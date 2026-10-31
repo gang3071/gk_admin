@@ -12,6 +12,7 @@ use addons\webman\model\VipLevel;
 use app\service\MachineApiService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\feedback\Alert;
 use ExAdmin\ui\component\form\field\Switches;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\card\Card;
@@ -514,23 +515,88 @@ class AdminOfflineMachineController
                     ->style(['margin-left' => '10px']);
             });
 
-            $form->row(function (Form $form) {
-                $form->number('odds_x', admin_trans('machine.fields.odds_x'))
-                    ->max(100000)
-                    ->min(0.01)
-                    ->precision(2)
-                    ->required()
-                    ->span(11)
-                    ->style(['width' => '100%']);
+            // 工控类型 + 比值：Slot 机台使用联动，选择 SONG 显示预设比值下拉，选择 MEI 显示数字输入
+            if ($gameType == GameType::TYPE_SLOT) {
+                $openOptions = config('machine.song_offline.open_options', []);
+                $oddsOptions = [];
+                foreach ($openOptions as $key => $opt) {
+                    $oddsOptions[$key] = strtr(admin_trans('machine.help.odds_ratio_option'), [
+                        '{key}'    => $key,
+                        '{score}'  => $opt['machine_score'],
+                        '{points}' => $opt['min_player_amount'],
+                    ]);
+                }
+                $existingModel = $form->isEdit() ? $form->driver()->get() : null;
+                $currentRatio  = $form->isEdit()
+                    ? (data_get($existingModel, 'odds_x') . ':' . data_get($existingModel, 'odds_y'))
+                    : '1:1';
 
-                $form->number('odds_y', admin_trans('machine.fields.odds_y'))
-                    ->max(100000)
-                    ->min(0.01)
-                    ->precision(2)
+                $form->select('control_type', admin_trans('machine.fields.control_type'))
                     ->required()
-                    ->span(11)
-                    ->style(['margin-left' => '10px', 'width' => '100%']);
-            });
+                    ->options([
+                        Machine::CONTROL_TYPE_MEI  => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_MEI),
+                        Machine::CONTROL_TYPE_SONG => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_SONG),
+                    ])
+                    ->default(Machine::CONTROL_TYPE_MEI)
+                    ->when(Machine::CONTROL_TYPE_SONG, function ($f) use ($oddsOptions, $currentRatio, $openOptions) {
+                        // SONG 协议：从预设比值列表选择，saving() 负责解析为 odds_x/odds_y
+                        $select = $f->select('odds_ratio', admin_trans('machine.fields.odds_ratio'))
+                            ->options($oddsOptions)
+                            ->default($currentRatio)
+                            ->required();
+
+                        // 根据当前选择的比值联动显示对应的 info 说明（info 条件 = control_type==SONG AND odds_ratio==ratio）
+                        foreach ($openOptions as $ratio => $opt) {
+                            $points = $opt['min_player_amount'];
+                            $score  = $opt['machine_score'];
+                            $msg    = strtr(admin_trans('machine.help.odds_ratio_info'), [
+                                '{score}'  => $score,
+                                '{points}' => $points,
+                            ]);
+                            $desc   = strtr(admin_trans('machine.help.odds_ratio_detail'), [
+                                '{points}' => $points,
+                            ]);
+                            $select->when($ratio, function ($f2) use ($msg, $desc) {
+                                $f2->push(
+                                    Alert::create()
+                                        ->type('info')
+                                        ->showIcon(true)
+                                        ->message(Html::raw('<span style="font-size:12px;">' . $msg . '</span>'))
+                                        ->description(Html::raw('<span style="font-size:11px;">' . $desc . '</span>'))
+                                );
+                            });
+                        }
+                    })
+                    ->when(Machine::CONTROL_TYPE_MEI, function ($f) {
+                        // MEI 协议：自由输入 odds_x / odds_y（同一行）
+                        $f->row(function (Form $f) {
+                            $f->number('odds_x', admin_trans('machine.fields.odds_x'))
+                                ->max(100000)->min(0.01)->precision(2)->required()
+                                ->span(11)->style(['width' => '100%']);
+                            $f->number('odds_y', admin_trans('machine.fields.odds_y'))
+                                ->max(100000)->min(0.01)->precision(2)->required()
+                                ->span(11)->style(['margin-left' => '10px', 'width' => '100%']);
+                        });
+                    });
+            } else {
+                // 钢珠机台：工控类型 + 自由输入比值（不联动）
+                $form->select('control_type', admin_trans('machine.fields.control_type'))
+                    ->required()
+                    ->options([
+                        Machine::CONTROL_TYPE_MEI  => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_MEI),
+                        Machine::CONTROL_TYPE_SONG => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_SONG),
+                    ])
+                    ->default(Machine::CONTROL_TYPE_MEI);
+
+                $form->row(function (Form $form) {
+                    $form->number('odds_x', admin_trans('machine.fields.odds_x'))
+                        ->max(100000)->min(0.01)->precision(2)->required()
+                        ->span(11)->style(['width' => '100%']);
+                    $form->number('odds_y', admin_trans('machine.fields.odds_y'))
+                        ->max(100000)->min(0.01)->precision(2)->required()
+                        ->span(11)->style(['margin-left' => '10px', 'width' => '100%']);
+                });
+            }
 
             $form->row(function (Form $form) {
                 $form->text('min_point', admin_trans('machine.fields.min_point'))
@@ -606,30 +672,37 @@ class AdminOfflineMachineController
                 ->showSearch()
                 ->dropdownMatchSelectWidth();
 
-            $form->select('control_type', admin_trans('machine.fields.control_type'))
-                ->required()
-                ->options([
-                    Machine::CONTROL_TYPE_MEI => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_MEI),
-                    Machine::CONTROL_TYPE_SONG => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_SONG),
-                ])
-                ->default(Machine::CONTROL_TYPE_MEI);
-
             $form->textarea('remark', admin_trans('machine.fields.remark'))
                 ->maxlength(250)
                 ->rows(3);
 
             // 保存前处理
-            $form->saving(function (Form $form) {
+            $form->saving(function (Form $form) use ($gameType) {
                 // 确保是线下机台
-                $form->machine_source = Machine::MACHINE_SOURCE_OFFLINE;
-                $form->is_live = 0;
-                $form->min_vip_level_id = (int)($form->input('min_vip_level_id') ?? 0);
+                $form->input('machine_source', Machine::MACHINE_SOURCE_OFFLINE);
+                $form->input('is_live', 0);
+                $form->input('min_vip_level_id', (int)($form->input('min_vip_level_id') ?? 0));
+
+                // SONG Slot 机台：从比值下拉解析 odds_x / odds_y（仅限 SONG 协议）
+                $controlType = (int)$form->input('control_type');
+                $oddsRatio   = $form->input('odds_ratio');
+                if ($controlType === Machine::CONTROL_TYPE_SONG && $oddsRatio !== null) {
+                    $options = config('machine.song_offline.open_options', []);
+                    if (!isset($options[$oddsRatio])) {
+                        throw new \InvalidArgumentException(
+                            strtr(admin_trans('machine.help.invalid_odds_ratio'), ['{ratio}' => $oddsRatio])
+                        );
+                    }
+                    $form->input('odds_x', $options[$oddsRatio]['odds_x']);
+                    $form->input('odds_y', $options[$oddsRatio]['odds_y']);
+                }
+                $form->removeInput('odds_ratio'); // 虚拟字段，始终移除，不写入数据库
             });
 
-            $form->saved(function (Form $form, $result) {
-                if ($result && $form->model()->id) {
+            $form->saved(function (Form $form) {
+                if ($form->driver()->model()->id) {
                     /** @var Machine $machine */
-                    $machine = Machine::find($form->model()->id);
+                    $machine = Machine::find($form->driver()->model()->id);
 
                     if ($machine) {
                         // 线下机台不允许配置直播流，删除可能存在的媒体配置
@@ -643,7 +716,7 @@ class AdminOfflineMachineController
                     }
                 }
 
-                return message_success(admin_trans('common.save_success'));
+                return message_success(admin_trans('form.save_success'));
             });
 
             $form->actions()->hideResetButton();

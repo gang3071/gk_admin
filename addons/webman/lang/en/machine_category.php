@@ -33,6 +33,8 @@ return [
     'lottery_rate_help' => 'The payout amount is multiplied by this coefficient (direct multiplier: 1.0 = unchanged, 2.0 = double payout, max 2×). The final amount is still capped by the lottery\'s "max payout amount".',
     'lottery_add_status_help' => 'Whether this type participates in the accumulation of the lottery pool',
     'lottery_assign_status_help' => 'Whether this type participates in lottery',
+    'turn_used_point_help' => 'Game points consumed per game action, used to calculate the cumulative betting amount for lottery jackpot eligibility (bet amount = increment × this value). Slot: increment is press (bet) count per action; Jackpot (steel ball): increment is turn count per action.',
+    'keep_minutes_help' => 'Seconds of machine reservation time added per game action. Accumulates while the player plays; after leaving, the machine is reserved until the time runs out. Formula: reserve_seconds += this value × increment (online Slot: press increment; online Jackpot: turn count; offline: fixed +1 per heartbeat).',
     'form' => [
         'category_name' => 'Category Name',
         'multilingual_config' => 'Multilingual Configuration',

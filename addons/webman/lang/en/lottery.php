@@ -233,6 +233,11 @@ return [
         'description' => '<strong>Description:</strong> Guaranteed amount is the minimum pool maintenance amount, ensuring pool always has sufficient funds for payouts.<br><strong>How it works:</strong><br>• Pool accumulation: If pool is insufficient for payout, auto-refill to guaranteed amount<br>• After payout: If pool is below guaranteed amount, auto-refill to guaranteed amount<br><strong>Example:</strong> Guaranteed amount set to 5000:<br>• Pool 3000, need payout 4000 → refill to 5000 first, payout 4000, remaining 1000 → refill to 5000 again<br>• Pool 6000, after payout of 2000 remaining 4000 → auto-refill to 5000<br><strong>Suggestion:</strong> Guaranteed amount should be 1-2x max payout amount to ensure sufficient funds anytime',
     ],
 
+    // Form help text
+    'form_help' => [
+        'pool_ratio' => 'Controls what percentage of the base amount is added to this pool each time (%). Formula: pool increment = turn increment × [Machine category] "Each spin/pressure spin increases bonus pool points" × [Lottery] "Pool ratio" / 100. Example: "Each spin/pressure spin increases bonus pool points" = 0.2, "Pool ratio" = 50, 10 new turns → pool = 10 × 0.2 × 50% = 1 point. Multiple jackpots in the same category can each have different ratios to share the same base.',
+    ],
+
     // Extended form help text and placeholders
     'form_help_extended' => [
         'current_pool_amount' => 'Current pool amount, deducted when player wins. E.g., pool has 5000, player wins 5000, pool clears to zero',

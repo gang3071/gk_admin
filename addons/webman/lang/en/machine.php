@@ -35,6 +35,7 @@ return [
         'player_score' => 'Original score',
         'odds_x' => 'ratioX',
         'odds_y' => 'ratio Y',
+        'odds_ratio' => 'Machine Ratio',
         'min_point' => 'Minimum top score',
         'max_point' => 'Highest score',
         'control_open_point' => 'Industrial control pressure point',
@@ -200,6 +201,10 @@ return [
         'max_point' => 'When set to 0, there is no limit',
         'stream_name' => 'A value of -1 indicates that the setting failed and will not be displayed in the foreground',
         'picture_url_size' => 'Recommended picture size 335 * 366',
+        'odds_ratio_option' => '{key} (machine {score} pts/open, top-up unit {points} game points)',
+        'odds_ratio_info' => 'Machine opens 1 time: {score} pts; player deducted {points} game points',
+        'odds_ratio_detail' => 'Top-up must be a multiple of {points} game points',
+        'invalid_odds_ratio' => 'Invalid machine ratio: {ratio}. Please select a valid ratio from the dropdown.',
     ],
     /** TODO translation */
     'detail' => 'details',

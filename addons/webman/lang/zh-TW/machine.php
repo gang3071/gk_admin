@@ -35,6 +35,7 @@ return [
         'player_score' => '原始得分',
         'odds_x' => '比值X',
         'odds_y' => '比值Y',
+        'odds_ratio' => '機台比值',
         'min_point' => '最低上分',
         'max_point' => '最高上分',
         'control_open_point' => '工控壓分',
@@ -200,6 +201,10 @@ return [
         'max_point' => '設定0時為不限制',
         'stream_name' => '值為-1表示設定失敗,並不顯示在前臺',
         'picture_url_size' => '建議圖片尺寸335 * 366',
+        'odds_ratio_option' => '{key}（機台 {score} 分/次，上分單位 {points} 遊戲點）',
+        'odds_ratio_info' => '機台開分1次 {score} 分，玩家扣款 {points} 遊戲點',
+        'odds_ratio_detail' => '上分必須為 {points} 遊戲點的整數倍',
+        'invalid_odds_ratio' => '無效的機台比值：{ratio}，請從下拉中選擇合法比值',
     ],
     /** TODO翻譯*/
     'detail' => '詳情',

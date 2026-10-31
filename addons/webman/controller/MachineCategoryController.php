@@ -350,14 +350,16 @@ class MachineCategoryController
                 ->options($optionList)
                 ->required();
             $form->number('turn_used_point',
-                admin_trans('machine_category.fields.turn_used_point'))->style(['width' => '100%']);
+                admin_trans('machine_category.fields.turn_used_point'))->style(['width' => '100%'])
+                ->help(admin_trans('machine_category.turn_used_point_help'));
             $form->text('keep_minutes', admin_trans('machine_category.fields.keep_minutes'))
                 ->rule([
                     'numeric' => admin_trans('validator.numeric'),
                     'max:600' => admin_trans('validator.max', null, ['{max}' => 600]),
                     'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
                 ])
-                ->addonAfter(admin_trans('machine_category.fields.second'));
+                ->addonAfter(admin_trans('machine_category.fields.second'))
+                ->help(admin_trans('machine_category.keep_minutes_help'));
             $form->row(function (Form $form) {
                 $langList = plugin()->webman->config('ui.lang.list');
                 $tabs = $form->tabs()->destroyInactiveTabPane();
