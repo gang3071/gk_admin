@@ -235,7 +235,7 @@ return [
 
     // Form help text
     'form_help' => [
-        'pool_ratio' => 'Controls what percentage of the base amount is added to this pool each time (%). Formula: pool increment = turn increment × category "pool base per turn (lottery_point)" × this ratio / 100. Example: lottery_point = 0.2, pool_ratio = 50, 10 new turns → base = 10 × 0.2 = 2 → pool increment = 2 × 50% = 1 point. Multiple jackpots in the same category can each have different ratios to share the same base.',
+        'pool_ratio' => 'Controls what percentage of the base amount is added to this pool each time (%). Formula: pool increment = turn increment × [Machine category] "Each spin/pressure spin increases bonus pool points" × [Lottery] "Pool ratio" / 100. Example: "Each spin/pressure spin increases bonus pool points" = 0.2, "Pool ratio" = 50, 10 new turns → pool = 10 × 0.2 × 50% = 1 point. Multiple jackpots in the same category can each have different ratios to share the same base.',
     ],
 
     // Extended form help text and placeholders
