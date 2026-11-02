@@ -143,10 +143,11 @@ class PlatformLimitGroupConfigController
                 ->required()
                 ->disabled($form->isEdit());
 
-            // 获取ATG、RSG和DG平台ID
+            // 获取ATG、RSG、DG、T9電子平台ID
             $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
             $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
             $dgPlatform = GamePlatform::query()->where('code', 'DG')->where('status', 1)->first();
+            $t9Platform = GamePlatform::query()->where('code', 'TNINE_SLOT')->where('status', 1)->first();
 
             // 编辑时获取config_data（已经是数组类型，无需json_decode）
             $configData = [];
@@ -243,6 +244,29 @@ class PlatformLimitGroupConfigController
                 });
             }
 
+            // T9 電子平台配置（当选择 T9 电子时显示）
+            if ($t9Platform) {
+                $platformSelect->when($t9Platform->id, function (Form $form) use ($configData) {
+                    $form->divider('T9 電子平台配置');
+
+                    $form->number('config_data.min', '最小下注金額')
+                        ->required()
+                        ->precision(2)
+                        ->min(0)
+                        ->value($configData['min'] ?? '')
+                        ->help('T9 電子最小下注金額')
+                        ->placeholder('例如：100.00');
+
+                    $form->number('config_data.max', '最大下注金額')
+                        ->required()
+                        ->precision(2)
+                        ->min(0)
+                        ->value($configData['max'] ?? '')
+                        ->help('T9 電子最大下注金額')
+                        ->placeholder('例如：20000.00');
+                });
+            }
+
             $form->radio('status', '状态')
                 ->options([
                     1 => '启用',
@@ -330,6 +354,27 @@ class PlatformLimitGroupConfigController
                     }
 
                     // 清空ATG和RSG字段
+                    unset($configData['operator']);
+                    unset($configData['operator_key']);
+                    unset($configData['provider_id']);
+                    unset($configData['api_domain']);
+                    unset($configData['limit_description']);
+                    unset($configData['min_bet_amount']);
+                    unset($configData['max_bet_amount']);
+
+                } elseif ($platform->code === 'TNINE_SLOT') {
+                    // 驗證 T9 電子平台必填欄位
+                    if (!isset($configData['min']) || $configData['min'] === '') {
+                        return message_error('T9 電子平台必須填寫最小下注金額');
+                    }
+                    if (!isset($configData['max']) || $configData['max'] === '') {
+                        return message_error('T9 電子平台必須填寫最大下注金額');
+                    }
+                    if ($configData['max'] <= $configData['min']) {
+                        return message_error('最大下注金額必須大於最小下注金額');
+                    }
+
+                    // 清空其他平台欄位
                     unset($configData['operator']);
                     unset($configData['operator_key']);
                     unset($configData['provider_id']);
@@ -443,7 +488,7 @@ class PlatformLimitGroupConfigController
         $request = Request::input();
         $query = GamePlatform::query()
             ->where('status', 1)
-            ->whereIn('code', ['ATG', 'RSG', 'DG']) // 只显示 ATG、RSG 和 DG
+            ->whereIn('code', ['ATG', 'RSG', 'DG', 'TNINE_SLOT']) // 顯示 ATG、RSG、DG、T9電子
             ->orderBy('sort', 'desc')
             ->orderBy('id', 'desc');
 
@@ -473,7 +518,7 @@ class PlatformLimitGroupConfigController
         $data = [];
         $list = GamePlatform::query()
             ->where('status', 1)
-            ->whereIn('code', ['ATG', 'RSG', 'DG']) // 只显示 ATG、RSG 和 DG
+            ->whereIn('code', ['ATG', 'RSG', 'DG', 'TNINE_SLOT']) // 顯示 ATG、RSG、DG、T9電子
             ->orderBy('sort', 'desc')
             ->orderBy('id', 'desc')
             ->get();
