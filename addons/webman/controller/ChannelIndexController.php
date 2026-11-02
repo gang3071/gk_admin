@@ -3948,44 +3948,41 @@ class ChannelIndexController
                     return json(['code' => 400, 'message' => '体验券领取总次数已用完（共' . $totalLimit . '次）']);
                 }
 
-                // 体验券打码判定逻辑
-                // 如果不是第一次领取，且开启了打码判定开关，则需要验证用户昨日打码量
-                if ($totalCount > 0) {
-                    // 获取店家的打码判定开关配置
-                    $storeAdmin = \addons\webman\model\AdminUser::query()->where('id', $storeAdminId)->first();
+                // 体验券打码判定逻辑（所有张次均需验证，含第一张）
+                $storeAdmin = \addons\webman\model\AdminUser::query()->where('id', $storeAdminId)->first();
 
-                    if ($storeAdmin && $storeAdmin->experience_bet_check_enabled) {
-                        // 计算用户昨日打码量
-                        $yesterdayStart = $now->gte($today8am)
-                            ? $yesterday8am->toDateTimeString()
-                            : Carbon::parse('-2 days')->setTime(8, 0, 0)->toDateTimeString();
-                        $yesterdayEnd = $now->gte($today8am)
-                            ? $today8am->toDateTimeString()
-                            : $yesterday8am->toDateTimeString();
+                if ($storeAdmin && $storeAdmin->experience_bet_check_enabled) {
+                    $betThreshold = $voucherConfig['experience']['bet_threshold'] ?? 20000;
 
-                        $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
-                            ->where('player_id', $playerId)
-                            ->where('created_at', '>=', $yesterdayStart)
-                            ->where('created_at', '<', $yesterdayEnd)
-                            ->sum('bet');
+                    // 计算用户昨日打码量
+                    $yesterdayStart = $now->gte($today8am)
+                        ? $yesterday8am->toDateTimeString()
+                        : Carbon::parse('-2 days')->setTime(8, 0, 0)->toDateTimeString();
+                    $yesterdayEnd = $now->gte($today8am)
+                        ? $today8am->toDateTimeString()
+                        : $yesterday8am->toDateTimeString();
 
-                        // 昨日实体机台打码量
-                        $yesterdayMachineBetAmount = (float) \addons\webman\model\PlayerGameLog::query()
-                            ->where('player_id', $playerId)
-                            ->where('created_at', '>=', $yesterdayStart)
-                            ->where('created_at', '<', $yesterdayEnd)
-                            ->sum('chip_amount');
-                        $yesterdayBetAmount += $yesterdayMachineBetAmount;
+                    $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                        ->where('player_id', $playerId)
+                        ->where('created_at', '>=', $yesterdayStart)
+                        ->where('created_at', '<', $yesterdayEnd)
+                        ->sum('bet');
 
-                        // 昨日打码量不足20000，拒绝领取
-                        if ($yesterdayBetAmount < 20000) {
-                            \support\Log::info('体验券打码判定失败', [
-                                'player_id' => $playerId,
-                                'yesterday_bet_amount' => $yesterdayBetAmount,
-                                'required_bet_amount' => 20000,
-                            ]);
-                            return json(['code' => 400, 'message' => '昨日打码量不足20,000，无法领取体验券']);
-                        }
+                    // 昨日实体机台打码量
+                    $yesterdayMachineBetAmount = (float) \addons\webman\model\PlayerGameLog::query()
+                        ->where('player_id', $playerId)
+                        ->where('created_at', '>=', $yesterdayStart)
+                        ->where('created_at', '<', $yesterdayEnd)
+                        ->sum('chip_amount');
+                    $yesterdayBetAmount += $yesterdayMachineBetAmount;
+
+                    if ($yesterdayBetAmount < $betThreshold) {
+                        \support\Log::info('体验券打码判定失败', [
+                            'player_id' => $playerId,
+                            'yesterday_bet_amount' => $yesterdayBetAmount,
+                            'required_bet_amount' => $betThreshold,
+                        ]);
+                        return json(['code' => 400, 'message' => '昨日打码量不足' . number_format($betThreshold) . '，无法领取体验券']);
                     }
                 }
             }
