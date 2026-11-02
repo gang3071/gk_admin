@@ -54,6 +54,16 @@ class PartitionMaintenanceTask
     }
 
     /**
+     * 手动触发维护（用于补跑失败的定时任务）
+     *
+     * @return void
+     */
+    public function runManually(): void
+    {
+        $this->maintainPartitions();
+    }
+
+    /**
      * 维护分区
      *
      * @return void
