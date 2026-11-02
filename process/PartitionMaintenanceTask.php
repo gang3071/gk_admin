@@ -208,23 +208,31 @@ class PartitionMaintenanceTask
                 return;
             }
 
-            // 归档分区数据到历史表
+            // 归档分区数据到历史表（INSERT IGNORE 跳过已存在的主键，保证幂等）
             $startTime = microtime(true);
 
             Db::statement("
-                INSERT INTO play_game_record_history
+                INSERT IGNORE INTO play_game_record_history
                 SELECT * FROM play_game_record PARTITION ({$partitionName})
             ");
 
             $duration = round(microtime(true) - $startTime, 2);
 
+            // 归档后统计实际写入行数
+            $archivedCount = Db::selectOne("
+                SELECT COUNT(*) AS count
+                FROM play_game_record_history
+                WHERE created_at >= ? AND created_at < ?
+            ", [$archiveDate, $archiveEndDate])->count ?? 0;
+
             Log::info('分区归档成功', [
-                'partition' => $partitionName,
-                'rows_archived' => $rowCount,
-                'duration_seconds' => $duration,
+                'partition'         => $partitionName,
+                'partition_rows'    => $rowCount,
+                'history_count'     => $archivedCount,
+                'duration_seconds'  => $duration,
             ]);
 
-            echo "[PartitionMaintenance] ✅ 归档分区成功: {$partitionName} ({$rowCount} 条，用时 {$duration} 秒)\n";
+            echo "[PartitionMaintenance] ✅ 归档分区成功: {$partitionName} (分区约 {$rowCount} 条，历史表 {$archivedCount} 条，用时 {$duration} 秒)\n";
 
         } catch (\Exception $e) {
             Log::error('归档分区失败', [
