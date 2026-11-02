@@ -3950,10 +3950,10 @@ class ChannelIndexController
                     return json(['code' => 400, 'message' => '体验券领取总次数已用完（共' . $totalLimit . '次）']);
                 }
 
-                // 体验券打码判定逻辑（所有张次均需验证，含第一张）
+                // 体验券打码判定逻辑：第一张免检，第二张起验证昨日打码
                 $storeAdmin = \addons\webman\model\AdminUser::query()->where('id', $storeAdminId)->first();
 
-                if ($storeAdmin && $storeAdmin->experience_bet_check_enabled) {
+                if ($storeAdmin && $storeAdmin->experience_bet_check_enabled && $totalCount > 0) {
                     $betThreshold = $voucherConfig['experience']['bet_threshold'] ?? 20000;
 
                     // 计算用户昨日打码量
