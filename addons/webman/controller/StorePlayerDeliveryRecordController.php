@@ -90,6 +90,10 @@ class StorePlayerDeliveryRecordController
                 $grid->model()->where('source', $exAdminFilter['search_source']);
             }
 
+            // 类型下拉须并入统计查询：框架的 in 筛选规则要到渲染时才作用于列表，卡片在此之前取数
+            if (!empty($exAdminFilter['type'])) {
+                $grid->model()->whereIn('type', (array)$exAdminFilter['type']);
+            }
             $query = clone $grid->model();
             $totalData = $query->selectRaw(
                 'sum(if(`type`=' . PlayerDeliveryRecord::TYPE_PRESENT_IN . ',`amount`,0)) as total_in_amount, ' .
