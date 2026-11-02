@@ -3897,7 +3897,7 @@ class ChannelIndexController
 
                 // 检查是否是新用户（注册时间在配置时间之后）
                 $player = \addons\webman\model\Player::query()->where('id', $playerId)->first();
-                $registerAfter = $expConfig['register_after'] ?? '2026-07-01 00:00:00';
+                $registerAfter = $expConfig['register_after'] ?? '2026-01-01 00:00:00';
                 if (!$player || $player->created_at < $registerAfter) {
                     return json(['code' => 400, 'message' => '只有新会员才能领取体验券']);
                 }
@@ -3923,7 +3923,8 @@ class ChannelIndexController
                     ->where('player_id', $playerId)
                     ->where('ticket_type', TicketRecord::TYPE_EXPERIENCE)
                     ->where('created_at', '>=', $todayStart)
-                    ->where('created_at', '<', $todayEnd);
+                    ->where('created_at', '<', $todayEnd)
+                    ->whereNull('deleted_at');
                 $todayCount = $todayQuery->count();
 
                 if ($todayCount >= $dailyLimit) {
@@ -3939,10 +3940,11 @@ class ChannelIndexController
                 }
 
                 // 检查总领取次数（排除已删除的记录）
-                $totalLimit = $expConfig['total_limit'] ?? 6;
+                $totalLimit = $expConfig['total_limit'] ?? 5;
                 $totalCount = TicketRecord::query()
                     ->where('player_id', $playerId)
                     ->where('ticket_type', TicketRecord::TYPE_EXPERIENCE)
+                    ->whereNull('deleted_at')
                     ->count();
                 if ($totalCount >= $totalLimit) {
                     return json(['code' => 400, 'message' => '体验券领取总次数已用完（共' . $totalLimit . '次）']);
