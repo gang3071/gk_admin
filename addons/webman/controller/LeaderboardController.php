@@ -53,7 +53,6 @@ class LeaderboardController
 
     /**
      * 榜單列表
-     * @auth true
      * @param int $periodType
      * @return Grid
      */
@@ -194,7 +193,6 @@ class LeaderboardController
 
     /**
      * 榜單詳情
-     * @auth true
      * @param int $id
      * @return Grid
      */

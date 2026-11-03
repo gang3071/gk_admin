@@ -33,6 +33,7 @@ class StoreDishOrderController
     /**
      * 列表
      * @auth true
+     * @group store
      */
     public function index(): Grid
     {
@@ -107,6 +108,7 @@ class StoreDishOrderController
     /**
      * 修改
      * @auth true
+     * @group store
      * @return Form
      */
     public function form(): Form
@@ -216,6 +218,7 @@ class StoreDishOrderController
     /**
      * 餐點明細報表
      * @auth true
+     * @group store
      */
     public function reportItem(): Grid
     {

@@ -27,6 +27,7 @@ class StoreDishController
     /**
      * 列表
      * @auth true
+     * @group store
      */
     public function index(): Grid
     {
@@ -94,6 +95,7 @@ class StoreDishController
     /**
      * 新增 / 修改
      * @auth true
+     * @group store
      * @return Form
      */
     public function form(): Form

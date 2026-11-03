@@ -38,6 +38,7 @@ class StoreLeaderboardController
     /**
      * 主頁
      * @auth true
+     * @group store
      * @return Card
      */
     public function index(): Card
@@ -53,7 +54,6 @@ class StoreLeaderboardController
 
     /**
      * 榜單列表
-     * @auth true
      * @param int $periodType
      * @return Grid
      */
@@ -173,7 +173,6 @@ class StoreLeaderboardController
 
     /**
      * 榜單詳情
-     * @auth true
      * @param int $id
      * @return Grid
      */
@@ -247,6 +246,7 @@ class StoreLeaderboardController
     /**
      * 發放獎勵
      * @auth true
+     * @group store
      * @param int $id
      */
     public static function grantOne(int $id)

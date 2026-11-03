@@ -39,6 +39,7 @@ class ChannelLeaderboardController
     /**
      * 主頁
      * @auth true
+     * @group channel
      * @return Card
      */
     public function index(): Card
@@ -54,7 +55,6 @@ class ChannelLeaderboardController
 
     /**
      * 榜單列表
-     * @auth true
      * @param int $periodType
      * @return Grid
      */
@@ -195,7 +195,6 @@ class ChannelLeaderboardController
 
     /**
      * 榜單詳情
-     * @auth true
      * @param int $id
      * @return Grid
      */
@@ -282,6 +281,7 @@ class ChannelLeaderboardController
     /**
      * 發放獎勵
      * @auth true
+     * @group channel
      * @param int $id
      */
     public static function grantOne(int $id)

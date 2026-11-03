@@ -23,6 +23,7 @@ class ChannelDishCategoryController
     /**
      * 列表
      * @auth true
+     * @group channel
      */
     public function index(): Grid
     {
@@ -63,6 +64,7 @@ class ChannelDishCategoryController
     /**
      * 新增 / 修改
      * @auth true
+     * @group channel
      * @return Form
      */
     public function form(): Form

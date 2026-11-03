@@ -34,6 +34,7 @@ class ChannelDishOrderController
     /**
      * 列表
      * @auth true
+     * @group channel
      */
     public function index(): Grid
     {
@@ -121,6 +122,7 @@ class ChannelDishOrderController
     /**
      * 修改
      * @auth true
+     * @group channel
      * @return Form
      */
     public function form(): Form
@@ -229,6 +231,7 @@ class ChannelDishOrderController
     /**
      * 餐點明細報表
      * @auth true
+     * @group channel
      */
     public function reportItem(): Grid
     {
