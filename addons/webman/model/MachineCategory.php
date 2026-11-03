@@ -21,6 +21,7 @@ use support\Cache;
  * @property float turn_used_point 每转消耗游戏点数
  * @property int lottery_add_status 彩金累加状态，0=停用, 1=啟用
  * @property int lottery_assign_status 彩金分配状态，0=停用, 1=啟用
+ * @property int machine_source 机台来源 1=线上机台（有直播） 2=线下机台（无直播）
  * @property int status 状态
  * @property int sort 排序
  * @property string created_at 创建时间
@@ -36,6 +37,8 @@ class MachineCategory extends Model
 {
     use SoftDeletes, HasDateTimeFormatter;
 
+    public const MACHINE_SOURCE_ONLINE = 1;
+    public const MACHINE_SOURCE_OFFLINE = 2;
 
     public function __construct(array $attributes = [])
     {
