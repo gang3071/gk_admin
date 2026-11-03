@@ -117,4 +117,11 @@ return [
         'reloadable' => true,
         'constructor' => []
     ],
+
+    // 餐點訂單超時自動取消：每 5 分鐘
+    'dish_order_auto_expire' => [
+        'handler' => process\DishOrderAutoExpireTask::class,
+        'reloadable' => true,
+        'constructor' => []
+    ],
 ];
