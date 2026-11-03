@@ -121,7 +121,7 @@ class ChannelVipLevelController
                         ->type('primary')
                         ->size('small')
                         ->drawer([$this, 'cashback'], ['vip_level_id' => $data['id']])
-                        ->width(500)
+                        ->width(350)
                         ->title($data['name'] . ' - ' . admin_trans('vip_level.cashback') . '（100=100%，0.1=0.1%）')
                 );
                 $actions->prepend(
@@ -130,7 +130,7 @@ class ChannelVipLevelController
                         ->type('primary')
                         ->size('small')
                         ->drawer([$this, 'machineRatio'], ['vip_level_id' => $data['id']])
-                        ->width(500)
+                        ->width(350)
                         ->title($data['name'] . ' - ' . admin_trans('vip_level.machine_ratio') . '（100=100%，0.1=0.1%）')
                 );
 
@@ -140,7 +140,7 @@ class ChannelVipLevelController
                         ->type('primary')
                         ->size('small')
                         ->drawer([$this, 'point'], ['vip_level_id' => $data['id']])
-                        ->width(500)
+                        ->width(350)
                         ->title($data['name'] . ' - ' . admin_trans('vip_level_point.title') . '（100=100%，0.1=0.1%）')
                 );
             });
@@ -208,6 +208,12 @@ class ChannelVipLevelController
                 ->style(['width' => '100%'])
                 ->help(admin_trans('vip_level.help.min_claim_amount'));
 
+            $form->number('children_cashback_ratio', admin_trans('vip_level.fields.children_cashback_ratio'))
+                ->min(0)
+                ->step(0.01)
+                ->style(['width' => '100%'])
+                ->help(admin_trans('vip_level.help.children_cashback_ratio'));
+
             $form->number('birthday_bonus', admin_trans('vip_level.fields.birthday_bonus'))
                 ->min(0)
                 ->step(0.01)
@@ -243,7 +249,6 @@ class ChannelVipLevelController
 
         return Form::create([], function (Form $form) use ($vipLevel, $platforms, $existingCashbacks) {
             $form->title(($vipLevel->name ?? '') . ' - ' . admin_trans('vip_level.cashback') . '（100=100%，0.1=0.1%）');
-            $form->labelWidth(180);
 
             foreach ($platforms as $platform) {
                 $form->number('cashback_' . $platform->id, $platform->name)
@@ -302,7 +307,6 @@ class ChannelVipLevelController
 
         return Form::create([], function (Form $form) use ($vipLevel, $machineTypes, $existingRatios) {
             $form->title(($vipLevel->name ?? '') . ' - ' . admin_trans('vip_level.machine_ratio') . '（100=100%，0.1=0.1%）');
-            $form->labelWidth(180);
 
             foreach ($machineTypes as $type => $label) {
                 $form->number('machine_ratio_' . $type, $label)

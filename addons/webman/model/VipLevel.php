@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property float retain_level_bet_amount 保级所需打码量
  * @property float upgrade_bet_amount 升级所需打码量
  * @property float min_claim_amount 最小领取额
+ * @property float children_cashback_ratio 下级反水比例 (%)
  * @property float birthday_bonus 生日礼金
  * @property float upgrade_bonus 升级礼金
  * @property float daily_login_bonus 每日登录奖励
@@ -41,6 +42,7 @@ class VipLevel extends Model
         'retain_level_bet_amount',
         'upgrade_bet_amount',
         'min_claim_amount',
+        'children_cashback_ratio',
         'birthday_bonus',
         'upgrade_bonus',
         'daily_login_bonus',
