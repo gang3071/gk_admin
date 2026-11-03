@@ -41,37 +41,35 @@ class DishOrderAutoExpireTask
 
         try {
             $expireTime = date('Y-m-d H:i:s', strtotime('-2 hours'));
+            $cancelled  = 0;
+            $failed     = 0;
 
-            $orders = DishOrder::query()
+            DishOrder::query()
                 ->where('status', DishOrder::STATUS_PENDING)
                 ->where('created_at', '<', $expireTime)
-                ->get();
+                ->orderBy('id')
+                ->chunkById(100, function ($orders) use (&$cancelled, &$failed) {
+                    foreach ($orders as $order) {
+                        try {
+                            $this->cancelOrder((int)$order->id);
+                            $cancelled++;
+                        } catch (\Throwable $e) {
+                            $failed++;
+                            $this->log->error('DishOrderAutoExpireTask 取消訂單失敗', [
+                                'order_id' => $order->id,
+                                'error'    => $e->getMessage(),
+                            ]);
+                        }
+                    }
+                });
 
-            if ($orders->isEmpty()) {
-                return;
+            if ($cancelled > 0 || $failed > 0) {
+                $this->log->info('DishOrderAutoExpireTask 完成', [
+                    'cancelled'     => $cancelled,
+                    'failed'        => $failed,
+                    'expire_before' => $expireTime,
+                ]);
             }
-
-            $cancelled = 0;
-            $failed    = 0;
-
-            foreach ($orders as $order) {
-                try {
-                    $this->cancelOrder((int)$order->id);
-                    $cancelled++;
-                } catch (\Throwable $e) {
-                    $failed++;
-                    $this->log->error('DishOrderAutoExpireTask 取消訂單失敗', [
-                        'order_id' => $order->id,
-                        'error'    => $e->getMessage(),
-                    ]);
-                }
-            }
-
-            $this->log->info('DishOrderAutoExpireTask 完成', [
-                'cancelled' => $cancelled,
-                'failed'    => $failed,
-                'expire_before' => $expireTime,
-            ]);
 
         } finally {
             self::$running = false;
