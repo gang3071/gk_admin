@@ -96,7 +96,12 @@ class DishOrderAutoExpireTask
 
             $pointsToReturn = (int)$order->total_amount;
 
-            if ($pointsToReturn > 0) {
+            // 玩家已注銷（軟刪除）時跳過退積分，避免無限重試
+            $playerExists = \addons\webman\model\Player::withTrashed()
+                ->where('id', $order->player_id)
+                ->exists();
+
+            if ($pointsToReturn > 0 && $playerExists) {
                 PlayerPointsService::addPoints(
                     (int)$order->player_id,
                     $pointsToReturn,
@@ -105,6 +110,12 @@ class DishOrderAutoExpireTask
                     PlayerPointsRecord::TYPE_REFUND,
                     PlayerPointsRecord::SOURCE_REFUND
                 );
+            } elseif ($pointsToReturn > 0) {
+                $this->log->warning('DishOrderAutoExpireTask 玩家不存在，跳過退積分', [
+                    'order_id'  => $orderId,
+                    'player_id' => $order->player_id,
+                    'points'    => $pointsToReturn,
+                ]);
             }
 
             Db::commit();
