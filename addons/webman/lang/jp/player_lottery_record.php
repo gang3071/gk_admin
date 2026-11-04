@@ -24,6 +24,7 @@ return [
         'created_at' => '作成時刻',
         'audit_at' => '監査時間',
         'source' => 'ソース',
+        'store' => '店舗',
     ],
     'double' => 'ダブル',
     'btn' => [

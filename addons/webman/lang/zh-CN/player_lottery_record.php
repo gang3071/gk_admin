@@ -24,6 +24,7 @@ return [
         'created_at' => '创建时间',
         'audit_at' => '审核时间',
         'source' => '来源',
+        'store' => '门店',
     ],
     'double' => '双倍',
     'btn' => [

@@ -3,6 +3,7 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\model\AdminUser;
 use addons\webman\model\GameLottery;
 use addons\webman\model\GameType;
 use addons\webman\model\Lottery;
@@ -98,6 +99,12 @@ class PlayerLotteryRecordController
             }
             if (!empty($requestFilter['department_id'])) {
                 $grid->model()->where('department_id', $requestFilter['department_id']);
+            }
+            // 所属门店筛选
+            if (!empty($requestFilter['player']['store_admin_id'])) {
+                $grid->model()->whereHas('player', function ($query) use ($requestFilter) {
+                    $query->where('store_admin_id', $requestFilter['player']['store_admin_id']);
+                });
             }
 
             // 排序
@@ -329,6 +336,13 @@ class PlayerLotteryRecordController
                     ->dropdownMatchSelectWidth()
                     ->placeholder(admin_trans('player.fields.department_id'))
                     ->remoteOptions(admin_url(['addons-webman-controller-ChannelController', 'getDepartmentOptions']));
+                // 所属门店筛选
+                $filter->eq()->select('player.store_admin_id')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('player_lottery_record.fields.store'))
+                    ->options($this->storeOptions());
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');
                 $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '')->placeholder([
@@ -922,5 +936,24 @@ class PlayerLotteryRecordController
                 return message_success(admin_trans('player_lottery_record.action_success'));
             });
         });
+    }
+
+    /**
+     * 门店选项（总后台：全部店家）
+     * 含停用/删除门店：不影响历史彩金领取记录的筛选可见性
+     * @return array
+     */
+    protected function storeOptions(): array
+    {
+        return AdminUser::query()
+            ->where('type', AdminUser::TYPE_STORE)
+            ->orderBy('id', 'desc')
+            ->get(['id', 'nickname', 'username'])
+            ->mapWithKeys(function ($store) {
+                $label = $store->nickname ?: $store->username;
+                $label .= " ({$store->username})";
+                return [$store->id => $label];
+            })
+            ->toArray();
     }
 }

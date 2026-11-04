@@ -1934,6 +1934,12 @@ class Login extends LoginAbstract
                 if (!empty($exAdminFilter['department_id'])) {
                     $query->where('department_id', $exAdminFilter['department_id']);
                 }
+                // 所属门店筛选
+                if (!empty($exAdminFilter['player']['store_admin_id'])) {
+                    $query->whereHas('player', function ($q) use ($exAdminFilter) {
+                        $q->where('store_admin_id', $exAdminFilter['player']['store_admin_id']);
+                    });
+                }
 
                 // 统计数据（应用所有筛选条件）
                 $totalData = $query->selectRaw('
@@ -1988,6 +1994,12 @@ class Login extends LoginAbstract
                 }
                 if (!empty($exAdminFilter['department_id'])) {
                     $jpQuery->where('department_id', $exAdminFilter['department_id']);
+                }
+                // 所属门店筛选
+                if (!empty($exAdminFilter['player']['store_admin_id'])) {
+                    $jpQuery->whereHas('player', function ($q) use ($exAdminFilter) {
+                        $q->where('store_admin_id', $exAdminFilter['player']['store_admin_id']);
+                    });
                 }
 
                 // 状态筛选：跟随用户选择，未选择时默认只看已完成

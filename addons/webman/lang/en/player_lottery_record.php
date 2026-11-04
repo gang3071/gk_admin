@@ -24,6 +24,7 @@ return [
         'created_at' => 'Creation time',
         'audit_at' => 'Audit time',
         'source' => 'Source',
+        'store' => 'Store',
     ],
     'double' => 'double',
     'btn' => [
