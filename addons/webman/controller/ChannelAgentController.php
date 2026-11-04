@@ -92,8 +92,8 @@ class ChannelAgentController
 
             // 根据账号类型过滤店家
             if ($admin->type === AdminUser::TYPE_AGENT) {
-                // 代理：查询本代理下的店家
-                $grid->model()->where('admin_users.parent_admin_id', $admin->id);
+                // 代理：查詢本代理下的店家（子帳號只查被指派的店家）
+                $grid->model()->whereIn('admin_users.id', $admin->childStores()->pluck('id')->all() ?: [0]);
             } elseif ($admin->type === AdminUser::TYPE_CHANNEL) {
                 // 渠道：查询同一部门下的所有店家
                 $grid->model()->where('parent_admin.department_id', $admin->department_id);
@@ -108,7 +108,7 @@ class ChannelAgentController
 
             // 根据账号类型过滤店家
             if ($admin->type === AdminUser::TYPE_AGENT) {
-                $storeOptionsQuery->where('parent_admin_id', $admin->id);
+                $storeOptionsQuery->whereIn('id', $admin->childStores()->pluck('id')->all() ?: [0]);
             } elseif ($admin->type === AdminUser::TYPE_CHANNEL) {
                 $storeOptionsQuery->where('department_id', $admin->department_id);
             }
@@ -2021,8 +2021,8 @@ class ChannelAgentController
             ->where('status', AdminUser::STATUS_ENABLED);
 
         if ($admin->type === AdminUser::TYPE_AGENT) {
-            // 代理：只显示自己的下级店家
-            $query->where('parent_admin_id', $admin->id);
+            // 代理：只顯示自己的下級店家（子帳號只顯示被指派的店家）
+            $query->whereIn('id', $admin->childStores()->pluck('id')->all() ?: [0]);
         } elseif ($admin->type === AdminUser::TYPE_CHANNEL) {
             // 渠道：显示所属渠道的所有店家
             $query->where('department_id', $admin->department_id);

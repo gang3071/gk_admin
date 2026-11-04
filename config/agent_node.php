@@ -442,4 +442,42 @@ return [
         'url' => 'ex-admin/addons-webman-controller-AdminController/editInfo',
         'title' => '个人信息',
     ],
+
+    // ========== 子帳號管理 ==========
+    [
+        'id' => 'addons\webman\controller\AgentSubAdminController-',
+        'pid' => 0,
+        'url' => '',
+        'group' => 'agent',
+        'title' => '子帳號管理',
+        'children' => [
+            [
+                'id' => 'addons\webman\controller\AgentSubAdminController\index',
+                'pid' => 'addons\webman\controller\AgentSubAdminController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'agent',
+                'url' => 'ex-admin/addons-webman-controller-AgentSubAdminController/index',
+                'title' => '子帳號列表',
+            ],
+            [
+                'id' => 'addons\webman\controller\AgentSubAdminController\form',
+                'pid' => 'addons\webman\controller\AgentSubAdminController-',
+                'action' => 'form',
+                'method' => '',
+                'group' => 'agent',
+                'url' => 'ex-admin/addons-webman-controller-AgentSubAdminController/form',
+                'title' => '子帳號表單',
+            ],
+            [
+                'id' => 'addons\webman\controller\AgentSubAdminController\getStoreOptions',
+                'pid' => 'addons\webman\controller\AgentSubAdminController-',
+                'action' => 'getStoreOptions',
+                'method' => 'get',
+                'group' => 'agent',
+                'url' => 'ex-admin/addons-webman-controller-AgentSubAdminController/getStoreOptions',
+                'title' => '店家選項',
+            ],
+        ],
+    ],
 ];

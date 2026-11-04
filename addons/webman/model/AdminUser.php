@@ -89,6 +89,7 @@ class AdminUser extends Model
         'parent_admin_id',
         'is_super',
         'post',
+        'visible_store_ids',
         'ratio',
         'agent_commission',
         'channel_commission',
@@ -124,6 +125,7 @@ class AdminUser extends Model
         'parent_admin_id' => 'integer',
         'is_super' => 'boolean',
         'post' => 'array',
+        'visible_store_ids' => 'array',
         'ratio' => 'float',
         'agent_commission' => 'float',
         'channel_commission' => 'float',
@@ -229,11 +231,42 @@ class AdminUser extends Model
     /**
      * 下级店家列表（代理查询下级店家）
      *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * - 總代理：回傳 parent_admin_id = 自己 的店家
+     * - 代理子帳號（type=3 且 parent_admin_id 有值）：只回傳被指派的店家
+     *
+     * @return \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function childStores()
     {
+        if ((int) $this->type === self::TYPE_AGENT && !empty($this->parent_admin_id)) {
+            $ids = is_array($this->visible_store_ids) ? $this->visible_store_ids : [];
+
+            // 與上級代理的店家取交集，避免越權
+            $parent = $this->parentAdmin;
+            if ($parent && !empty($ids)) {
+                $parentStoreIds = $parent->childStores()
+                    ->where('type', self::TYPE_STORE)
+                    ->pluck('id')
+                    ->all();
+                $ids = array_values(array_intersect(array_map('intval', $ids), $parentStoreIds));
+            }
+
+            return AdminUser::query()
+                ->whereIn('id', $ids ?: [0])
+                ->where('type', self::TYPE_STORE);
+        }
+
         return $this->hasMany(AdminUser::class, 'parent_admin_id');
+    }
+
+    /**
+     * 是否為代理子帳號
+     *
+     * @return bool
+     */
+    public function isSubAccount(): bool
+    {
+        return (int) $this->type === self::TYPE_AGENT && !empty($this->parent_admin_id);
     }
 
     /**

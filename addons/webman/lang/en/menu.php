@@ -273,5 +273,6 @@ return [
         'limit_management' => 'Limit Management',
         'limit_group_management' => 'Limit Group Management',
         'platform_config' => 'Platform Configuration',
+        'agent_sub_account' => 'Sub-accounts',
     ]
 ];

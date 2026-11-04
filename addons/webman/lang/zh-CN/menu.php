@@ -273,5 +273,6 @@ return [
         'limit_management' => '限红管理',
         'limit_group_management' => '限红组管理',
         'platform_config' => '平台配置',
+        'agent_sub_account' => '子账号管理',
     ]
 ];
