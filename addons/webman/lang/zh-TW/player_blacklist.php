@@ -13,7 +13,9 @@ return [
     ],
 
     'action' => [
-        'add' => '加入黑名單',
+        'add'            => '加入黑名單',
+        'remove'         => '移除',
+        'remove_confirm' => '確定要將此身份證號碼從黑名單中移除嗎？',
     ],
 
     'placeholder' => [
@@ -23,6 +25,7 @@ return [
 
     'message' => [
         'add_success'      => '已成功加入黑名單',
+        'remove_success'   => '已成功從黑名單中移除',
         'not_blacklisted'  => '✓ 未加入黑名單',
     ],
 

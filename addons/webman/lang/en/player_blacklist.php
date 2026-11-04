@@ -13,7 +13,9 @@ return [
     ],
 
     'action' => [
-        'add' => 'Add to Blacklist',
+        'add'            => 'Add to Blacklist',
+        'remove'         => 'Remove',
+        'remove_confirm' => 'Are you sure you want to remove this ID number from the blacklist?',
     ],
 
     'placeholder' => [
@@ -23,6 +25,7 @@ return [
 
     'message' => [
         'add_success'      => 'Successfully added to blacklist',
+        'remove_success'   => 'Successfully removed from blacklist',
         'not_blacklisted'  => '✓ Not in blacklist',
     ],
 

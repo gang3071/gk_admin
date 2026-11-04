@@ -13,7 +13,9 @@ return [
     ],
 
     'action' => [
-        'add' => 'ブラックリストに追加',
+        'add'            => 'ブラックリストに追加',
+        'remove'         => '削除',
+        'remove_confirm' => 'このID番号をブラックリストから削除してもよろしいですか？',
     ],
 
     'placeholder' => [
@@ -23,6 +25,7 @@ return [
 
     'message' => [
         'add_success'      => 'ブラックリストへの追加が完了しました',
+        'remove_success'   => 'ブラックリストからの削除が完了しました',
         'not_blacklisted'  => '✓ ブラックリスト未登録',
     ],
 
