@@ -320,6 +320,8 @@ return [
         'all_pages' => '导出全部',
         'export_hint' => '设置完成后，请点击导出按钮进行导出',
         'fixed_columns_hint' => '导出功能已改为固定14列导出，无需选择栏目。',
+        'export_pdf' => '导出 PDF',
+        'export_pdf_no_data' => '没有可导出的交班记录',
     ],
 
     // 交易明细

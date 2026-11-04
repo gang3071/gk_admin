@@ -261,6 +261,8 @@ return [
         'all_pages' => '導出全部',
         'export_hint' => '設置完成後，請點擊導出按鈕進行導出',
         'fixed_columns_hint' => '導出功能已改為固定14列導出，無需選擇欄位。',
+        'export_pdf' => '導出 PDF',
+        'export_pdf_no_data' => '沒有可導出的交班記錄',
     ],
 
     // 交易明細

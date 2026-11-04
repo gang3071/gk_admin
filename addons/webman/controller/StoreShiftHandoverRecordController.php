@@ -3,6 +3,7 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\grid\ShiftReportPdfExporter;
 use addons\webman\grid\ShiftReportExporter;
 use addons\webman\model\AdminUser;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
@@ -19,6 +20,7 @@ use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\response\Response;
+use ExAdmin\ui\support\Request;
 use support\Cache;
 use support\Log;
 
@@ -240,6 +242,12 @@ class StoreShiftHandoverRecordController
             //         ->width('50%')
             // ]);
 
+            // 工具栏 - 导出 PDF（与列表同筛选条件，点击后浏览器直接下载）
+            $grid->tools([
+                Button::create(admin_trans('shift_handover.export.export_pdf'))
+                    ->href(admin_url([$this, 'exportPdf'], ['ex_admin_filter' => Request::input('ex_admin_filter', [])])),
+            ]);
+
             // 操作列
             $grid->actions(function (Actions $actions) {
                 $actions->hideEdit();
@@ -297,6 +305,67 @@ class StoreShiftHandoverRecordController
     public function export()
     {
         // 此方法仅用于权限控制，实际导出由 Grid 的 export 功能处理
+    }
+
+    /**
+     * 导出交班报表 PDF（与列表同筛选条件，浏览器直接下载）
+     * 取数口径与 Excel 导出一致（ShiftReportExporter 固定导出栏位），渲染为 A4 横向、每班一页
+     * @group store
+     * @auth true
+     * @return \support\Response
+     */
+    public function exportPdf()
+    {
+        $exAdminFilter = Request::input('ex_admin_filter', []);
+
+        /** @var AdminUser $admin */
+        $admin = Admin::user();
+
+        // 与列表同口径：自己的交班记录 + 列表实际生效的筛选（is_auto_shift 走框架 eq 规则）
+        $query = StoreAgentShiftHandoverRecord::query()
+            ->where('bind_admin_user_id', $admin->id)
+            ->orderBy('id', 'desc');
+        if (is_numeric($exAdminFilter['is_auto_shift'] ?? null) || !empty($exAdminFilter['is_auto_shift'])) {
+            $query->where('is_auto_shift', $exAdminFilter['is_auto_shift']);
+        }
+
+        $count = (clone $query)->count();
+
+        // 固定默认导出栏位，与 Excel 导出一致
+        $defaultColumns = [
+            'player_name',
+            'player_phone',
+            'open_score_amount',
+            'ticket_open_score_amount',
+            'redeem_amount',
+            'experience_coupon_amount',
+            'welfare_coupon_amount',
+            'electronic_game_bet_amount',
+            'machine_bet_amount',
+            'total_in',
+            'total_out',
+            'profit',
+            'ticket_unredeemed_amount',
+            'activity_give_amount',
+        ];
+
+        $exporter = new ShiftReportPdfExporter();
+        $exporter->setSelectedColumns($defaultColumns);
+        // 进度缓存与导出框架同套机制（同步下载无进度条，但 write() 依赖它落进度状态）
+        $exporter->setProgressKey('export_pdf_' . uniqid());
+        $exporter->count(max(1, $count));
+
+        if ($count > 0) {
+            $query->chunk(500, function ($records) use ($exporter) {
+                $exporter->write($records->toArray(), null);
+            });
+        } else {
+            $exporter->writeEmptyHint(admin_trans('shift_handover.export.export_pdf_no_data'));
+        }
+
+        $filename = $exporter->save(\addons\webman\filesystem\Filesystem::path(''));
+
+        return \support\Response::download($filename, 'shift_report_' . date('YmdHis') . '.pdf');
     }
 
     /**

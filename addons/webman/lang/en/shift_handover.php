@@ -262,6 +262,8 @@ return [
         'all_pages' => 'Export All',
         'export_hint' => 'After settings are saved, please click the export button to export',
         'fixed_columns_hint' => 'Export has been changed to fixed 14 columns. No column selection needed.',
+        'export_pdf' => 'Export PDF',
+        'export_pdf_no_data' => 'No shift records to export',
     ],
 
     // Transaction Details

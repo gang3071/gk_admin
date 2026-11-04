@@ -624,6 +624,16 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/export',
                 'title' => '导出交班记录',
             ],
+            // 导出交班报表PDF
+            [
+                'id' => 'addons\webman\controller\StoreShiftHandoverRecordController\exportPdf',
+                'pid' => 'addons\webman\controller\StoreShiftHandoverRecordController\index',
+                'action' => 'exportPdf',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/exportPdf',
+                'title' => '导出交班报表PDF',
+            ],
         ]
     ],
 
