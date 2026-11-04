@@ -92,14 +92,18 @@ class VipLevelCashback extends Model
      *
      * @param float $bet 下注金额
      * @param float $cashbackRatio 反水比例
+     * @param float $parentRatio 上級推廣紅利比例
      * @return float
      */
-    public static function calculateCashbackAmount(float $bet, float $cashbackRatio): float
+    public static function calculateCashbackAmount(float $bet, float $cashbackRatio, float $parentRatio): float
     {
         if ($bet <= 0 || $cashbackRatio <= 0) {
             return 0;
         }
-        return round($bet * $cashbackRatio / 100, 4);
+
+        $cashbackAmount = $bet * ($cashbackRatio / 100) * (1 - $parentRatio / 100);
+
+        return round($cashbackAmount, 4);
     }
 
     /**
@@ -107,13 +111,17 @@ class VipLevelCashback extends Model
      *
      * @param float $cashbackRatio 反水比例
      * @param float $cashbackAmount 反水金额
+     * @param float $parentRatio 上級推廣紅利比例
+     * @param float $parentAmount 上級推廣紅利金额
      * @return array [cashback_ratio, cashback_amount] 存储值（0值转为null）
      */
-    public static function formatForStorage(float $cashbackRatio, float $cashbackAmount): array
+    public static function formatForStorage(float $cashbackRatio, float $cashbackAmount, float $parentRatio, float $parentAmount): array
     {
         return [
             'cashback_ratio' => $cashbackRatio > 0 ? $cashbackRatio : null,
             'cashback_amount' => $cashbackAmount > 0 ? $cashbackAmount : null,
+            'parent_cashback_ratio' => $parentRatio > 0 ? $parentRatio : 0,
+            'parent_cashback_amount' => $parentAmount > 0 ? $parentAmount : 0,
         ];
     }
 }

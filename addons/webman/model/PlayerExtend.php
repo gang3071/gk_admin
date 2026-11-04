@@ -183,6 +183,22 @@ class PlayerExtend extends Model
     }
 
     /**
+     * 增加推廣紅利（待領取 & 總額）
+     *
+     * @param float $amount 推廣紅利金额
+     * @return void
+     */
+    public function addChildrenCashback(float $amount): void
+    {
+        if ($amount <= 0) {
+            return;
+        }
+
+        $this->increment('pending_children_cashback_amount', $amount);
+        $this->increment('total_children_cashback_amount', $amount);
+    }
+
+    /**
      * 领取反水（清零待领取金额）
      *
      * @return float 本次领取的金额

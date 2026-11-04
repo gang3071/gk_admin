@@ -126,6 +126,7 @@ class VipCashbackService
 
             // 批量获取玩家信息
             $playerIds = $records->pluck('player_id')->unique();
+            $playerIds = $records->pluck('parent_player_id')->unique()->merge($playerIds);
             $players = $this->queryPlayers($playerIds);
 
             // 获取默认VIP等级（最低等级）
@@ -138,10 +139,8 @@ class VipCashbackService
             // 批量预加载反水比例（避免 N+1 查询）
             // 预加载所有启用的VIP等级，防止升级后新等级的反水比例未被加载
             $platformIds = $records->pluck('platform_id')->unique()->toArray();
-            $allVipLevelIds = VipLevel::query()
-                ->where('status', VipLevel::STATUS_ENABLED)
-                ->pluck('id')
-                ->toArray();
+            $allVipLevel = VipLevel::query()->where('status', VipLevel::STATUS_ENABLED)->get()->keyBy('id')->toArray();
+            $allVipLevelIds = array_column($allVipLevel, 'id');
             $cashbackMap = $this->preloadCashbackRatios($allVipLevelIds, $platformIds);
 
             // 获取电子游戏平台ID列表
@@ -205,10 +204,37 @@ class VipCashbackService
                         continue;
                     }
 
-                    // 计算反水（从预加载缓存获取）
+                    // ---------------------------------------- 推廣紅利 ----------------------------------------
+                    $parentRatio = 0;
+                    $parentAmount = 0;
                     $cashbackRatio = $cashbackMap[$vipLevelId][$record->platform_id] ?? 0;
-                    $cashbackAmount = VipLevelCashback::calculateCashbackAmount($record->bet, $cashbackRatio);
-                    $storageData = VipLevelCashback::formatForStorage($cashbackRatio, $cashbackAmount);
+
+                    if (! empty($record->parent_player_id)) {
+                        $parent = $players->get($record->parent_player_id);
+
+                        if ($parent) {
+                            $vipLevel = $allVipLevel[$parent->vip_level_id] ?? null;
+
+                            if (! empty($vipLevel['children_cashback_ratio'])) {
+                                $parentRatio = $vipLevel['children_cashback_ratio'];
+                                $parentAmount = $record->bet * ($cashbackRatio / 100) * ($parentRatio / 100);
+                                $parentAmount = round($parentAmount, 5);
+
+                                if ($parentAmount > 0) {
+                                    $this->updateParentCashbackAmount($parent, $parentAmount);
+                                }
+                            }
+                        } else {
+                            $this->log('debug', '跳过记录：上級玩家不存在，不計算推廣紅利', [
+                                'record_id' => $record->id,
+                                'player_id' => $record->player_id,
+                            ]);
+                        }
+                    }
+
+                    // 计算反水（从预加载缓存获取）
+                    $cashbackAmount = VipLevelCashback::calculateCashbackAmount($record->bet, $cashbackRatio, $parentRatio);
+                    $storageData = VipLevelCashback::formatForStorage($cashbackRatio, $cashbackAmount, $parentRatio, $parentAmount);
 
                     // 更新游戏记录
                     $this->updateRecordCashback($record, $vipLevelId, $storageData);
@@ -381,6 +407,8 @@ class VipCashbackService
         $record->vip_level_id = $vipLevelId;
         $record->cashback_ratio = $storageData['cashback_ratio'];
         $record->cashback_amount = $storageData['cashback_amount'];
+        $record->parent_cashback_ratio = $storageData['parent_cashback_ratio'];
+        $record->parent_cashback_amount = $storageData['parent_cashback_amount'];
         $record->save();
     }
 
@@ -407,6 +435,36 @@ class VipCashbackService
             $this->log('warning', '更新玩家反水金额失败', [
                 'player_id' => $player->id,
                 'cashback_amount' => $cashbackAmount,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * 更新上級玩家推廣紅利
+     * 如果 player_extend 不存在则自动创建
+     *
+     * @param Player $player
+     * @param float $amount 推廣紅利金额
+     */
+    protected function updateParentCashbackAmount($player, float $amount): void
+    {
+        try {
+            $playerExtend = $player->player_extend;
+
+            if (! $playerExtend) {
+                $playerExtend = new PlayerExtend();
+                $playerExtend->player_id = $player->id;
+                $playerExtend->pending_children_cashback_amount = 0;
+                $playerExtend->total_children_cashback_amount = 0;
+                $playerExtend->save();
+            }
+
+            $playerExtend->addChildrenCashback($amount);
+        } catch (\Throwable $e) {
+            $this->log('warning', '更新上級玩家推廣紅利失敗', [
+                'player_id' => $player->id,
+                'amount' => $amount,
                 'error' => $e->getMessage(),
             ]);
         }
