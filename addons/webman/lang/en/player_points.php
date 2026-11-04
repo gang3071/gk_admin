@@ -37,6 +37,8 @@ return [
         PlayerPointsRecord::TYPE_POINTS_DEDUCT => 'Deduct Points',
         PlayerPointsRecord::TYPE_POINTS_FREEZE => 'Freeze Points',
         PlayerPointsRecord::TYPE_POINTS_UNFREEZE => 'Unfreeze Points',
+        PlayerPointsRecord::TYPE_TRANSFER_OUT => 'Transfer Out',
+        PlayerPointsRecord::TYPE_TRANSFER_IN => 'Transfer In',
     ],
 
     'action' => [

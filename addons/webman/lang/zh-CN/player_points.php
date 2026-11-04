@@ -37,6 +37,8 @@ return [
         PlayerPointsRecord::TYPE_POINTS_DEDUCT => '扣除积分',
         PlayerPointsRecord::TYPE_POINTS_FREEZE => '冻结积分',
         PlayerPointsRecord::TYPE_POINTS_UNFREEZE => '解冻积分',
+        PlayerPointsRecord::TYPE_TRANSFER_OUT => '积分转赠（送出）',
+        PlayerPointsRecord::TYPE_TRANSFER_IN => '积分转赠（收入）',
     ],
 
     'action' => [

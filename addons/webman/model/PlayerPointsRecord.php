@@ -39,6 +39,8 @@ class PlayerPointsRecord extends Model
     const TYPE_POINTS_DEDUCT = 8;    // 扣除积分
     const TYPE_POINTS_FREEZE = 9;    // 冻结积分
     const TYPE_POINTS_UNFREEZE = 10; // 解冻积分
+    const TYPE_TRANSFER_OUT = 11;    // 积分转赠（送出）
+    const TYPE_TRANSFER_IN = 12;     // 积分转赠（收入）
 
     // 来源常量
     const SOURCE_BETTING_SUMMARY = 'betting_summary';
@@ -91,8 +93,10 @@ class PlayerPointsRecord extends Model
             self::TYPE_REFUND => admin_trans('player_points.type.' . self::TYPE_REFUND),
             self::TYPE_POINTS_ADD => admin_trans('player_points.type.' . self::TYPE_POINTS_ADD),
             self::TYPE_POINTS_DEDUCT => admin_trans('player_points.type.' . self::TYPE_POINTS_DEDUCT),
-            self::TYPE_POINTS_FREEZE => admin_trans('player_points.type.' . self::TYPE_POINTS_FREEZE),
-            self::TYPE_POINTS_UNFREEZE => admin_trans('player_points.type.' . self::TYPE_POINTS_UNFREEZE),
+            self::TYPE_POINTS_FREEZE    => admin_trans('player_points.type.' . self::TYPE_POINTS_FREEZE),
+            self::TYPE_POINTS_UNFREEZE  => admin_trans('player_points.type.' . self::TYPE_POINTS_UNFREEZE),
+            self::TYPE_TRANSFER_OUT     => admin_trans('player_points.type.' . self::TYPE_TRANSFER_OUT),
+            self::TYPE_TRANSFER_IN      => admin_trans('player_points.type.' . self::TYPE_TRANSFER_IN),
         ];
 
         return $types[$this->type] ?? admin_trans('admin.unknown', [], 'Unknown');
