@@ -107,6 +107,9 @@ class PlayerLotteryRecordController
                 });
             }
 
+            // 预加载玩家与店家关联，避免列表逐行补查
+            $grid->model()->with(['player', 'player.storeAdmin']);
+
             // 排序
             $grid->model()->orderBy('created_at', 'desc');
 
@@ -175,6 +178,19 @@ class PlayerLotteryRecordController
                 ]);
             })->align('center')->align('center');
             $grid->column('channel.name', admin_trans('player.fields.department_id'))->width('150px')->align('center');
+            $grid->column('player.storeAdmin.username', admin_trans('player_lottery_record.fields.store'))->display(function (
+                $val,
+                PlayerLotteryRecord $data
+            ) {
+                if ($data->player && !empty($data->player->storeAdmin)) {
+                    return Html::create()->content([
+                        Tag::create($data->player->storeAdmin->nickname ?: $data->player->storeAdmin->username)->color('blue')
+                    ]);
+                }
+                return Html::create()->content([
+                    Tag::create(admin_trans('admin.unassigned'))->color('default')
+                ]);
+            })->width(120)->align('center');
             $grid->column('lottery_type', admin_trans('lottery.fields.lottery_type'))->display(function ($val) {
                 return Html::create()->content([
                     Tag::create(admin_trans('lottery.lottery_type.' . $val))->color($val == PlayerLotteryRecord::SOURCE_MACHINE ? '#108ee9' : '#f50')
