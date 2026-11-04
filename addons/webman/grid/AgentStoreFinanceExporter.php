@@ -19,7 +19,7 @@ class AgentStoreFinanceExporter extends Excel
             $savedPath = $export->save($directory);
             $file = '/storage/' . basename($savedPath);
 
-            return Request::getSchemeAndHttpHost() . $file;
+            return $file;
         });
     }
 }
