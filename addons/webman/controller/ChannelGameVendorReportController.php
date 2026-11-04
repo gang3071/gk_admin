@@ -138,9 +138,9 @@ class ChannelGameVendorReportController
                     ]);
                 $filter->hidden('start_date');
                 $filter->hidden('end_date');
-                $filter->form()->dateRange('start_date', 'end_date', '')->placeholder([
-                    admin_trans('public_msg.date_start'),
-                    admin_trans('public_msg.date_end'),
+                $filter->form()->dateTimeRange('start_date', 'end_date', '')->placeholder([
+                    admin_trans('public_msg.created_at_start'),
+                    admin_trans('public_msg.created_at_end'),
                 ]);
                 $filter->eq()->select('platform_id')
                     ->placeholder(admin_trans('game_vendor_report.platform'))

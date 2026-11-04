@@ -3,6 +3,7 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\model\AdminUser;
 use addons\webman\model\GameLottery;
 use addons\webman\model\GameType;
 use addons\webman\model\Lottery;
@@ -99,6 +100,15 @@ class PlayerLotteryRecordController
             if (!empty($requestFilter['department_id'])) {
                 $grid->model()->where('department_id', $requestFilter['department_id']);
             }
+            // 所属门店筛选
+            if (!empty($requestFilter['player']['store_admin_id'])) {
+                $grid->model()->whereHas('player', function ($query) use ($requestFilter) {
+                    $query->where('store_admin_id', $requestFilter['player']['store_admin_id']);
+                });
+            }
+
+            // 预加载玩家与店家关联，避免列表逐行补查
+            $grid->model()->with(['player', 'player.storeAdmin']);
 
             // 排序
             $grid->model()->orderBy('created_at', 'desc');
@@ -168,6 +178,19 @@ class PlayerLotteryRecordController
                 ]);
             })->align('center')->align('center');
             $grid->column('channel.name', admin_trans('player.fields.department_id'))->width('150px')->align('center');
+            $grid->column('player.storeAdmin.username', admin_trans('player_lottery_record.fields.store'))->display(function (
+                $val,
+                PlayerLotteryRecord $data
+            ) {
+                if ($data->player && !empty($data->player->storeAdmin)) {
+                    return Html::create()->content([
+                        Tag::create($data->player->storeAdmin->nickname ?: $data->player->storeAdmin->username)->color('blue')
+                    ]);
+                }
+                return Html::create()->content([
+                    Tag::create(admin_trans('admin.unassigned'))->color('default')
+                ]);
+            })->width(120)->align('center');
             $grid->column('lottery_type', admin_trans('lottery.fields.lottery_type'))->display(function ($val) {
                 return Html::create()->content([
                     Tag::create(admin_trans('lottery.lottery_type.' . $val))->color($val == PlayerLotteryRecord::SOURCE_MACHINE ? '#108ee9' : '#f50')
@@ -329,6 +352,13 @@ class PlayerLotteryRecordController
                     ->dropdownMatchSelectWidth()
                     ->placeholder(admin_trans('player.fields.department_id'))
                     ->remoteOptions(admin_url(['addons-webman-controller-ChannelController', 'getDepartmentOptions']));
+                // 所属门店筛选
+                $filter->eq()->select('player.store_admin_id')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('player_lottery_record.fields.store'))
+                    ->options($this->storeOptions());
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');
                 $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '')->placeholder([
@@ -922,5 +952,24 @@ class PlayerLotteryRecordController
                 return message_success(admin_trans('player_lottery_record.action_success'));
             });
         });
+    }
+
+    /**
+     * 门店选项（总后台：全部店家）
+     * 含停用/删除门店：不影响历史彩金领取记录的筛选可见性
+     * @return array
+     */
+    protected function storeOptions(): array
+    {
+        return AdminUser::query()
+            ->where('type', AdminUser::TYPE_STORE)
+            ->orderBy('id', 'desc')
+            ->get(['id', 'nickname', 'username'])
+            ->mapWithKeys(function ($store) {
+                $label = $store->nickname ?: $store->username;
+                $label .= " ({$store->username})";
+                return [$store->id => $label];
+            })
+            ->toArray();
     }
 }
