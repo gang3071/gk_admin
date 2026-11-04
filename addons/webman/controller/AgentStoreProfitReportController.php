@@ -625,6 +625,7 @@ class AgentStoreProfitReportController
     /**
      * 門店帳務報表
      * @auth true
+     * @group agent
      */
     public function finance(): Grid
     {
@@ -698,7 +699,7 @@ class AgentStoreProfitReportController
             $grid->hideDelete();
             $grid->hideSelection();
 
-            $grid->export('StoreProfitReport' . date('ymdHis'));
+            $grid->export((new \addons\webman\grid\AgentStoreFinanceExporter())->filename('StoreProfitReport' . date('ymdHis')));
             $grid->hideExportSelection();
 
             $grid->expandFilter();
