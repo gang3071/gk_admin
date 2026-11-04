@@ -149,6 +149,7 @@ return [
         'machine_edit_log' => 'マシン変更ログ',
         'lottery_add_log' => '宝くじプール蓄積ログ',
         'player_money_edit_log' => 'ウォレット操作ログ',
+        'machine_ctrl_log' => 'マシン制御ログ',
         /** TODO 翻訳終了 */
         'computer_game' => '電子ゲーム',
         'game_platforms' => 'ゲームプラットフォームリスト',

@@ -149,6 +149,7 @@ return [
         'machine_edit_log' => 'Machine change log',
         'lottery_add_log' => 'Lottery pool accumulation log',
         'player_money_edit_log' => 'Wallet operation log',
+        'machine_ctrl_log' => 'Machine control log',
         'computer_game' => 'computer game',
         'game_platforms' => 'List of gaming platforms',
         'game_transfer_record' => 'Game transfer records',
