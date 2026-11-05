@@ -148,6 +148,7 @@ return [
         'machine_edit_log' => '機台異動日誌',
         'lottery_add_log' => '彩金獎池累積日誌',
         'player_money_edit_log' => '錢包操作日誌',
+        'machine_ctrl_log' => '機台控制日誌',
         'computer_game' => '電子遊戲',
         'game_platforms' => '遊戲平臺清單',
         'game_transfer_record' => '轉帳記錄',

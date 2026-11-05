@@ -1522,6 +1522,24 @@ return [
         'url' => 'ex-admin/addons-webman-controller-PhoneSmsLogController/index',
         'title' => '短信日志',
     ],
+    [
+        'id' => 'addons\webman\controller\MachineCtrlLogController\index',
+        'pid' => 'addons\webman\controller\MachineKeepingLogController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-MachineCtrlLogController/index',
+        'title' => '机台控制日志',
+    ],
+    [
+        'id' => 'addons\webman\controller\MachineCtrlLogController\search',
+        'pid' => 'addons\webman\controller\MachineCtrlLogController\index',
+        'action' => 'search',
+        'method' => 'post',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-MachineCtrlLogController/search',
+        'title' => '机台控制日志查询',
+    ],
     //活动管理
     [
         'id' => 'addons\webman\controller\PlayerActivityRecordController-',
