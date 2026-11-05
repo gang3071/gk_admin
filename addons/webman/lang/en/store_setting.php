@@ -16,6 +16,7 @@ return [
         'business_hours' => 'Business Hours',
         'enable_physical_machine' => 'Enable Physical Machine',
         'enable_live_baccarat' => 'Enable Live Baccarat',
+        'enable_points' => 'Enable Points',
         'machine_crash_amount' => 'Machine Crash Amount',
         'menu_image' => 'Menu Image',
     ],

@@ -16,6 +16,7 @@ return [
         'business_hours' => '営業時間',
         'enable_physical_machine' => '実機を有効にする',
         'enable_live_baccarat' => 'ライブバカラを有効にする',
+        'enable_points' => 'ポイントを有効にする',
         'machine_crash_amount' => 'クラッシュ金額',
         'menu_image' => 'メニュー画像',
     ],

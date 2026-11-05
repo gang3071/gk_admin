@@ -4606,7 +4606,7 @@ class ChannelPlayerController
 
             // enable_physical_machine
             $storeSettingMachine = new StoreSetting();
-            $storeSetting->department_id = $currentDepartmentId;
+            $storeSettingMachine->department_id = $currentDepartmentId;
             $storeSettingMachine->admin_user_id = $adminUser->id;
             $storeSettingMachine->feature = 'enable_physical_machine';
             $storeSettingMachine->num = 1; // 默认启用
@@ -4615,12 +4615,21 @@ class ChannelPlayerController
 
             // enable_live_baccarat
             $storeSettingBaccarat = new StoreSetting();
-            $storeSetting->department_id = $currentDepartmentId;
+            $storeSettingBaccarat->department_id = $currentDepartmentId;
             $storeSettingBaccarat->admin_user_id = $adminUser->id;
             $storeSettingBaccarat->feature = 'enable_live_baccarat';
             $storeSettingBaccarat->num = 1; // 默认启用
             $storeSettingBaccarat->status = 1;
             $storeSettingBaccarat->save();
+
+            // enable_points（积分开关，默认开启）
+            $storeSettingPoints = new StoreSetting();
+            $storeSettingPoints->department_id = $currentDepartmentId;
+            $storeSettingPoints->admin_user_id = $adminUser->id;
+            $storeSettingPoints->feature = 'enable_points';
+            $storeSettingPoints->num = 1; // 默认启用
+            $storeSettingPoints->status = 1;
+            $storeSettingPoints->save();
 
             // machine_crash_amount（爆机金额）
             $storeSettingCrashAmount = new StoreSetting();
@@ -4888,6 +4897,15 @@ class ChannelPlayerController
             $storeSettingBaccarat->num = 1; // 默认启用
             $storeSettingBaccarat->status = 1;
             $storeSettingBaccarat->save();
+
+            // enable_points（积分开关，默认开启）
+            $storeSettingPoints = new StoreSetting();
+            $storeSettingPoints->department_id = $departmentId;
+            $storeSettingPoints->admin_user_id = $adminUser->id;
+            $storeSettingPoints->feature = 'enable_points';
+            $storeSettingPoints->num = 1; // 默认启用
+            $storeSettingPoints->status = 1;
+            $storeSettingPoints->save();
 
             // machine_crash_amount（爆机金额）
             $storeSettingCrashAmount = new StoreSetting();

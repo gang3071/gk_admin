@@ -320,6 +320,15 @@ class AgentController
             $storeSettingBaccarat->status = 1;
             $storeSettingBaccarat->save();
 
+            // enable_points（积分开关，默认开启）
+            $storeSettingPoints = new StoreSetting();
+            $storeSettingPoints->department_id = $departmentId;
+            $storeSettingPoints->admin_user_id = $adminUser->id;
+            $storeSettingPoints->feature = 'enable_points';
+            $storeSettingPoints->num = 1;
+            $storeSettingPoints->status = 1;
+            $storeSettingPoints->save();
+
             // machine_crash_amount（爆机金额）
             $storeSettingCrashAmount = new StoreSetting();
             $storeSettingCrashAmount->department_id = $departmentId;

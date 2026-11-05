@@ -16,6 +16,7 @@ return [
         'business_hours' => '营业时间段',
         'enable_physical_machine' => '是否开启实体机台',
         'enable_live_baccarat' => '是否开启真人百家',
+        'enable_points' => '是否开启积分',
         'machine_crash_amount' => '爆机金额',
         'menu_image' => '点菜菜单图片',
     ],
