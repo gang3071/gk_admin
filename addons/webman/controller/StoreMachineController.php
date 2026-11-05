@@ -91,9 +91,14 @@ class StoreMachineController
                 $grid->model()->where('admin_users.id', $filterData['store_id_custom']);
             }
 
-            // 状态筛选
+            // 状态筛选（正常/停用/已撤店）
             if (isset($filterData['status_custom']) && $filterData['status_custom'] !== null && $filterData['status_custom'] !== '') {
-                $grid->model()->where('admin_users.status', $filterData['status_custom']);
+                if ($filterData['status_custom'] === 'hidden') {
+                    $grid->model()->where('admin_users.is_hide', 1);
+                } else {
+                    $grid->model()->where('admin_users.status', $filterData['status_custom'])
+                        ->where('admin_users.is_hide', 0);
+                }
             }
 
             // 用户名筛选
@@ -172,16 +177,15 @@ class StoreMachineController
                 ->width(120)->align('center');
 
             $grid->column('status', admin_trans('store_machine.fields.status'))->display(function ($value, $data) {
-                $tags = [];
-                $tags[] = match ((int) $value) {
+                // 狀態只顯示一類：已撤店優先，否則顯示正常/停用
+                if (!empty($data['is_hide'])) {
+                    return Tag::create(admin_trans('store_machine.status.hidden'))->color('volcano');
+                }
+                return match ((int) $value) {
                     0 => Tag::create(admin_trans('store_machine.status.disabled'))->color('red'),
                     1 => Tag::create(admin_trans('store_machine.status.normal'))->color('green'),
                     default => '',
                 };
-                if (!empty($data['is_hide'])) {
-                    $tags[] = Tag::create(admin_trans('store_machine.status.hidden'))->color('volcano');
-                }
-                return Html::create()->content($tags);
             })->width(120)->align('center');
 
             $grid->column('created_at', admin_trans('store_machine.fields.created_at'))->width(160)->align('center');
@@ -197,7 +201,8 @@ class StoreMachineController
                     ->placeholder(admin_trans('store_machine.placeholder.status'))
                     ->options([
                         1 => admin_trans('store_machine.status.normal'),
-                        0 => admin_trans('store_machine.status.disabled')
+                        0 => admin_trans('store_machine.status.disabled'),
+                        'hidden' => admin_trans('store_machine.status.hidden'),
                     ])
                     ->style(['width' => '150px']);
 
