@@ -86,7 +86,10 @@
 <script>
 export default {
   name: 'MachineCtrlLogs',
-  props: { id: { type: [Number, String], required: true } },
+  props: {
+    id: { type: [Number, String], required: true },
+    fetchUrl: { type: String, default: '/ex-admin/addons-webman-controller-PlayerGameLogController/fetchCtrlLogs' },
+  },
   data() {
     return { loading: false, error: null, logs: [], timeRange: '', hideNoise: true, hideHeartbeat: false };
   },
@@ -144,7 +147,7 @@ export default {
       this.loading = true; this.error = null;
       try {
         const res = await fetch(
-          '/ex-admin/addons-webman-controller-PlayerGameLogController/fetchCtrlLogs',
+          this.fetchUrl,
           { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'Authorization': this.getToken() }, body: JSON.stringify({ id: this.id }) }
         );
         const j = await res.json();
