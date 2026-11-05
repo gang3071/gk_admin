@@ -340,6 +340,62 @@ class ChannelAgentController
         $sortFieldMapping = [
             'vip_level_name' => 'vip_level_sort',
         ];
+
+        // 打码量排序：聚合 join 仅在按打码列排序时挂载（count 之后挂，保持 count 轻量），
+        // 口径与页内批量统计一致（dataAuth 全局作用域自动生效）
+        $sortNeedsElectronicBet = ($exAdminSortField === 'electronic_bet_amount' && $exAdminSortBy !== '');
+        $sortNeedsMachineBet = ($exAdminSortField === 'machine_bet_amount' && $exAdminSortBy !== '');
+        $sortNeedsTotalBet = ($exAdminSortField === 'total_bet_amount' && $exAdminSortBy !== '');
+
+        if ($sortNeedsElectronicBet || $sortNeedsMachineBet || $sortNeedsTotalBet) {
+            // 当前账号可见玩家集合（聚合 join 限定范围内 GROUP BY，避免全站聚合），与上方查询条件同口径
+            $visiblePlayerIds = Player::query()
+                ->select('id')
+                ->where('type', Player::TYPE_PLAYER)
+                ->where('is_promoter', 0);
+            if ($admin->type === AdminUser::TYPE_STORE) {
+                $visiblePlayerIds->where('store_admin_id', $admin->id);
+            } elseif ($admin->type === AdminUser::TYPE_AGENT) {
+                $storeIds = $admin->childStores()
+                    ->where('type', AdminUser::TYPE_STORE)
+                    ->pluck('id')
+                    ->toArray();
+                if (empty($storeIds)) {
+                    $visiblePlayerIds->whereRaw('1 = 0');
+                } else {
+                    $visiblePlayerIds->whereIn('store_admin_id', $storeIds);
+                }
+            } elseif ($admin->type === AdminUser::TYPE_CHANNEL) {
+                $visiblePlayerIds->where('department_id', $admin->department_id);
+            }
+        }
+        if ($sortNeedsElectronicBet || $sortNeedsTotalBet) {
+            $eleSub = \addons\webman\model\PlayGameRecord::query()
+                ->selectRaw('player_id, COALESCE(SUM(bet), 0) as electronic_bet_amount')
+                // 电子打码量：过滤结算状态为已取消的订单
+                ->where('settlement_status', '!=', \addons\webman\model\PlayGameRecord::SETTLEMENT_STATUS_CANCELLED)
+                ->whereIn('player_id', $visiblePlayerIds)
+                ->groupBy('player_id');
+            $query->leftJoinSub($eleSub, 'electronic_bet_stats', function ($join) {
+                $join->on('player.id', '=', 'electronic_bet_stats.player_id');
+            });
+            $sortFieldMapping['electronic_bet_amount'] = 'electronic_bet_stats.electronic_bet_amount';
+        }
+        if ($sortNeedsMachineBet || $sortNeedsTotalBet) {
+            $machineSub = \addons\webman\model\PlayerGameLog::query()
+                ->selectRaw('player_id, COALESCE(SUM(chip_amount), 0) as machine_bet_amount')
+                ->whereIn('player_id', $visiblePlayerIds)
+                ->groupBy('player_id');
+            $query->leftJoinSub($machineSub, 'machine_bet_stats', function ($join) {
+                $join->on('player.id', '=', 'machine_bet_stats.player_id');
+            });
+            $sortFieldMapping['machine_bet_amount'] = 'machine_bet_stats.machine_bet_amount';
+        }
+        if ($sortNeedsTotalBet) {
+            // 总打码 = 电子 + 机台（与列表展示口径一致）
+            $sortFieldMapping['total_bet_amount'] = Db::raw('(COALESCE(electronic_bet_stats.electronic_bet_amount, 0) + COALESCE(machine_bet_stats.machine_bet_amount, 0))');
+        }
+
         $actualSortField = $sortFieldMapping[$exAdminSortField] ?? $exAdminSortField;
 
         $list = $query->forPage($page, $size)
@@ -357,9 +413,28 @@ class ChannelAgentController
             $playerIds = array_column($list, 'id');
             $balances = WalletService::getBatchBalance($playerIds, PlayerPlatformCash::PLATFORM_SELF);
 
+            // 电子打码量（仅当前页；过滤结算状态为已取消的订单）
+            $electronicBetByPlayer = \addons\webman\model\PlayGameRecord::query()
+                ->whereIn('player_id', $playerIds)
+                ->where('settlement_status', '!=', \addons\webman\model\PlayGameRecord::SETTLEMENT_STATUS_CANCELLED)
+                ->groupBy('player_id')
+                ->selectRaw('player_id, COALESCE(SUM(bet), 0) as total_bet')
+                ->pluck('total_bet', 'player_id');
+
+            // 机台打码量（仅当前页）
+            $machineBetByPlayer = \addons\webman\model\PlayerGameLog::query()
+                ->whereIn('player_id', $playerIds)
+                ->groupBy('player_id')
+                ->selectRaw('player_id, COALESCE(SUM(chip_amount), 0) as total_chip')
+                ->pluck('total_chip', 'player_id');
+
             // 将 Redis 缓存余额合并到列表数据中，并修正精度
             foreach ($list as &$item) {
                 $item['money'] = number_format($balances[$item['id']] ?? 0.0, 2, '.', '');
+                // 打码量：电子 / 机台 / 总（电子 + 机台）
+                $item['electronic_bet_amount'] = floatval($electronicBetByPlayer[$item['id']] ?? 0);
+                $item['machine_bet_amount'] = floatval($machineBetByPlayer[$item['id']] ?? 0);
+                $item['total_bet_amount'] = $item['electronic_bet_amount'] + $item['machine_bet_amount'];
             }
             unset($item);
         }
@@ -505,6 +580,16 @@ class ChannelAgentController
                 return number_format(floatval($value), 2);
             })->sortable()->width('100px')->align('center');
             $grid->column('lottery_amount', admin_trans('channel_agent.fields.lottery_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->sortable()->width('100px')->align('center');
+            // 打码量：电子（过滤已取消）/ 机台 / 总
+            $grid->column('electronic_bet_amount', admin_trans('player.electronic_bet_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->sortable()->width('100px')->align('center');
+            $grid->column('machine_bet_amount', admin_trans('player.machine_bet_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->sortable()->width('100px')->align('center');
+            $grid->column('total_bet_amount', admin_trans('player.total_bet_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->sortable()->width('100px')->align('center');
             $grid->column('subtotal', admin_trans('channel_agent.fields.subtotal'))->display(function ($value) {
