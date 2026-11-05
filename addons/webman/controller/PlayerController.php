@@ -340,6 +340,39 @@ class PlayerController
         $sortFieldMapping = [
             'vip_level_name' => 'vip_level_sort',
         ];
+
+        // 打码量排序：聚合 join 仅在按打码列排序时挂载，口径与页内批量统计一致
+        $sortNeedsElectronicBet = ($exAdminSortField === 'electronic_bet_amount' && $exAdminSortBy !== '');
+        $sortNeedsMachineBet = ($exAdminSortField === 'machine_bet_amount' && $exAdminSortBy !== '');
+        $sortNeedsTotalBet = ($exAdminSortField === 'total_bet_amount' && $exAdminSortBy !== '');
+
+        if ($sortNeedsElectronicBet || $sortNeedsTotalBet) {
+            $eleSub = PlayGameRecord::query()
+                ->selectRaw('player_id, COALESCE(SUM(bet), 0) as electronic_bet_amount')
+                // 电子打码量：过滤结算状态为已取消的订单
+                ->where('settlement_status', '!=', PlayGameRecord::SETTLEMENT_STATUS_CANCELLED)
+                ->whereIn('player_id', Player::query()->select('id')->where('type', Player::TYPE_PLAYER))
+                ->groupBy('player_id');
+            $query->leftJoinSub($eleSub, 'electronic_bet_stats', function ($join) {
+                $join->on('player.id', '=', 'electronic_bet_stats.player_id');
+            });
+            $sortFieldMapping['electronic_bet_amount'] = 'electronic_bet_stats.electronic_bet_amount';
+        }
+        if ($sortNeedsMachineBet || $sortNeedsTotalBet) {
+            $machineSub = PlayerGameLog::query()
+                ->selectRaw('player_id, COALESCE(SUM(chip_amount), 0) as machine_bet_amount')
+                ->whereIn('player_id', Player::query()->select('id')->where('type', Player::TYPE_PLAYER))
+                ->groupBy('player_id');
+            $query->leftJoinSub($machineSub, 'machine_bet_stats', function ($join) {
+                $join->on('player.id', '=', 'machine_bet_stats.player_id');
+            });
+            $sortFieldMapping['machine_bet_amount'] = 'machine_bet_stats.machine_bet_amount';
+        }
+        if ($sortNeedsTotalBet) {
+            // 总打码 = 电子 + 机台（与列表展示口径一致）
+            $sortFieldMapping['total_bet_amount'] = DB::raw('(COALESCE(electronic_bet_stats.electronic_bet_amount, 0) + COALESCE(machine_bet_stats.machine_bet_amount, 0))');
+        }
+
         $actualSortField = $sortFieldMapping[$exAdminSortField] ?? $exAdminSortField;
 
         $list = (clone $query)->forPage($page, $size)
@@ -546,13 +579,13 @@ class PlayerController
             // 打码量：电子（过滤已取消）/ 机台 / 总
             $grid->column('electronic_bet_amount', admin_trans('player.electronic_bet_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
-            })->width(120)->align('center');
+            })->sortable()->width(120)->align('center');
             $grid->column('machine_bet_amount', admin_trans('player.machine_bet_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
-            })->width(120)->align('center');
+            })->sortable()->width(120)->align('center');
             $grid->column('total_bet_amount', admin_trans('player.total_bet_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
-            })->width(120)->align('center');
+            })->sortable()->width(120)->align('center');
             $grid->column('remark', admin_trans('player_extend.fields.remark'))->display(function ($value) {
                 return ToolTip::create(Str::of($value)->limit(30, ' (...)'))->title($value);
             })->editable(

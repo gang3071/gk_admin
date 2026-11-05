@@ -243,17 +243,26 @@ class ChannelPlayerController
             'vip_level_name' => Db::raw('COALESCE(vip_level.sort, ' . (int)$minVipSort . ')'),
             'subtotal' => Db::raw('(COALESCE(player_extend.recharge_amount, 0) - COALESCE(player_extend.withdraw_amount, 0))'),
         ];
-        // 只有按彩金/电子打码排序时才挂聚合 join（限定本渠道玩家，避免全站 GROUP BY）
+        // 只有按彩金/打码量排序时才挂聚合 join（限定本渠道玩家，避免全站 GROUP BY）
         $sortNeedsLottery = ($exAdminSortField === 'lottery_amount' && $exAdminSortBy !== '');
         $sortNeedsElectronicBet = ($exAdminSortField === 'electronic_game_bet_amount' && $exAdminSortBy !== '');
+        $sortNeedsMachineBet = ($exAdminSortField === 'machine_bet_amount' && $exAdminSortBy !== '');
+        $sortNeedsTotalBet = ($exAdminSortField === 'total_bet_amount' && $exAdminSortBy !== '');
 
         if ($sortNeedsLottery) {
             $selectFields[] = 'lottery_stats.lottery_amount';
             $sortFieldMapping['lottery_amount'] = 'lottery_stats.lottery_amount';
         }
-        if ($sortNeedsElectronicBet) {
+        if ($sortNeedsElectronicBet || $sortNeedsTotalBet) {
             $selectFields[] = 'electronic_game_stats.electronic_game_bet_amount';
             $sortFieldMapping['electronic_game_bet_amount'] = 'electronic_game_stats.electronic_game_bet_amount';
+        }
+        if ($sortNeedsMachineBet || $sortNeedsTotalBet) {
+            $sortFieldMapping['machine_bet_amount'] = 'machine_game_stats.machine_bet_amount';
+        }
+        if ($sortNeedsTotalBet) {
+            // 总打码 = 电子 + 机台（与列表展示口径一致）
+            $sortFieldMapping['total_bet_amount'] = Db::raw('(COALESCE(electronic_game_stats.electronic_game_bet_amount, 0) + COALESCE(machine_game_stats.machine_bet_amount, 0))');
         }
         $actualSortField = $sortFieldMapping[$exAdminSortField] ?? $exAdminSortField;
 
@@ -291,7 +300,7 @@ class ChannelPlayerController
                 }
             );
         }
-        if ($sortNeedsElectronicBet) {
+        if ($sortNeedsElectronicBet || $sortNeedsTotalBet) {
             $eleSub = PlayGameRecord::query()
                 ->selectRaw('player_id, COALESCE(SUM(bet), 0) as electronic_game_bet_amount')
                 // 电子打码量：过滤结算状态为已取消的订单
@@ -309,6 +318,24 @@ class ChannelPlayerController
             }
             $query->leftJoinSub($eleSub, 'electronic_game_stats', function ($join) {
                 $join->on('player.id', '=', 'electronic_game_stats.player_id');
+            });
+        }
+        if ($sortNeedsMachineBet || $sortNeedsTotalBet) {
+            $machineSub = PlayerGameLog::query()
+                ->selectRaw('player_id, COALESCE(SUM(chip_amount), 0) as machine_bet_amount')
+                ->whereIn('player_id', Player::query()
+                    ->select('id')
+                    ->where('department_id', $departmentId)
+                    ->where('type', Player::TYPE_PLAYER))
+                ->groupBy('player_id');
+            if (!empty($dataTimeStart)) {
+                $machineSub->where('created_at', '>=', $dataTimeStart);
+            }
+            if (!empty($dataTimeEnd)) {
+                $machineSub->where('created_at', '<=', $dataTimeEnd);
+            }
+            $query->leftJoinSub($machineSub, 'machine_game_stats', function ($join) {
+                $join->on('player.id', '=', 'machine_game_stats.player_id');
             });
         }
 
@@ -697,12 +724,12 @@ class ChannelPlayerController
             // 机台打码量
             $grid->column('machine_bet_amount', admin_trans('player.machine_bet_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
-            })->width(120)->align('center');
+            })->sortable()->width(120)->align('center');
 
             // 总打码量
             $grid->column('total_bet_amount', admin_trans('player.total_bet_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
-            })->width(120)->align('center');
+            })->sortable()->width(120)->align('center');
 
             $grid->column('subtotal', admin_trans('player.subtotal'))->display(function ($value) {
                 $color = $value >= 0 ? '#3f8600' : '#cf1322';
