@@ -716,13 +716,14 @@ class StoreMachineController
 
             $form->hidden('store_id')->value($storeId);
 
-            // 获取ATG、RSG和DG平台
+            // 获取ATG、RSG、DG 及 T9 電子平台
             $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
             $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
             $dgPlatform = GamePlatform::query()->where('code', 'DG')->where('status', 1)->first();
+            $t9Platform = GamePlatform::query()->where('code', 'TNINE_SLOT')->where('status', 1)->first();
 
-            if (!$atgPlatform && !$rsgPlatform && !$dgPlatform) {
-                $form->push(Html::markdown('><font size=2 color="#999">暂无可用的游戏平台（ATG/RSG/DG）</font>'));
+            if (!$atgPlatform && !$rsgPlatform && !$dgPlatform && !$t9Platform) {
+                $form->push(Html::markdown('><font size=2 color="#999">暂无可用的游戏平台（ATG/RSG/DG/T9）</font>'));
             } else {
                 // ATG平台配置
                 if ($atgPlatform) {
@@ -762,6 +763,19 @@ class StoreMachineController
                         ->value($dgConfig ? $dgConfig->limit_group_id : null)
                         ->help('选择DG平台的限红组，选择「不配置限红组」将清除该平台的限红配置');
                 }
+
+                // T9 電子平台配置
+                if ($t9Platform) {
+                    $form->divider()->content('T9 電子平台限紅組配置');
+
+                    $t9Config = $existingConfigs->get($t9Platform->id);
+                    $t9Options = ['' => '不配置限紅組'] + $this->getLimitGroupOptionsForPlatform($t9Platform->id);
+
+                    $form->select('t9_limit_group_id', "限紅組 ({$t9Platform->name})")
+                        ->options($t9Options)
+                        ->value($t9Config ? $t9Config->limit_group_id : null)
+                        ->help('選擇T9電子平台的限紅組，選擇「不配置限紅組」將清除該平台的限紅配置');
+                }
             }
         });
     }
@@ -784,10 +798,11 @@ class StoreMachineController
             return message_error('店家ID不能为空');
         }
 
-        // 获取ATG、RSG和DG平台
+        // 获取ATG、RSG、DG 及 T9 電子平台
         $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
         $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
         $dgPlatform = GamePlatform::query()->where('code', 'DG')->where('status', 1)->first();
+        $t9Platform = GamePlatform::query()->where('code', 'TNINE_SLOT')->where('status', 1)->first();
 
         DB::beginTransaction();
         try {
@@ -839,6 +854,22 @@ class StoreMachineController
                     $updatedCount++;
                 } else {
                     $errors[] = "DG: {$result['message']}";
+                }
+            }
+
+            // 处理 T9 電子平台配置
+            if ($t9Platform) {
+                $result = $this->savePlatformLimitGroup(
+                    $storeId,
+                    $t9Platform->id,
+                    $t9Platform->code,
+                    $data['t9_limit_group_id'] ?? null
+                );
+
+                if ($result['success']) {
+                    $updatedCount++;
+                } else {
+                    $errors[] = "T9: {$result['message']}";
                 }
             }
 
