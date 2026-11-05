@@ -18,7 +18,7 @@ class ShiftReportExporter extends Excel
     /**
      * 导出文件保护密码（固定）：解锁工作表保护/活页簿结构用
      */
-    protected const PROTECT_PASSWORD = '123456';
+    protected const PROTECT_PASSWORD = '135790';
 
     // 跟踪已处理的记录数（用于判断是否完成）
     protected $processedRecords = 0;
