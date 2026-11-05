@@ -3745,20 +3745,26 @@ class ChannelPlayerController
             $settledData = (clone $baseQuery)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)
                 ->selectRaw('sum(bet) as total_bet, sum(diff) as total_diff, count(*) as count')->first();
             $unsettledData = (clone $baseQuery)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_UNSETTLED)
-                ->selectRaw('sum(bet) as total_bet, count(*) as count')->first();
+                ->selectRaw('sum(bet) as total_bet, sum(diff) as total_diff, count(*) as count')->first();
             $cancelledData = (clone $baseQuery)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_CANCELLED)
                 ->selectRaw('sum(bet) as total_bet, count(*) as count')->first();
+
+            // 总投注/总盈亏 = 已结算 + 未结算
+            $totalBet = floatval($settledData['total_bet'] ?? 0) + floatval($unsettledData['total_bet'] ?? 0);
+            $totalDiff = floatval($settledData['total_diff'] ?? 0) + floatval($unsettledData['total_diff'] ?? 0);
+            $totalCount = intval($settledData['count'] ?? 0) + intval($unsettledData['count'] ?? 0);
+
             $layout = Layout::create();
-            $layout->row(function (Row $row) use ($settledData, $unsettledData, $cancelledData) {
+            $layout->row(function (Row $row) use ($settledData, $unsettledData, $cancelledData, $totalBet, $totalDiff, $totalCount) {
                 $row->gutter([10, 0]);
 
-                // 已结算统计
+                // 总投注统计（已结算 + 未结算）
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
-                            ->title('已结算投注')
-                            ->value(!empty($settledData['total_bet']) ? floatval($settledData['total_bet']) : 0)
-                            ->suffix('(' . ($settledData['count'] ?? 0) . '笔)')
+                            ->title('总投注')
+                            ->value($totalBet)
+                            ->suffix('(' . $totalCount . '笔)')
                             ->valueStyle(['color' => '#3f8600'])
                             ->style(['font-size' => '14px', 'text-align' => 'center'])),
                     ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '72px'])
@@ -3767,9 +3773,9 @@ class ChannelPlayerController
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
-                            ->title('已结算盈亏')
-                            ->value(!empty($settledData['total_diff']) ? floatval($settledData['total_diff']) : 0)
-                            ->valueStyle(['color' => floatval($settledData['total_diff'] ?? 0) > 0 ? '#3f8600' : '#cf1322'])
+                            ->title('总盈亏')
+                            ->value($totalDiff)
+                            ->valueStyle(['color' => $totalDiff > 0 ? '#3f8600' : '#cf1322'])
                             ->style(['font-size' => '14px', 'text-align' => 'center'])),
                     ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '72px'])
                         ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px']), 6);

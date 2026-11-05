@@ -705,20 +705,25 @@ class Login extends LoginAbstract
                 $settledData = (clone $query)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)
                     ->selectRaw('sum(bet) as total_bet, sum(diff) as total_diff, sum(reward) as total_reward, count(*) as count')->first();
                 $unsettledData = (clone $query)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_UNSETTLED)
-                    ->selectRaw('sum(bet) as total_bet, count(*) as count')->first();
+                    ->selectRaw('sum(bet) as total_bet, sum(diff) as total_diff, count(*) as count')->first();
                 $cancelledData = (clone $query)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_CANCELLED)
                     ->selectRaw('sum(bet) as total_bet, count(*) as count')->first();
 
+                // 总投注/总盈亏 = 已结算 + 未结算
+                $totalBet = floatval($settledData['total_bet'] ?? 0) + floatval($unsettledData['total_bet'] ?? 0);
+                $totalDiff = floatval($settledData['total_diff'] ?? 0) + floatval($unsettledData['total_diff'] ?? 0);
+                $totalCount = intval($settledData['count'] ?? 0) + intval($unsettledData['count'] ?? 0);
+
                 $data = [
                     [
-                        'title' => '已结算投注',
-                        'number' => !empty($settledData['total_bet']) ? floatval($settledData['total_bet']) : 0,
+                        'title' => '总投注',
+                        'number' => $totalBet,
                         'prefix' => '',
-                        'suffix' => '(' . ($settledData['count'] ?? 0) . '笔)'
+                        'suffix' => '(' . $totalCount . '笔)'
                     ],
                     [
-                        'title' => '已结算盈亏',
-                        'number' => !empty($settledData['total_diff']) ? floatval($settledData['total_diff']) : 0,
+                        'title' => '总盈亏',
+                        'number' => $totalDiff,
                         'prefix' => '',
                         'suffix' => ''
                     ],
