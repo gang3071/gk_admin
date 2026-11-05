@@ -316,6 +316,31 @@ class StorePlayerController
             $currentLotteryTicketRewardByPlayer = $currentLotteryTicketRewardQuery->selectRaw('player_id, SUM(amount) as total_amount')
                 ->groupBy('player_id')->pluck('total_amount', 'player_id')->toArray();
 
+            // 批量查询电子打码量（过滤结算状态为已取消的订单；支持统计时间筛选）
+            $electronicBetQuery = \addons\webman\model\PlayGameRecord::query()
+                ->whereIn('player_id', $playerIds)
+                ->where('settlement_status', '!=', \addons\webman\model\PlayGameRecord::SETTLEMENT_STATUS_CANCELLED);
+            if (!empty($requestFilter['stats_start_time'])) {
+                $electronicBetQuery->where('created_at', '>=', $requestFilter['stats_start_time']);
+            }
+            if (!empty($requestFilter['stats_end_time'])) {
+                $electronicBetQuery->where('created_at', '<=', $requestFilter['stats_end_time']);
+            }
+            $electronicBetByPlayer = $electronicBetQuery->selectRaw('player_id, SUM(bet) as total_bet')
+                ->groupBy('player_id')->pluck('total_bet', 'player_id')->toArray();
+
+            // 批量查询机台打码量（支持统计时间筛选）
+            $machineBetQuery = \addons\webman\model\PlayerGameLog::query()
+                ->whereIn('player_id', $playerIds);
+            if (!empty($requestFilter['stats_start_time'])) {
+                $machineBetQuery->where('created_at', '>=', $requestFilter['stats_start_time']);
+            }
+            if (!empty($requestFilter['stats_end_time'])) {
+                $machineBetQuery->where('created_at', '<=', $requestFilter['stats_end_time']);
+            }
+            $machineBetByPlayer = $machineBetQuery->selectRaw('player_id, SUM(chip_amount) as total_chip')
+                ->groupBy('player_id')->pluck('total_chip', 'player_id')->toArray();
+
             // === 合并数据到列表 ===
             foreach ($list as &$item) {
                 $playerId = $item['id'];
@@ -363,6 +388,11 @@ class StorePlayerController
                 $item['current_lottery_ticket_reward'] = floatval($currentLotteryTicketRewardByPlayer[$playerId] ?? 0);
                 $item['current_electronic_game_bet'] = floatval($currentElectronicGameBetByPlayer[$playerId] ?? 0);
                 $item['current_machine_bet'] = floatval($currentMachineBetByPlayer[$playerId] ?? 0);
+
+                // 打码量：电子（过滤已取消）/ 机台 / 总（电子 + 机台）
+                $item['electronic_bet_amount'] = floatval($electronicBetByPlayer[$playerId] ?? 0);
+                $item['machine_bet_amount'] = floatval($machineBetByPlayer[$playerId] ?? 0);
+                $item['total_bet_amount'] = $item['electronic_bet_amount'] + $item['machine_bet_amount'];
 
                 // 计算当前未交班总利润 = (开分 + 投钞) - 洗分
                 // 注意：current_total_outcome 只包含洗分(TYPE_WITHDRAWAL)，不包含彩金
@@ -561,6 +591,26 @@ class StorePlayerController
                     'fontWeight' => '500'
                 ]);
             })->sortable()->width(110)->align('center');
+
+            // 打码量：电子（过滤已取消）/ 机台 / 总
+            $grid->column('electronic_bet_amount', admin_trans('player.electronic_bet_amount'))->display(function ($value) {
+                return Html::create(number_format(floatval($value), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500'
+                ]);
+            })->width(110)->align('center');
+            $grid->column('machine_bet_amount', admin_trans('player.machine_bet_amount'))->display(function ($value) {
+                return Html::create(number_format(floatval($value), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500'
+                ]);
+            })->width(110)->align('center');
+            $grid->column('total_bet_amount', admin_trans('player.total_bet_amount'))->display(function ($value) {
+                return Html::create(number_format(floatval($value), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500'
+                ]);
+            })->width(110)->align('center');
 
 
             $grid->column('lottery_amount', admin_trans('player.total_lottery_amount'))->display(function ($value) {

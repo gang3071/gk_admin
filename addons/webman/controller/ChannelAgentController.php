@@ -357,9 +357,28 @@ class ChannelAgentController
             $playerIds = array_column($list, 'id');
             $balances = WalletService::getBatchBalance($playerIds, PlayerPlatformCash::PLATFORM_SELF);
 
+            // 电子打码量（仅当前页；过滤结算状态为已取消的订单）
+            $electronicBetByPlayer = \addons\webman\model\PlayGameRecord::query()
+                ->whereIn('player_id', $playerIds)
+                ->where('settlement_status', '!=', \addons\webman\model\PlayGameRecord::SETTLEMENT_STATUS_CANCELLED)
+                ->groupBy('player_id')
+                ->selectRaw('player_id, COALESCE(SUM(bet), 0) as total_bet')
+                ->pluck('total_bet', 'player_id');
+
+            // 机台打码量（仅当前页）
+            $machineBetByPlayer = \addons\webman\model\PlayerGameLog::query()
+                ->whereIn('player_id', $playerIds)
+                ->groupBy('player_id')
+                ->selectRaw('player_id, COALESCE(SUM(chip_amount), 0) as total_chip')
+                ->pluck('total_chip', 'player_id');
+
             // 将 Redis 缓存余额合并到列表数据中，并修正精度
             foreach ($list as &$item) {
                 $item['money'] = number_format($balances[$item['id']] ?? 0.0, 2, '.', '');
+                // 打码量：电子 / 机台 / 总（电子 + 机台）
+                $item['electronic_bet_amount'] = floatval($electronicBetByPlayer[$item['id']] ?? 0);
+                $item['machine_bet_amount'] = floatval($machineBetByPlayer[$item['id']] ?? 0);
+                $item['total_bet_amount'] = $item['electronic_bet_amount'] + $item['machine_bet_amount'];
             }
             unset($item);
         }
@@ -507,6 +526,16 @@ class ChannelAgentController
             $grid->column('lottery_amount', admin_trans('channel_agent.fields.lottery_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->sortable()->width('100px')->align('center');
+            // 打码量：电子（过滤已取消）/ 机台 / 总
+            $grid->column('electronic_bet_amount', admin_trans('player.electronic_bet_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width('100px')->align('center');
+            $grid->column('machine_bet_amount', admin_trans('player.machine_bet_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width('100px')->align('center');
+            $grid->column('total_bet_amount', admin_trans('player.total_bet_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width('100px')->align('center');
             $grid->column('subtotal', admin_trans('channel_agent.fields.subtotal'))->display(function ($value) {
                 $color = $value >= 0 ? '#3f8600' : '#cf1322';
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);

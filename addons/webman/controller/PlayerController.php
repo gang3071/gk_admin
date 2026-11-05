@@ -357,12 +357,31 @@ class PlayerController
             $playerIds = array_column($list, 'id');
             $balances = WalletService::getBatchBalance($playerIds, PlayerPlatformCash::PLATFORM_SELF);
 
+            // 电子打码量（仅当前页；过滤结算状态为已取消的订单）
+            $electronicBetByPlayer = PlayGameRecord::query()
+                ->whereIn('player_id', $playerIds)
+                ->where('settlement_status', '!=', PlayGameRecord::SETTLEMENT_STATUS_CANCELLED)
+                ->groupBy('player_id')
+                ->selectRaw('player_id, COALESCE(SUM(bet), 0) as total_bet')
+                ->pluck('total_bet', 'player_id');
+
+            // 机台打码量（仅当前页）
+            $machineBetByPlayer = PlayerGameLog::query()
+                ->whereIn('player_id', $playerIds)
+                ->groupBy('player_id')
+                ->selectRaw('player_id, COALESCE(SUM(chip_amount), 0) as total_chip')
+                ->pluck('total_chip', 'player_id');
+
             // 将 Redis 缓存余额合并到列表数据中（覆盖数据库余额）
             foreach ($list as &$item) {
                 // 🔧 修复精度问题：格式化为保留2位小数
                 $item['money'] = number_format($balances[$item['id']] ?? 0.0, 2, '.', '');
                 // 移除数据库余额字段（仅用于排序）
                 unset($item['db_money']);
+                // 打码量：电子 / 机台 / 总（电子 + 机台）
+                $item['electronic_bet_amount'] = floatval($electronicBetByPlayer[$item['id']] ?? 0);
+                $item['machine_bet_amount'] = floatval($machineBetByPlayer[$item['id']] ?? 0);
+                $item['total_bet_amount'] = $item['electronic_bet_amount'] + $item['machine_bet_amount'];
             }
             unset($item);
         }
@@ -524,6 +543,16 @@ class PlayerController
                 admin_trans('player_extend.fields.recharge_amount'))->ellipsis(true)->sortable()->align('center');
             $grid->column('withdraw_amount',
                 admin_trans('player_extend.fields.withdraw_amount'))->ellipsis(true)->sortable()->align('center');
+            // 打码量：电子（过滤已取消）/ 机台 / 总
+            $grid->column('electronic_bet_amount', admin_trans('player.electronic_bet_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+            $grid->column('machine_bet_amount', admin_trans('player.machine_bet_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+            $grid->column('total_bet_amount', admin_trans('player.total_bet_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
             $grid->column('remark', admin_trans('player_extend.fields.remark'))->display(function ($value) {
                 return ToolTip::create(Str::of($value)->limit(30, ' (...)'))->title($value);
             })->editable(
