@@ -65,11 +65,25 @@
           <a-button size="small" :loading="loading" @click="doSearch">刷新</a-button>
         </div>
 
+        <!-- 錨點快速跳轉 -->
+        <div v-if="anchors.length" class="anchor-nav">
+          <span class="anchor-label">跳轉：</span>
+          <div class="anchor-list">
+            <button
+              v-for="a in anchors"
+              :key="a.idx"
+              class="anchor-btn"
+              :class="'anchor-btn-' + a.item.marker"
+              @click="scrollToAnchor(a.idx)"
+            >{{ a.item.time.slice(11, 19) }} {{ markerLabel(a.item.marker) }}</button>
+          </div>
+        </div>
+
         <!-- 時間軸（內部滾動） -->
-        <div class="timeline-scroll">
+        <div ref="timeline" class="timeline-scroll">
           <a-empty v-if="!visibleLogs.length" description="該時間範圍內無日誌（或全部被過濾）" />
 
-          <div v-for="(item, idx) in visibleLogs" :key="idx" class="tl-row">
+          <div v-for="(item, idx) in visibleLogs" :key="idx" :id="'tl-item-' + idx" class="tl-row">
             <div class="tl-axis">
               <div class="tl-dot" :class="dotClass(item)"></div>
               <div v-if="idx < visibleLogs.length - 1" class="tl-line"></div>
@@ -156,6 +170,11 @@ export default {
         return true;
       });
     },
+    anchors() {
+      return this.visibleLogs
+        .map((item, idx) => ({ item, idx }))
+        .filter(({ item }) => !!item.marker);
+    },
   },
   methods: {
     fmtElapsed(ms) {
@@ -192,6 +211,10 @@ export default {
       if (item.level === 'WARNING') return 'body-warn';
       if (['wash', 'leave', 'account_query', 'wash_zero', 'all_down'].includes(item.action)) return 'body-key';
       return 'body-default';
+    },
+    scrollToAnchor(idx) {
+      const el = this.$refs.timeline?.querySelector(`#tl-item-${idx}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     },
     getToken() {
       return localStorage.getItem((window['App-Name'] || '') + '_ex-admin-token') || '';
@@ -325,4 +348,30 @@ export default {
 .hex-send  { background:#e6f7ff; color:#0050b3; }
 .hex-recv  { background:#f6ffed; color:#135200; }
 .hex-arrow { font-weight:bold; margin-right:4px; }
+
+/* ── 錨點導航 ───────────────────────────────────────────────── */
+.anchor-nav   { flex-shrink:0; display:flex; align-items:center; gap:6px; margin-bottom:8px; }
+.anchor-label { font-size:11px; color:#8c8c8c; white-space:nowrap; flex-shrink:0; }
+.anchor-list  { display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; }
+.anchor-list::-webkit-scrollbar { height:4px; }
+.anchor-list::-webkit-scrollbar-thumb { background:#d9d9d9; border-radius:2px; }
+
+.anchor-btn {
+  flex-shrink: 0;
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  border: 1px solid;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 20px;
+  background: #fff;
+  transition: opacity .15s;
+}
+.anchor-btn:hover { opacity: .75; }
+
+.anchor-btn-open_start { background:#e6fffb; border-color:#13c2c2; color:#006d75; }
+.anchor-btn-open_end   { background:#f6ffed; border-color:#52c41a; color:#237804; }
+.anchor-btn-wash_start { background:#fff7e6; border-color:#fa8c16; color:#ad4e00; }
+.anchor-btn-wash_end   { background:#f9f0ff; border-color:#722ed1; color:#391085; }
 </style>
