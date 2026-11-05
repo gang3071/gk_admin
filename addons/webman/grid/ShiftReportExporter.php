@@ -15,6 +15,11 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 class ShiftReportExporter extends Excel
 {
+    /**
+     * 导出文件保护密码（固定）：解锁工作表保护/活页簿结构用
+     */
+    protected const PROTECT_PASSWORD = '123456';
+
     // 跟踪已处理的记录数（用于判断是否完成）
     protected $processedRecords = 0;
 
@@ -1060,15 +1065,21 @@ class ShiftReportExporter extends Excel
     }
 
     /**
-     * 锁定所有工作表（不设密码，仅防误改）
-     * 导出后在 Excel/WPS 中默认只读，需手动「撤销工作表保护」才能编辑
+     * 锁定所有工作表与活页簿结构（密码固定 123456）
+     * 导出后在 Excel/WPS 中不可编辑，撤销工作表保护/解除结构锁定须输入密码
      */
     protected function lockSheets(): void
     {
         foreach ($this->spreadsheet->getAllSheets() as $sheet) {
             // 单元格默认 locked=true，启用保护后整表不可编辑
-            $sheet->getProtection()->setSheet(true);
+            $protection = $sheet->getProtection();
+            $protection->setSheet(true);
+            $protection->setPassword(self::PROTECT_PASSWORD);
         }
+        // 活页簿结构一并锁定（不能新增/删除/重命名工作表）
+        $security = $this->spreadsheet->getSecurity();
+        $security->setLockStructure(true);
+        $security->setWorkbookPassword(self::PROTECT_PASSWORD);
     }
 
     /**
