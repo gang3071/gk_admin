@@ -41,6 +41,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property float team_machine_put_amount 机器投钞总金额(团队)
  * @property float pending_cashback_amount 待领取反水金额
  * @property float total_cashback_amount 总反水金额
+ * @property float pending_children_cashback_amount 待領取推廣紅利
+ * @property float total_children_cashback_amount 總推廣紅利
  * @property string created_at 创建时间
  * @property string updated_at 最后一次修改时间
  *

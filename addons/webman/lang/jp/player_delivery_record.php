@@ -62,6 +62,7 @@ return [
         PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS => 'VIP毎日ログインボーナス',
         PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE => 'イベント外付与',
         PlayerDeliveryRecord::TYPE_LEADERBOARD_REWARD => 'ランキング報酬',
+        PlayerDeliveryRecord::TYPE_CHILDREN_CASHBACK => 'プロモーションの恩恵',
     ],
     'machine_refund' => '台返金',
     'detail' => '詳細',

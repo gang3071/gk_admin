@@ -62,6 +62,7 @@ return [
         PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS => 'VIP每日登錄獎勵',
         PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE => '活動外增',
         PlayerDeliveryRecord::TYPE_LEADERBOARD_REWARD => '排行榜獎勵',
+        PlayerDeliveryRecord::TYPE_CHILDREN_CASHBACK => '推廣紅利',
     ],
     'machine_refund' => '機台退款',
     'detail' => '詳情',
