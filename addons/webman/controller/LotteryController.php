@@ -66,10 +66,11 @@ class LotteryController
      */
     public function getList($type): Grid
     {
-        // 预查该游戏类型下的所有机台类别（game_id 是 GameType 主键，需通过关联查 type）
+        // 预查该游戏类型下已启用彩金累加的机台类别
         $machineCategories = MachineCategory::whereHas('gameType', function ($query) use ($type) {
                 $query->where('type', $type);
             })
+            ->where('lottery_add_status', 1)
             ->orderBy('sort', 'desc')
             ->get(['id', 'name', 'lottery_point', 'lottery_add_status']);
 
@@ -162,23 +163,16 @@ class LotteryController
                     <th style="padding:8px 12px;text-align:left;border-bottom:1px solid #f0f0f0;">' . admin_trans('lottery.pool_per_point_col.category') . '</th>
                     <th style="padding:8px 12px;text-align:right;border-bottom:1px solid #f0f0f0;">' . admin_trans('lottery.pool_per_point_col.lottery_point') . '</th>
                     <th style="padding:8px 12px;text-align:right;border-bottom:1px solid #f0f0f0;">' . admin_trans('lottery.pool_per_point_col.add_amount') . '</th>
-                    <th style="padding:8px 12px;text-align:center;border-bottom:1px solid #f0f0f0;">' . admin_trans('lottery.pool_per_point_col.accumulate_status') . '</th>
                 </tr>';
 
                 $tRows = '';
                 foreach ($machineCategories as $cat) {
                     $lotteryPoint = floatval($cat->lottery_point);
                     $addAmount    = number_format(round($lotteryPoint * $ratio / 100, 6), 6);
-                    $enabled      = $cat->lottery_add_status == 1;
-                    $nameColor    = $enabled ? '#000' : '#bbb';
-                    $statusHtml   = $enabled
-                        ? '<span style="color:#52c41a;">✓ ' . admin_trans('lottery.enabled') . '</span>'
-                        : '<span style="color:#ff4d4f;">✗ ' . admin_trans('lottery.disabled') . '</span>';
                     $tRows .= '<tr>
-                        <td style="padding:8px 12px;border-bottom:1px solid #f5f5f5;color:' . $nameColor . ';">' . htmlspecialchars($cat->name) . '</td>
-                        <td style="padding:8px 12px;border-bottom:1px solid #f5f5f5;text-align:right;color:' . $nameColor . ';">' . number_format($lotteryPoint, 4) . '</td>
+                        <td style="padding:8px 12px;border-bottom:1px solid #f5f5f5;">' . htmlspecialchars($cat->name) . '</td>
+                        <td style="padding:8px 12px;border-bottom:1px solid #f5f5f5;text-align:right;">' . number_format($lotteryPoint, 4) . '</td>
                         <td style="padding:8px 12px;border-bottom:1px solid #f5f5f5;text-align:right;color:#1890ff;font-weight:bold;">' . $addAmount . '</td>
-                        <td style="padding:8px 12px;border-bottom:1px solid #f5f5f5;text-align:center;">' . $statusHtml . '</td>
                     </tr>';
                 }
 
