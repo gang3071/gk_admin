@@ -126,10 +126,12 @@ return [
     // 新規フィールド
     'max_pool_amount' => '最大プール金額',
     'pool_per_point_col' => [
-        'title'         => 'マシンカテゴリ別入池詳細',
-        'category'      => 'マシンカテゴリ',
-        'lottery_point' => 'ベットポイント',
-        'add_amount'    => '入池(元)',
+        'title'             => 'マシンカテゴリ別入池詳細',
+        'category'          => 'マシンカテゴリ',
+        'lottery_point'     => 'ベットポイント',
+        'add_amount'        => '入池(元/+1スピン)',
+        'accumulate_status' => '累積状態',
+        'no_category'       => 'マシンカテゴリが設定されていません',
     ],
     'auto_refill_amount' => '保証金額',
     'enabled' => '有効',

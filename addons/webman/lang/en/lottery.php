@@ -125,10 +125,12 @@ return [
     // New fields
     'max_pool_amount' => 'Maximum Pool Amount',
     'pool_per_point_col' => [
-        'title'         => 'Pool Entry Detail by Machine Category',
-        'category'      => 'Machine Category',
-        'lottery_point' => 'Lottery Point',
-        'add_amount'    => 'Pool Entry (¥)',
+        'title'             => 'Pool Entry Detail by Machine Category',
+        'category'          => 'Machine Category',
+        'lottery_point'     => 'Lottery Point',
+        'add_amount'        => 'Pool Entry (¥ / +1 turn)',
+        'accumulate_status' => 'Accumulation',
+        'no_category'       => 'No machine category configured',
     ],
     'auto_refill_amount' => 'Guaranteed Amount',
     'enabled' => 'Enabled',

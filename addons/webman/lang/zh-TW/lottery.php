@@ -112,10 +112,12 @@ return [
     // 新增字段
     'max_pool_amount' => '最大彩池金額',
     'pool_per_point_col' => [
-        'title'         => '各機台類別入池明細',
-        'category'      => '機台類別',
-        'lottery_point' => '打碼點數',
-        'add_amount'    => '入池(元)',
+        'title'             => '各機台類別入池明細',
+        'category'          => '機台類別',
+        'lottery_point'     => '打碼點數',
+        'add_amount'        => '入池(元/增量1)',
+        'accumulate_status' => '彩金累加',
+        'no_category'       => '暫無機台類別配置',
     ],
     'auto_refill_amount' => '保底金額',
     'enabled' => '已啟用',
