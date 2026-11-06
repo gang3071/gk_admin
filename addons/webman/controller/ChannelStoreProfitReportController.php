@@ -5,6 +5,7 @@ namespace addons\webman\controller;
 use addons\webman\Admin;
 use addons\webman\grid\SummaryGrid;
 use addons\webman\model\AdminUser;
+use addons\webman\model\GameType;
 use addons\webman\model\Player;
 use Carbon\Carbon;
 use addons\webman\model\PlayerDeliveryRecord;
@@ -52,7 +53,9 @@ class ChannelStoreProfitReportController
         'counter_ticket_amount', 'counter_redeem_amount',
         'storage_ticket_purchase', 'storage_recharge',
         'redeem_amount', 'redeem_machine_amount', 'ticket_unredeemed_amount', 'experience_coupon_amount',
-        'welfare_coupon_amount', 'lottery_amount', 'activity_total', 'lottery_ticket_reward_amount',
+        'welfare_coupon_amount',
+        'electronic_lottery_amount', 'slot_lottery_amount', 'steel_ball_lottery_amount',
+        'activity_total', 'lottery_ticket_reward_amount',
         'electronic_game_bet_amount', 'machine_bet_amount',
         'total_income', 'total_expense',
     ];
@@ -194,9 +197,11 @@ class ChannelStoreProfitReportController
                 2
             );
 
-            // 拉彩数据
+            // 拉彩数据（拆分为電子/斯洛/鋼珠彩金）
             $lotteryData = $lotteryDataByStore[$storeId] ?? null;
-            $lotteryAmount = floatval($lotteryData->lottery_amount ?? 0);
+            $electronicLotteryAmount = floatval($lotteryData->electronic_lottery_amount ?? 0);
+            $slotLotteryAmount = floatval($lotteryData->slot_lottery_amount ?? 0);
+            $steelBallLotteryAmount = floatval($lotteryData->steel_ball_lottery_amount ?? 0);
 
             // 打码量数据
             $betData = $betDataByStore[$storeId] ?? null;
@@ -237,7 +242,9 @@ class ChannelStoreProfitReportController
                 'open_score_amount' => $openScoreAmount,
                 'withdraw_amount' => $withdrawAmount,
                 'machine_put_point' => $machinePutPoint,
-                'lottery_amount' => $lotteryAmount,
+                'electronic_lottery_amount' => $electronicLotteryAmount,
+                'slot_lottery_amount' => $slotLotteryAmount,
+                'steel_ball_lottery_amount' => $steelBallLotteryAmount,
                 'activity_total' => $activityTotal,
                 'lottery_ticket_reward_amount' => $lotteryTicketRewardAmount,
                 'electronic_game_bet_amount' => $electronicGameBetAmount,
@@ -266,7 +273,9 @@ class ChannelStoreProfitReportController
         // 计算统计数据
         $totalStats = [
             'total_machine_put' => 0,
-            'total_lottery' => 0,
+            'total_electronic_lottery' => 0,
+            'total_slot_lottery' => 0,
+            'total_steel_ball_lottery' => 0,
             'total_activity' => 0,
             'total_lottery_ticket_reward' => 0,
             'total_agent_profit' => 0,
@@ -278,7 +287,9 @@ class ChannelStoreProfitReportController
 
         foreach ($reportData as $item) {
             $totalStats['total_machine_put'] = bcadd($totalStats['total_machine_put'], $item['machine_put_point'], 2);
-            $totalStats['total_lottery'] = bcadd($totalStats['total_lottery'], $item['lottery_amount'], 2);
+            $totalStats['total_electronic_lottery'] = bcadd($totalStats['total_electronic_lottery'], $item['electronic_lottery_amount'], 2);
+            $totalStats['total_slot_lottery'] = bcadd($totalStats['total_slot_lottery'], $item['slot_lottery_amount'], 2);
+            $totalStats['total_steel_ball_lottery'] = bcadd($totalStats['total_steel_ball_lottery'], $item['steel_ball_lottery_amount'], 2);
             $totalStats['total_activity'] = bcadd($totalStats['total_activity'] ?? 0, $item['activity_total'], 2);
             $totalStats['total_lottery_ticket_reward'] = bcadd($totalStats['total_lottery_ticket_reward'], $item['lottery_ticket_reward_amount'], 2);
             $totalStats['total_agent_profit'] = bcadd($totalStats['total_agent_profit'], $item['agent_profit'], 2);
@@ -554,9 +565,13 @@ class ChannelStoreProfitReportController
 
         $this->applyTimeFilter($query, 'created_at', $selectedShift, $dateType, $createdAtStart, $createdAtEnd, $shiftDateRange);
 
+        // 彩金拆分口径与客户端「彩金领取列表」一致：
+        // 電子彩金 = source 为电子游戏/手动发放；斯洛/鋼珠彩金 = game_type 为对应实体机台类型
         $lotteryData = $query->selectRaw("
             player_id,
-            SUM(`amount`) as lottery_amount
+            SUM(CASE WHEN `source` IN (" . PlayerLotteryRecord::SOURCE_GAME . ", " . PlayerLotteryRecord::SOURCE_MANUAL . ") THEN `amount` ELSE 0 END) AS electronic_lottery_amount,
+            SUM(CASE WHEN `game_type` = " . GameType::TYPE_SLOT . " THEN `amount` ELSE 0 END) AS slot_lottery_amount,
+            SUM(CASE WHEN `game_type` = " . GameType::TYPE_STEEL_BALL . " THEN `amount` ELSE 0 END) AS steel_ball_lottery_amount
         ")->groupBy('player_id')->get();
 
         $dataByPlayer = $lotteryData->keyBy('player_id');
@@ -564,14 +579,22 @@ class ChannelStoreProfitReportController
         // 按店家聚合
         $result = [];
         foreach ($playerIdsByStore as $storeId => $playerIds) {
-            $lotteryAmount = 0;
+            $electronicLotteryAmount = 0;
+            $slotLotteryAmount = 0;
+            $steelBallLotteryAmount = 0;
             foreach ($playerIds as $playerId) {
                 $playerData = $dataByPlayer->get($playerId);
                 if ($playerData) {
-                    $lotteryAmount += floatval($playerData->lottery_amount);
+                    $electronicLotteryAmount += floatval($playerData->electronic_lottery_amount);
+                    $slotLotteryAmount += floatval($playerData->slot_lottery_amount);
+                    $steelBallLotteryAmount += floatval($playerData->steel_ball_lottery_amount);
                 }
             }
-            $result[$storeId] = (object)['lottery_amount' => $lotteryAmount];
+            $result[$storeId] = (object)[
+                'electronic_lottery_amount' => $electronicLotteryAmount,
+                'slot_lottery_amount' => $slotLotteryAmount,
+                'steel_ball_lottery_amount' => $steelBallLotteryAmount,
+            ];
         }
 
         return $result;
@@ -1047,7 +1070,9 @@ class ChannelStoreProfitReportController
             'total_expense' => 0,
             'total_profit' => 0,
             'total_machine_put' => 0,
-            'total_lottery' => 0,
+            'total_electronic_lottery' => 0,
+            'total_slot_lottery' => 0,
+            'total_steel_ball_lottery' => 0,
             'total_activity' => 0,
             'total_lottery_ticket_reward' => 0,
             'total_agent_profit' => 0,
@@ -1059,6 +1084,9 @@ class ChannelStoreProfitReportController
             $ticketData = $ticketDataByStore[$storeId] ?? null;
             $redeemData = $redeemDataByStore[$storeId] ?? null;
             $lotteryData = $lotteryDataByStore[$storeId] ?? null;
+            $electronicLotteryAmount = floatval($lotteryData->electronic_lottery_amount ?? 0);
+            $slotLotteryAmount = floatval($lotteryData->slot_lottery_amount ?? 0);
+            $steelBallLotteryAmount = floatval($lotteryData->steel_ball_lottery_amount ?? 0);
             $betData = $betDataByStore[$storeId] ?? null;
 
             $rechargeAmount = floatval($deliveryData->recharge_amount ?? 0);
@@ -1076,8 +1104,6 @@ class ChannelStoreProfitReportController
             $ticketOpenScoreUsedAmount = floatval($redeemData->ticket_open_score_used_amount ?? 0);
             $redeemAmount = floatval($redeemData->redeem_amount ?? 0);
             $redeemMachineAmount = floatval($redeemData->redeem_machine_amount ?? 0);
-
-            $lotteryAmount = floatval($lotteryData->lottery_amount ?? 0);
 
             $ticketAmount = bcadd($experienceCouponAmount, $welfareCouponAmount, 2);
             $rechargeAmount = bcsub($rechargeAmount, $ticketAmount, 2);
@@ -1097,7 +1123,9 @@ class ChannelStoreProfitReportController
             $totalStats['total_expense'] = bcadd($totalStats['total_expense'], $totalExpense, 2);
             $totalStats['total_profit'] = bcadd($totalStats['total_profit'], $totalProfit, 2);
             $totalStats['total_machine_put'] = bcadd($totalStats['total_machine_put'], $machinePutPoint, 2);
-            $totalStats['total_lottery'] = bcadd($totalStats['total_lottery'], $lotteryAmount, 2);
+            $totalStats['total_electronic_lottery'] = bcadd($totalStats['total_electronic_lottery'], $electronicLotteryAmount, 2);
+            $totalStats['total_slot_lottery'] = bcadd($totalStats['total_slot_lottery'], $slotLotteryAmount, 2);
+            $totalStats['total_steel_ball_lottery'] = bcadd($totalStats['total_steel_ball_lottery'], $steelBallLotteryAmount, 2);
             $totalStats['total_activity'] = bcadd($totalStats['total_activity'], $activityTotal, 2);
             $totalStats['total_lottery_ticket_reward'] = bcadd($totalStats['total_lottery_ticket_reward'], $lotteryTicketRewardAmount, 2);
             $totalStats['total_agent_profit'] = bcadd($totalStats['total_agent_profit'], $agentProfit, 2);
@@ -1109,7 +1137,9 @@ class ChannelStoreProfitReportController
             ['title' => admin_trans('channel_store_profit.stats.total_expense'), 'number' => floatval($totalStats['total_expense']), 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('channel_store_profit.stats.total_profit'), 'number' => floatval($totalStats['total_profit']), 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('channel_store_profit.stats.total_machine_put'), 'number' => floatval($totalStats['total_machine_put']), 'prefix' => '', 'suffix' => ''],
-            ['title' => admin_trans('channel_store_profit.stats.total_lottery'), 'number' => floatval($totalStats['total_lottery']), 'prefix' => '', 'suffix' => ''],
+            ['title' => admin_trans('channel_store_profit.stats.total_electronic_lottery'), 'number' => floatval($totalStats['total_electronic_lottery']), 'prefix' => '', 'suffix' => ''],
+            ['title' => admin_trans('channel_store_profit.stats.total_slot_lottery'), 'number' => floatval($totalStats['total_slot_lottery']), 'prefix' => '', 'suffix' => ''],
+            ['title' => admin_trans('channel_store_profit.stats.total_steel_ball_lottery'), 'number' => floatval($totalStats['total_steel_ball_lottery']), 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('channel_store_profit.stats.total_activity'), 'number' => floatval($totalStats['total_activity']), 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('channel_store_profit.stats.total_lottery_ticket_reward'), 'number' => floatval($totalStats['total_lottery_ticket_reward']), 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('channel_store_profit.stats.total_agent_profit'), 'number' => floatval($totalStats['total_agent_profit']), 'prefix' => '', 'suffix' => ''],
@@ -1130,7 +1160,9 @@ class ChannelStoreProfitReportController
             ['title' => admin_trans('channel_store_profit.stats.total_expense'), 'number' => 0, 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('channel_store_profit.stats.total_profit'), 'number' => 0, 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('channel_store_profit.stats.total_machine_put'), 'number' => 0, 'prefix' => '', 'suffix' => ''],
-            ['title' => admin_trans('channel_store_profit.stats.total_lottery'), 'number' => 0, 'prefix' => '', 'suffix' => ''],
+            ['title' => admin_trans('channel_store_profit.stats.total_electronic_lottery'), 'number' => 0, 'prefix' => '', 'suffix' => ''],
+            ['title' => admin_trans('channel_store_profit.stats.total_slot_lottery'), 'number' => 0, 'prefix' => '', 'suffix' => ''],
+            ['title' => admin_trans('channel_store_profit.stats.total_steel_ball_lottery'), 'number' => 0, 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('channel_store_profit.stats.total_activity'), 'number' => 0, 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('channel_store_profit.stats.total_lottery_ticket_reward'), 'number' => 0, 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('channel_store_profit.stats.total_agent_profit'), 'number' => 0, 'prefix' => '', 'suffix' => ''],
