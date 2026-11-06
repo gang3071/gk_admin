@@ -97,7 +97,7 @@ class ChannelAnnouncementController
                         $tag
                     ]);
                 })->sortable();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->column('status', admin_trans('announcement.fields.status'))->switch()->align('center');
             $grid->setForm()->drawer($this->form());
             $grid->hideDelete();

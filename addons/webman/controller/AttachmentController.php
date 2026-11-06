@@ -100,7 +100,7 @@ class AttachmentController
                     ->redirect($data['url'])
             );
         });
-        $grid->expandFilter();
+        $grid->expandFilter(false);
 
         $grid->vModel('selectedSidebar');
 

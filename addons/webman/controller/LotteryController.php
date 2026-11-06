@@ -4,6 +4,7 @@ namespace addons\webman\controller;
 
 use addons\webman\model\GameType;
 use addons\webman\model\Lottery;
+use addons\webman\model\MachineCategory;
 use app\service\LotteryServices;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
@@ -65,7 +66,15 @@ class LotteryController
      */
     public function getList($type): Grid
     {
-        return Grid::create(new $this->lottery, function (Grid $grid) use ($type) {
+        // 预查该游戏类型下已启用彩金累加的机台类别
+        $machineCategories = MachineCategory::whereHas('gameType', function ($query) use ($type) {
+                $query->where('type', $type);
+            })
+            ->where('lottery_add_status', 1)
+            ->orderBy('sort', 'desc')
+            ->get(['id', 'name', 'lottery_point', 'lottery_add_status']);
+
+        return Grid::create(new $this->lottery, function (Grid $grid) use ($type, $machineCategories) {
             $grid->model()->with(['player'])->where('game_type', $type)->orderBy('sort', 'desc')->orderBy('id', 'desc');
             $requestFilter = Request::input('ex_admin_filter', []);
             if (!empty($requestFilter)) {
@@ -135,13 +144,48 @@ class LotteryController
                 return number_format($val, 4);
             })->align('center');
 
-            // 最大彩池金额（仅随机彩金显示）
-            $grid->column('max_pool_amount', admin_trans('lottery.fields.max_pool_amount'))->display(function ($val, Lottery $data) {
-                if ($data->lottery_type == Lottery::LOTTERY_TYPE_RANDOM) {
-                    return number_format($val, 4);
-                }
-                return '-';
+            // 最大彩池金额（所有类型都显示）
+            $grid->column('max_pool_amount', admin_trans('lottery.fields.max_pool_amount'))->display(function ($val) {
+                return number_format(floatval($val), 4);
             })->align('center');
+
+            // 行展开 - 各机台类别对应配置得到的入池金额明细
+            $grid->expandRow(function ($row) use ($machineCategories) {
+                $ratio = floatval($row['pool_ratio']);
+
+                if ($machineCategories->isEmpty()) {
+                    return Card::create([
+                        Html::raw('<div style="padding:20px;color:#999;text-align:center;">' . admin_trans('lottery.pool_per_point_col.no_category') . '</div>')
+                    ]);
+                }
+
+                $tHead = '<tr style="background:#fafafa;">
+                    <th style="padding:8px 12px;text-align:left;border-bottom:1px solid #f0f0f0;">' . admin_trans('lottery.pool_per_point_col.category') . '</th>
+                    <th style="padding:8px 12px;text-align:right;border-bottom:1px solid #f0f0f0;">' . admin_trans('lottery.pool_per_point_col.lottery_point') . '</th>
+                    <th style="padding:8px 12px;text-align:right;border-bottom:1px solid #f0f0f0;">' . admin_trans('lottery.pool_per_point_col.add_amount') . '</th>
+                </tr>';
+
+                $tRows = '';
+                foreach ($machineCategories as $cat) {
+                    $lotteryPoint = floatval($cat->lottery_point);
+                    $addAmount    = number_format(round($lotteryPoint * $ratio / 100, 6), 6);
+                    $tRows .= '<tr>
+                        <td style="padding:8px 12px;border-bottom:1px solid #f5f5f5;">' . htmlspecialchars($cat->name) . '</td>
+                        <td style="padding:8px 12px;border-bottom:1px solid #f5f5f5;text-align:right;">' . number_format($lotteryPoint, 4) . '</td>
+                        <td style="padding:8px 12px;border-bottom:1px solid #f5f5f5;text-align:right;color:#1890ff;font-weight:bold;">' . $addAmount . '</td>
+                    </tr>';
+                }
+
+                return Card::create([
+                    Html::raw('<div style="padding:16px;">
+                        <h4 style="margin-bottom:12px;font-size:14px;">' . admin_trans('lottery.pool_per_point_col.title') . '</h4>
+                        <table style="width:100%;border-collapse:collapse;border:1px solid #f0f0f0;border-radius:4px;">
+                            <thead>' . $tHead . '</thead>
+                            <tbody>' . $tRows . '</tbody>
+                        </table>
+                    </div>')
+                ]);
+            });
 
             // 保底金额（固定和随机彩金都显示）
             $grid->column('auto_refill_amount', admin_trans('lottery.fields.auto_refill_amount'))->display(function ($val, Lottery $data) {
@@ -335,7 +379,7 @@ class LotteryController
                 $filter->form()->hidden('created_at_end');
                 $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '')->placeholder([admin_trans('lottery.created_at_start'), admin_trans('lottery.created_at_end')]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

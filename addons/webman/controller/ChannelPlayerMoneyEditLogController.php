@@ -454,7 +454,7 @@ class ChannelPlayerMoneyEditLogController
                     admin_trans('player_money_edit_log.created_at_end')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

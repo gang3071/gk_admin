@@ -365,7 +365,7 @@ class PlayerGameLogController
             })->align('center');
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -523,7 +523,7 @@ class PlayerGameLogController
             })->align('center');
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

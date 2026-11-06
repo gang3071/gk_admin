@@ -137,7 +137,7 @@ class MachineCategoryController
                 return Html::create()->content([$map[$val] ?? $val]);
             })->align('center');
             $grid->column('status', admin_trans('machine_category.fields.status'))->switch()->align('center');
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->setForm()->drawer($this->form());
             $grid->hideDelete();
             $grid->deling(function ($ids) {
@@ -232,7 +232,7 @@ class MachineCategoryController
                 return Html::create()->content([$map[$val] ?? $val]);
             })->align('center');
             $grid->column('status', admin_trans('machine_category.fields.status'))->switch()->align('center');
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->setForm()->drawer($this->form());
             $grid->hideDelete();
             $grid->deling(function ($ids) {
@@ -337,7 +337,7 @@ class MachineCategoryController
                 return Html::create()->content([$map[$val] ?? $val]);
             })->align('center');
             $grid->column('status', admin_trans('machine_category.fields.status'))->switch()->align('center');
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->setForm()->drawer($this->form());
             $grid->hideDelete();
             $grid->deling(function ($ids) {

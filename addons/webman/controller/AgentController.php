@@ -169,7 +169,7 @@ class AgentController
             });
 
             $grid->setForm()->drawer($this->createAgentForm());
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -319,6 +319,15 @@ class AgentController
             $storeSettingBaccarat->num = 1;
             $storeSettingBaccarat->status = 1;
             $storeSettingBaccarat->save();
+
+            // enable_points（积分开关，默认开启）
+            $storeSettingPoints = new StoreSetting();
+            $storeSettingPoints->department_id = $departmentId;
+            $storeSettingPoints->admin_user_id = $adminUser->id;
+            $storeSettingPoints->feature = 'enable_points';
+            $storeSettingPoints->num = 1;
+            $storeSettingPoints->status = 1;
+            $storeSettingPoints->save();
 
             // machine_crash_amount（爆机金额）
             $storeSettingCrashAmount = new StoreSetting();

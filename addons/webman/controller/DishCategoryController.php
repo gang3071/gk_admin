@@ -32,7 +32,7 @@ class DishCategoryController
             $grid->hideDelete();
             $grid->model()->orderBy('top', 'desc')->orderBy('sort', 'desc');
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('title')->placeholder(admin_trans('dish_category.fields.title'));
                 $filter->eq()->select('status')

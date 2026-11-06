@@ -494,7 +494,7 @@ class ChannelRechargeRecordController
                 ]);
 
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -821,7 +821,7 @@ class ChannelRechargeRecordController
                     admin_trans('public_msg.created_at_end')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -1286,7 +1286,7 @@ class ChannelRechargeRecordController
                 ]);
 
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -1448,7 +1448,7 @@ class ChannelRechargeRecordController
                 admin_trans('player_recharge_record.fields.created_at'))->sortable()->align('center');
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
                 $actions->hideEdit();

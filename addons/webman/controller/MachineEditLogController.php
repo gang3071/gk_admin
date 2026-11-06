@@ -197,7 +197,7 @@ class MachineEditLogController
                 $filter->form()->hidden('created_at_end');
                 $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '')->placeholder([admin_trans('machine_edit_log.created_at_start'), admin_trans('machine_edit_log.created_at_end')]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

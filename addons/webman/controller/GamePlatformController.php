@@ -140,7 +140,7 @@ class GamePlatformController
 
             $grid->sortInput('sort');
             $grid->column('status', admin_trans('game_platform.fields.status'))->switch()->align('center');
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->setForm()->drawer($this->form());
             $grid->actions(function (Actions $actions, $data) {
                 $actions->hideDel();
@@ -518,7 +518,7 @@ class GamePlatformController
                 $filter->like()->text('code')->placeholder(admin_trans('game_extend.fields.code'));
                 $filter->like()->text('table_name')->placeholder(admin_trans('game_extend.fields.table_name'));
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

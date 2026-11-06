@@ -58,7 +58,7 @@ class PostController
             });
 
             $grid->setForm()->modal($this->form());
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

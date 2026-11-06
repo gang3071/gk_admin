@@ -429,7 +429,7 @@ class MachineController
                 ->size('small'),
         ]);
         $grid->hideDelete();
-        $grid->expandFilter();
+        $grid->expandFilter(false);
     }
 
     /**
@@ -1336,7 +1336,7 @@ class MachineController
             });
             $grid->hideSelection();
             $grid->hideTrashed();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions, $data) {
                 $actions->hideDel();
                 $actions->hideEdit();
@@ -2164,7 +2164,7 @@ class MachineController
             });
             $grid->hideSelection();
             $grid->hideTrashed();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions, $data) {
                 $actions->hideDel();
                 $actions->hideEdit();
@@ -2419,7 +2419,7 @@ class MachineController
                 ]);
             });
             $grid->hideSelection();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
                 $actions->hideEdit();

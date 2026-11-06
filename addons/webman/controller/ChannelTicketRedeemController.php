@@ -226,7 +226,7 @@ class ChannelTicketRedeemController
             }
 
             // 筛选器
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->filter(function (Filter $filter) use ($storeOptions) {
                 $filter->like()->text('order_id')->placeholder(admin_trans('ticket_machine.redeem.order_id'));
                 $filter->like()->text('qr_code_no')->placeholder(admin_trans('ticket_machine.redeem.qr_code_no'));

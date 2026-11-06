@@ -51,7 +51,7 @@ class MachineTencentPlayController
                 admin_trans('machine_tencent_play.fields.created_at'))->sortable()->align('center');
             $grid->column('updated_at',
                 admin_trans('machine_tencent_play.fields.updated_at'))->sortable()->align('center');
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDeleteSelection();
             $grid->hideDelete();
             $grid->hideSelection();

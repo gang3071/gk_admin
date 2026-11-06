@@ -289,7 +289,7 @@ class ChannelPlayGameRecordController
                     admin_trans('public_msg.action_at_end')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

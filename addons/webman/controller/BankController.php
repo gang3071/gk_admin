@@ -79,7 +79,7 @@ class BankController
                     ->placeholder(admin_trans('bank.fields.department_id'))
                     ->options($this->getChannelOptions());
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
                 $actions->hideDetail();

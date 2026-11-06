@@ -140,7 +140,7 @@ class PlayerActivityRecordController
             });
             $grid->hideDelete();
             $grid->hideTrashed();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions, PlayerActivityRecord $data) {
                 $actions->hideDel();
                 $actions->prepend([
@@ -843,6 +843,6 @@ class PlayerActivityRecordController
         $grid->column('condition', admin_trans('player_activity_phase_record.fields.condition'))->align('center');
         $grid->column('bonus', admin_trans('player_activity_phase_record.fields.bonus'))->align('center');
         $grid->column('player_score', admin_trans('player_activity_phase_record.fields.player_score'))->align('center');
-        $grid->expandFilter();
+        $grid->expandFilter(false);
     }
 }

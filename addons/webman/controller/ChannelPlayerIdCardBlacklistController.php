@@ -76,6 +76,7 @@ class ChannelPlayerIdCardBlacklistController
                 $filter->like()->text('id_number')
                     ->placeholder(admin_trans('player_blacklist.filter.id_number'));
             });
+            $grid->expandFilter(false);
         });
     }
 

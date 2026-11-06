@@ -430,7 +430,7 @@ class WithdrawRecordController
 
             });
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -682,7 +682,7 @@ class WithdrawRecordController
                 admin_trans('player_withdraw_record.fields.finish_time'))->sortable()->align('center');
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
                 $actions->hideEdit();

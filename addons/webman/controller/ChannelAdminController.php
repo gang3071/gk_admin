@@ -106,7 +106,7 @@ class ChannelAdminController
                     ]);
                 })->sortable();
             $grid->column('created_at', admin_trans('admin.fields.create_at'));
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDelete();
             $grid->setForm()->modal($this->form());
             $grid->filter(function (Filter $filter) {

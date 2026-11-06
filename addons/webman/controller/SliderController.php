@@ -97,7 +97,7 @@ class SliderController
                     ]);
             });
             $grid->hideDelete();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

@@ -457,7 +457,7 @@ class PlayerDeliveryRecordController
                             ->remoteOptions(admin_url([$this, 'getActivity']));
                     });
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

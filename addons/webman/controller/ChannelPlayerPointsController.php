@@ -185,6 +185,7 @@ class ChannelPlayerPointsController
                         PlayerPointsRecord::TYPE_TRANSFER_IN      => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_TRANSFER_IN),
                     ]);
             });
+            $grid->expandFilter(false);
 
             $grid->actions(function (Actions $actions, $data) {
                 $actions->hideDel();

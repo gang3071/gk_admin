@@ -142,6 +142,7 @@ class StoreLotteryTicketActivityController
                         admin_trans('lottery_ticket.fields.end_time')
                     ]);
             });
+            $grid->expandFilter(false);
 
             // 店家后台只读：隐藏删除和选择
             $grid->hideDelete();

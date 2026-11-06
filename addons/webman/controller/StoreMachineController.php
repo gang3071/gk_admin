@@ -393,7 +393,7 @@ class StoreMachineController
             $grid->hideDelete();
             $grid->hideAdd(); // 屏蔽添加按钮
             $grid->setForm()->drawer($this->createStoreMachineForm());
-            $grid->expandFilter();
+            $grid->expandFilter(false);
 
             // 处理可编辑列的保存
             $grid->updateing(function ($ids, $data) use ($currentDepartmentId) {
@@ -617,6 +617,15 @@ class StoreMachineController
             $storeSettingBaccarat->num = 1;
             $storeSettingBaccarat->status = 1;
             $storeSettingBaccarat->save();
+
+            // enable_points（积分开关，默认开启）
+            $storeSettingPoints = new StoreSetting();
+            $storeSettingPoints->department_id = $departmentId;
+            $storeSettingPoints->admin_user_id = $adminUser->id;
+            $storeSettingPoints->feature = 'enable_points';
+            $storeSettingPoints->num = 1;
+            $storeSettingPoints->status = 1;
+            $storeSettingPoints->save();
 
             // machine_crash_amount（爆机金额）
             $storeSettingCrashAmount = new StoreSetting();
@@ -1469,7 +1478,7 @@ class StoreMachineController
             $grid->hideDelete(); // 去掉删除
             $grid->hideTrashed(); // 去掉回收站
             $grid->setForm()->drawer($this->openScoreSettingForm($storeId));
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions) {
                 $actions->hideDetail();
                 $actions->hideDel(); // 去掉删除按钮
@@ -1628,7 +1637,7 @@ class StoreMachineController
             $grid->hideDelete(); // 去掉删除
             $grid->hideTrashed(); // 去掉回收站
             $grid->setForm()->drawer($this->washPointSettingForm($storeId));
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions) {
                 $actions->hideDetail();
                 $actions->hideDel(); // 去掉删除按钮
@@ -2206,7 +2215,7 @@ class StoreMachineController
             $grid->hideDelete(); // 去掉删除
             $grid->hideTrashed(); // 去掉回收站
             $grid->setForm()->drawer($this->purchaseScoreSettingForm($storeId));
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions) {
                 $actions->hideDetail();
                 $actions->hideDel(); // 去掉删除按钮

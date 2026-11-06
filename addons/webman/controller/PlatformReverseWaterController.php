@@ -77,7 +77,7 @@ class PlatformReverseWaterController
             $grid->column('ratio', admin_trans('activity.ratio'))->display(function($value){
                 return $value.'%';
             })->sortable();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDelete();
             $grid->setForm()->modal([$this, 'form?water_id='.$water_id])->style(['width'=>'30%']);
         });
@@ -252,7 +252,7 @@ class PlatformReverseWaterController
                     admin_trans('public_msg.created_at_end')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

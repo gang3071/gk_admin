@@ -227,7 +227,7 @@ class StorePlayerRechargeRecordController
 
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 }

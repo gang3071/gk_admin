@@ -247,7 +247,7 @@ class StoreShiftHandoverRecordController
             });
 
             $grid->hideDelete();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDeleteSelection();
 
             // 导出功能（权限通过 store_node.php 和 @auth true 控制）

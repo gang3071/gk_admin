@@ -722,7 +722,7 @@ class PlayerController
                 ]);
             });
             $grid->hideDelete();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->tools([
                     $grid->addButton()->modal($this->form()),
                     Button::create(admin_trans('player.clear_test'))->style(['margin-left' => '8px'])->confirm(admin_trans('player.clear_test_msg'),
@@ -2171,7 +2171,7 @@ class PlayerController
             $grid->column('email', admin_trans('player.fields.email'))->align('center');
             $grid->column('line', admin_trans('player.fields.line'))->align('center');
             $grid->column('status', admin_trans('player.fields.status'))->switch()->align('center');
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDelete();
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
@@ -2445,7 +2445,7 @@ class PlayerController
                 ]);
 
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -2551,7 +2551,7 @@ class PlayerController
                     admin_trans('player_withdraw_record.fields.finish_time')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -2653,7 +2653,7 @@ class PlayerController
                     admin_trans('player_game_log.fields.created_at_end')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
             })->align('center');
@@ -2714,20 +2714,26 @@ class PlayerController
             $settledData = (clone $baseQuery)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)
                 ->selectRaw('sum(bet) as total_bet, sum(diff) as total_diff, count(*) as count')->first();
             $unsettledData = (clone $baseQuery)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_UNSETTLED)
-                ->selectRaw('sum(bet) as total_bet, count(*) as count')->first();
+                ->selectRaw('sum(bet) as total_bet, sum(diff) as total_diff, count(*) as count')->first();
             $cancelledData = (clone $baseQuery)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_CANCELLED)
                 ->selectRaw('sum(bet) as total_bet, count(*) as count')->first();
+
+            // 总投注/总盈亏 = 已结算 + 未结算
+            $totalBet = floatval($settledData['total_bet'] ?? 0) + floatval($unsettledData['total_bet'] ?? 0);
+            $totalDiff = floatval($settledData['total_diff'] ?? 0) + floatval($unsettledData['total_diff'] ?? 0);
+            $totalCount = intval($settledData['count'] ?? 0) + intval($unsettledData['count'] ?? 0);
+
             $layout = Layout::create();
-            $layout->row(function (Row $row) use ($settledData, $unsettledData, $cancelledData) {
+            $layout->row(function (Row $row) use ($settledData, $unsettledData, $cancelledData, $totalBet, $totalDiff, $totalCount) {
                 $row->gutter([10, 0]);
 
-                // 已结算统计
+                // 总投注统计（已结算 + 未结算）
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
-                            ->title('已结算投注')
-                            ->value(!empty($settledData['total_bet']) ? floatval($settledData['total_bet']) : 0)
-                            ->suffix('(' . ($settledData['count'] ?? 0) . '笔)')
+                            ->title('总投注')
+                            ->value($totalBet)
+                            ->suffix('(' . $totalCount . '笔)')
                             ->valueStyle(['color' => '#3f8600'])
                             ->style(['font-size' => '14px', 'text-align' => 'center'])),
                     ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '72px'])
@@ -2736,9 +2742,9 @@ class PlayerController
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
-                            ->title('已结算盈亏')
-                            ->value(!empty($settledData['total_diff']) ? floatval($settledData['total_diff']) : 0)
-                            ->valueStyle(['color' => floatval($settledData['total_diff'] ?? 0) > 0 ? '#3f8600' : '#cf1322'])
+                            ->title('总盈亏')
+                            ->value($totalDiff)
+                            ->valueStyle(['color' => $totalDiff > 0 ? '#3f8600' : '#cf1322'])
                             ->style(['font-size' => '14px', 'text-align' => 'center'])),
                     ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '72px'])
                     ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px']), 6);
@@ -2872,7 +2878,7 @@ class PlayerController
                     admin_trans('public_msg.created_at_end')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -2986,7 +2992,7 @@ class PlayerController
                 }
             }
             $grid->autoHeight();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->bordered(true);
             $grid->column('id', admin_trans('promoter_profit_record.fields.id'))->align('center');
             $grid->column('lottery_name', admin_trans('player_lottery_record.fields.lottery_name'))->align('center');
@@ -3063,7 +3069,7 @@ class PlayerController
                 }
             }
             $grid->autoHeight();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->bordered(true);
             $grid->column('id', admin_trans('player_delivery_record.fields.id'))->align('center');
             $grid->column('source', admin_trans('player_delivery_record.fields.source'))->display(function (
@@ -3434,7 +3440,7 @@ class PlayerController
             });
 
             $grid->hideDelete();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideAdd();
             $grid->hideSelection();
             $grid->hideTrashed();
@@ -4084,7 +4090,7 @@ class PlayerController
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideAdd();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

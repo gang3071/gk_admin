@@ -393,7 +393,7 @@ class AdminOfflineMachineController
                 ->options($producerOptions);
         });
 
-        $grid->expandFilter();
+        $grid->expandFilter(false);
         $grid->hideDelete();
     }
 

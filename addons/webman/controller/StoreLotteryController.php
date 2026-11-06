@@ -282,7 +282,7 @@ class StoreLotteryController
                     ]);
             });
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 }

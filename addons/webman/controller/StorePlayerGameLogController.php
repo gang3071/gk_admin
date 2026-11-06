@@ -383,7 +383,7 @@ class StorePlayerGameLogController
             })->align('center');
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

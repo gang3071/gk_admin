@@ -899,7 +899,7 @@ class ChannelPlayerController
                 ]);
             });
             $grid->hideDelete();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $tools = [];
             // 线下渠道：添加批量生成按钮和创建代理按钮
             if ($channel && $channel->is_offline == 1) {
@@ -2834,7 +2834,7 @@ class ChannelPlayerController
             });
             $grid->hideDelete();
             $grid->hideAdd();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->tools(
                 $grid->addButton()->modal($this->form())
             );
@@ -3646,7 +3646,7 @@ class ChannelPlayerController
                 }
             }
             $grid->autoHeight();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->bordered(true);
             $grid->column('id', admin_trans('promoter_profit_record.fields.id'))->align('center');
             $grid->column('lottery_name', admin_trans('player_lottery_record.fields.lottery_name'))->align('center');
@@ -3745,20 +3745,26 @@ class ChannelPlayerController
             $settledData = (clone $baseQuery)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)
                 ->selectRaw('sum(bet) as total_bet, sum(diff) as total_diff, count(*) as count')->first();
             $unsettledData = (clone $baseQuery)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_UNSETTLED)
-                ->selectRaw('sum(bet) as total_bet, count(*) as count')->first();
+                ->selectRaw('sum(bet) as total_bet, sum(diff) as total_diff, count(*) as count')->first();
             $cancelledData = (clone $baseQuery)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_CANCELLED)
                 ->selectRaw('sum(bet) as total_bet, count(*) as count')->first();
+
+            // 总投注/总盈亏 = 已结算 + 未结算
+            $totalBet = floatval($settledData['total_bet'] ?? 0) + floatval($unsettledData['total_bet'] ?? 0);
+            $totalDiff = floatval($settledData['total_diff'] ?? 0) + floatval($unsettledData['total_diff'] ?? 0);
+            $totalCount = intval($settledData['count'] ?? 0) + intval($unsettledData['count'] ?? 0);
+
             $layout = Layout::create();
-            $layout->row(function (Row $row) use ($settledData, $unsettledData, $cancelledData) {
+            $layout->row(function (Row $row) use ($settledData, $unsettledData, $cancelledData, $totalBet, $totalDiff, $totalCount) {
                 $row->gutter([10, 0]);
 
-                // 已结算统计
+                // 总投注统计（已结算 + 未结算）
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
-                            ->title('已结算投注')
-                            ->value(!empty($settledData['total_bet']) ? floatval($settledData['total_bet']) : 0)
-                            ->suffix('(' . ($settledData['count'] ?? 0) . '笔)')
+                            ->title('总投注')
+                            ->value($totalBet)
+                            ->suffix('(' . $totalCount . '笔)')
                             ->valueStyle(['color' => '#3f8600'])
                             ->style(['font-size' => '14px', 'text-align' => 'center'])),
                     ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '72px'])
@@ -3767,9 +3773,9 @@ class ChannelPlayerController
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
-                            ->title('已结算盈亏')
-                            ->value(!empty($settledData['total_diff']) ? floatval($settledData['total_diff']) : 0)
-                            ->valueStyle(['color' => floatval($settledData['total_diff'] ?? 0) > 0 ? '#3f8600' : '#cf1322'])
+                            ->title('总盈亏')
+                            ->value($totalDiff)
+                            ->valueStyle(['color' => $totalDiff > 0 ? '#3f8600' : '#cf1322'])
                             ->style(['font-size' => '14px', 'text-align' => 'center'])),
                     ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '72px'])
                         ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px']), 6);
@@ -3899,7 +3905,7 @@ class ChannelPlayerController
                     admin_trans('public_msg.created_at_end')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -3933,7 +3939,7 @@ class ChannelPlayerController
                 }
             }
             $grid->autoHeight();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->bordered(true);
             $grid->column('id', admin_trans('player_delivery_record.fields.id'))->align('center');
             $grid->column('source', admin_trans('player_delivery_record.fields.source'))->display(function (
@@ -4600,7 +4606,7 @@ class ChannelPlayerController
 
             // enable_physical_machine
             $storeSettingMachine = new StoreSetting();
-            $storeSetting->department_id = $currentDepartmentId;
+            $storeSettingMachine->department_id = $currentDepartmentId;
             $storeSettingMachine->admin_user_id = $adminUser->id;
             $storeSettingMachine->feature = 'enable_physical_machine';
             $storeSettingMachine->num = 1; // 默认启用
@@ -4609,12 +4615,21 @@ class ChannelPlayerController
 
             // enable_live_baccarat
             $storeSettingBaccarat = new StoreSetting();
-            $storeSetting->department_id = $currentDepartmentId;
+            $storeSettingBaccarat->department_id = $currentDepartmentId;
             $storeSettingBaccarat->admin_user_id = $adminUser->id;
             $storeSettingBaccarat->feature = 'enable_live_baccarat';
             $storeSettingBaccarat->num = 1; // 默认启用
             $storeSettingBaccarat->status = 1;
             $storeSettingBaccarat->save();
+
+            // enable_points（积分开关，默认开启）
+            $storeSettingPoints = new StoreSetting();
+            $storeSettingPoints->department_id = $currentDepartmentId;
+            $storeSettingPoints->admin_user_id = $adminUser->id;
+            $storeSettingPoints->feature = 'enable_points';
+            $storeSettingPoints->num = 1; // 默认启用
+            $storeSettingPoints->status = 1;
+            $storeSettingPoints->save();
 
             // machine_crash_amount（爆机金额）
             $storeSettingCrashAmount = new StoreSetting();
@@ -4882,6 +4897,15 @@ class ChannelPlayerController
             $storeSettingBaccarat->num = 1; // 默认启用
             $storeSettingBaccarat->status = 1;
             $storeSettingBaccarat->save();
+
+            // enable_points（积分开关，默认开启）
+            $storeSettingPoints = new StoreSetting();
+            $storeSettingPoints->department_id = $departmentId;
+            $storeSettingPoints->admin_user_id = $adminUser->id;
+            $storeSettingPoints->feature = 'enable_points';
+            $storeSettingPoints->num = 1; // 默认启用
+            $storeSettingPoints->status = 1;
+            $storeSettingPoints->save();
 
             // machine_crash_amount（爆机金额）
             $storeSettingCrashAmount = new StoreSetting();
@@ -5198,7 +5222,7 @@ class ChannelPlayerController
                     ]);
             });
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideSelection();
         });
     }
@@ -6253,7 +6277,7 @@ class ChannelPlayerController
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideAdd();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -6396,7 +6420,7 @@ class ChannelPlayerController
                     ]);
             });
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideSelection();
         });
     }

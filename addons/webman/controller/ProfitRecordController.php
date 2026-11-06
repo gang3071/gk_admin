@@ -174,7 +174,7 @@ class ProfitRecordController
         $grid->hideDelete();
         $grid->hideSelection();
         $grid->hideTrashed();
-        $grid->expandFilter();
+        $grid->expandFilter(false);
     }
     
     /**
@@ -237,7 +237,7 @@ class ProfitRecordController
                         0 => admin_trans('channel.disable')
                     ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideTrashed();
@@ -371,7 +371,7 @@ class ProfitRecordController
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideTrashed();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
             });
@@ -570,7 +570,7 @@ class ProfitRecordController
                     admin_trans('public_msg.created_at_end')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideTrashed();

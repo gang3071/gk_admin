@@ -54,7 +54,7 @@ class MachineStrategyController
             $grid->sortInput('sort', admin_trans('machine_strategy.fields.sort'))->align('center');
             $grid->column('status', admin_trans('machine_strategy.fields.status'))->switch()->align('center');
             $grid->column('created_at', admin_trans('machine_strategy.fields.created_at'))->sortable()->align('center');
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->setForm()->drawer($this->form());
         });
     }
@@ -93,7 +93,7 @@ class MachineStrategyController
             $grid->sortInput('sort', admin_trans('machine_strategy.fields.sort'))->align('center');
             $grid->column('status', admin_trans('machine_strategy.fields.status'))->switch()->align('center');
             $grid->column('created_at', admin_trans('machine_strategy.fields.created_at'))->sortable()->align('center');
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->setForm()->drawer($this->form());
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();

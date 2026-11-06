@@ -546,7 +546,7 @@ class ChannelNationalPromoterController
                     admin_trans('public_msg.created_at_end')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
     /**
@@ -735,7 +735,7 @@ class ChannelNationalPromoterController
         $grid->actions(function (Actions $actions ) {
             $actions->hideDel();
         });
-        $grid->expandFilter();
+        $grid->expandFilter(false);
     }
 
     /**

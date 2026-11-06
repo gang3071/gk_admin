@@ -759,6 +759,7 @@ class ChannelLotteryTicketActivityController
                         admin_trans('lottery_ticket.fields.end_time')
                     ]);
             });
+            $grid->expandFilter(false);
 
             // 操作按钮
             $grid->actions(function (Actions $actions, $data) {
