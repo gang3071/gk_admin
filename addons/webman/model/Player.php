@@ -6,6 +6,8 @@ use addons\webman\Admin;
 use addons\webman\traits\DataPermissions;
 use addons\webman\traits\HasDateTimeFormatter;
 use DateTimeInterface;
+use ExAdmin\ui\support\Arr;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -105,6 +107,8 @@ class Player extends Model
     const AUDIT_STATUS_PENDING = 0;   // 未审核
     const AUDIT_STATUS_APPROVED = 1;  // 已通过
     const AUDIT_STATUS_REJECTED = 2;  // 未通过
+
+    const PARENT_ONLINE_TIME = '2020-12-01 00:00:00';  // 推廣紅利上線日期
 
     //数据权限字段
     protected $dataAuth = ['department_id' => 'department_id'];
@@ -427,5 +431,39 @@ class Player extends Model
     public function vipPeriods(): HasMany
     {
         return $this->hasMany(PlayerVipPeriod::class, 'player_id');
+    }
+
+    /**
+     * 獲取上級會員選項樹
+     * @param $playerId
+     * @param $departmentId
+     * @param bool $isTest
+     * @param bool $isTree
+     * @return array
+     */
+    public static function getParentTreeOptions(int $playerId, int $departmentId, bool $isTest = false, bool $isTree = true): array
+    {
+        $list = [];
+        $players = Player::query()
+            ->when($isTest, function (Builder $query) {
+                $query->where('is_test', 1);
+            })
+            ->where(function (Builder $query) use ($playerId) {
+                $query->whereNull('recommend_id')->orWhere('recommend_id', '<>', $playerId);
+            })
+            ->where('status', 1)
+            ->where('department_id', $departmentId)
+            ->where('id', '<>', $playerId)
+            ->get();
+
+        foreach ($players as $value) {
+            $list[] = [
+                'id' => $value->id,
+                'name' => $value->name,
+                'pid' => $value->recommend_id
+            ];
+        }
+
+        return $isTree ? Arr::tree($list) : $list;
     }
 }

@@ -192,6 +192,8 @@ class PlayerController
                 'player_extend.third_withdraw_amount',
                 'player_extend.pending_cashback_amount',
                 'player_extend.total_cashback_amount',
+                'player_extend.pending_children_cashback_amount',
+                'player_extend.total_children_cashback_amount',
                 'channel.name as channel_name',
                 'recommend_promoter.uuid as recommend_promoter_uuid',
                 'recommend_promoter.phone as recommend_promoter_phone',
@@ -608,6 +610,15 @@ class PlayerController
                 admin_trans('player_extend.fields.total_cashback_amount'))->display(function ($val) {
                 return $val > 0 ? Html::create()->content([number_format((float)$val, 4)])->style(['color' => 'green']) : '0.0000';
             })->sortable()->align('center');
+            $grid->column('pending_children_cashback_amount', admin_trans('player_extend.fields.pending_children_cashback_amount'))
+                ->display(function ($value) {
+                    return $value > 0 ? Html::create()->content([number_format((float)$value, 5)])->style(['color' => '#fa8c16']) : '0.0000';
+                })->sortable()->align('center');
+            $grid->column('total_children_cashback_amount', admin_trans('player_extend.fields.total_children_cashback_amount'))
+                ->display(function ($value) {
+                    return $value > 0 ? Html::create()->content([number_format((float)$value, 5)])->style(['color' => 'green']) : '0.0000';
+                })->sortable()->align('center');
+
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('uuid')->placeholder(admin_trans('player.fields.uuid'));
@@ -955,7 +966,13 @@ class PlayerController
                             ->event('change', ['store_admin_id' => null], 'variable'),
                         admin_url([$this, 'getAgentOptions'])
                     )
-                    ->event('change', ['agent_admin_id' => null, 'store_admin_id' => null], 'variable');
+                    ->load(
+                        $form->select('recommend_id', admin_trans('player.fields.recommend_promoter_name'))
+                            ->showSearch()
+                            ->placeholder(admin_trans('player.fields.recommend_promoter_name')),
+                        admin_url([$this, 'getParentOptions'])
+                    )
+                    ->event('change', ['agent_admin_id' => null, 'store_admin_id' => null, 'recommend_id' => null,], 'variable');
                 $form->text('player_extend.id_number', admin_trans('player_extend.fields.id_number'))->maxlength(50)->required();
                 $form->image('player_extend.id_card_front', admin_trans('player_extend.fields.id_card_front'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
                 $form->image('player_extend.id_card_back', admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
@@ -992,6 +1009,32 @@ class PlayerController
                     if (empty($channel)) {
                         return jsonFailResponse(trans('channel_not_found', [], 'message'));
                     }
+
+                    $parent = null;
+
+                    if (! empty($form->input('recommend_id'))) {
+                        $parent = Player::query()
+                            ->where('id', $form->input('recommend_id'))
+                            ->where('department_id', $channel->department_id)
+                            ->when((int) $form->input('is_test') == 1, function ($query) {
+                                $query->where('is_test', 1);
+                            })
+                            ->first();
+
+                        $parent = Player::query()
+                            ->where('id', $form->input('recommend_id'))
+                            ->where('department_id', $channel->department_id)
+                            ->first();
+
+                        if (empty($parent)) {
+                            return message_error(admin_trans('player.promoter_not_found'));
+                        }
+
+                        if ($parent->status == 0) {
+                            return message_error(admin_trans('player.promoter_has_disable'));
+                        }
+                    }
+
                     DB::beginTransaction();
                     try {
                         $player = new Player();
@@ -1010,6 +1053,8 @@ class PlayerController
                         $player->password = $form->input('password');
                         $player->uuid = generate15DigitUniqueId();
                         $player->recommend_code = createCode();
+                        $player->recommend_id = $parent->id ?? 0;
+                        $player->recommended_code = $parent->recommend_code ?? '';
                         $player->save();
 
                         //创建玩家全民代理身份
@@ -1676,54 +1721,63 @@ class PlayerController
     }
 
     /**
-     * 绑定推广员
+     * 綁定上級會員
      * @auth true
      * @param $id
      * @return Form|Msg
      */
-    public function bindPromoter($id)
+    public function bindPromoter(int $id)
     {
-        /** @var Player $player */
         $player = Player::query()->find($id);
+
         if (empty($player)) {
             return message_error(admin_trans('player.player_not_found'));
         }
-        if (!empty($player->recommended_code)) {
+
+        if (! empty($player->recommend_id)) {
             return message_error(admin_trans('player.player_has_bind'));
         }
-        if ($player->is_promoter > 0) {
-            return message_error(admin_trans('player.has_been_promoter'));
+
+        if ($player->created_at < Player::PARENT_ONLINE_TIME) {
+            return message_error(admin_trans('player.player_too_old'));
         }
-        /** @var Channel $channel */
+
         $channel = Channel::query()->where('department_id', $player->department_id)->first();
+
         if (empty($channel)) {
             return message_error(admin_trans('player.channel_not_found'));
         }
-        if ($channel->promotion_status != 1) {
-            return message_error(admin_trans('player.channel_close_promoter'));
-        }
+
         return Form::create($player, function (Form $form) use ($player) {
             $form->push(Html::markdown('><font size=1 color="#ff4d4f">' . admin_trans('player.bind_promoter_confirm') . '</font>'));
-            $options = getPromoterTreeOptions($player->id, $player->department_id, true, $player->is_test == 1);
-            $form->treeSelect('recommend_id')
-                ->options($options);
+            $options = Player::getParentTreeOptions($player->id, $player->department_id, $player->is_test == 1);
+            $form->treeSelect('recommend_id')->options($options);
+
             $form->saving(function (Form $form) use ($player) {
-                /** @var PlayerPromoter $recommendPlayer */
-                $recommendPlayer = PlayerPromoter::query()->where('player_id',
-                    $form->input('recommend_id'))->where('department_id', $player->department_id)->first();
-                if (empty($recommendPlayer)) {
+                $parent = Player::query()
+                    ->where('id', $form->input('recommend_id'))
+                    ->where('department_id', $player->department_id)
+                    ->first();
+
+                if (empty($parent)) {
                     return message_error(admin_trans('player.promoter_not_found'));
                 }
-                if ($recommendPlayer->player->status == 0) {
+
+                if ($parent->status == 0) {
                     return message_error(admin_trans('player.promoter_has_disable'));
                 }
-                $player->recommend_id = $recommendPlayer->player->id;
-                $player->recommended_code = $recommendPlayer->player->recommend_code;
-                $player->save();
 
-                // 更新推荐人的玩家数量（使用 save() 确保事务一致性和触发模型事件）
-                $recommendPlayer->player_num = ($recommendPlayer->player_num ?? 0) + 1;
-                $recommendPlayer->save();
+                if ($parent->recommend_id == $player->id) {
+                    return message_error(admin_trans('player.promoter_is_children'));
+                }
+
+                if ($parent->id == $player->id) {
+                    return message_error(admin_trans('player.promoter_cant_be_self'));
+                }
+
+                $player->recommend_id = $parent->id;
+                $player->recommended_code = $parent->recommend_code;
+                $player->save();
 
                 return message_success(admin_trans('player.action_success'));
             });
@@ -3766,69 +3820,57 @@ class PlayerController
      * @param $player_id
      * @return Detail
      */
-    public function playerInfo($player_id): Detail
+    public function playerInfo(int $player_id): Detail
     {
         $player = Player::find($player_id);
+
         return Detail::create($player, function (Detail $detail) {
-            $detail->item('name', admin_trans('player.fields.name'));
             $detail->item('phone', admin_trans('player.fields.phone'));
             $detail->item('uuid', admin_trans('player.fields.uuid'));
-            $detail->item('is_promoter', admin_trans('player.fields.is_promoter'))->display(function (
-                $value,
-                Player $data
-            ) {
-                return Html::create()->content([
-                    Tag::create($value == 1 ? admin_trans('player.promoter') : admin_trans('player.national_promoter'))->color($value == 1 ? 'red' : 'orange'),
-                    $data->player_promoter->name ?? ''
-                ]);
-            });
-            $detail->item('national_promoter.level_list.damage_rebate_ratio',
-                admin_trans('national_promoter.level_list.damage_rebate_ratio'))->display(function (
-                $value,
-                Player $data
-            ) {
-                return floatval($value) . ' %';
-            });
-            $detail->item('national_promoter.level_list.recharge_ratio',
-                admin_trans('national_promoter.level_list.recharge_ratio'))->display(function ($value, Player $data) {
-                return floatval($value) . ' %';
-            });
-            $detail->item('recommend_player.name',
-                admin_trans('player_promoter.fields.recommend_promoter_name'))->display(function (
-                $value,
-                Player $data
-            ) {
-                if (isset($data->recommend_player) && !empty($data->recommend_player)) {
+            $detail->item('name', admin_trans('player.fields.name'));
+            $detail->item('vipLevel.name', admin_trans('player.fields.vip_level'))
+                ->display(function ($value) {
+                    $content = Tag::create($value ?? '--')->color('purple');
+                    return Html::create()->content([$content])->style(['display' => 'flex', 'flex-direction' => 'column', 'align-items' => 'center']);
+                });
+            $detail->item('vipLevel.children_cashback_ratio', admin_trans('vip_level.fields.children_cashback_ratio'))
+                ->display(function ($value) {
+                    return floatval($value) . ' %';
+                });
+            $detail->item('recommend_player.name', admin_trans('player.fields.recommend_promoter_name'))
+                ->display(function ($value, Player $data) {
+                    if (empty($data->recommend_player)) {
+                        return '--';
+                    }
+
                     return Html::create(Str::of($value)->limit(20, ' (...)'))
                         ->style(['cursor' => 'pointer', 'color' => 'rgb(24, 144, 255)'])
                         ->modal([$this, 'playerInfo'], ['player_id' => $data->recommend_player->id])
                         ->width('60%')->title(admin_trans('player.fields.phone') . ':' . $data->recommend_player->phone);
-                }
-                return '';
-            });
+                });
             $detail->item('address', admin_trans('player_extend.fields.address'));
             $detail->item('line', admin_trans('player_extend.fields.line'));
             $detail->item('email', admin_trans('player_extend.fields.email'));
-            $detail->item('created_at', admin_trans('player.fields.created_at'))->display(function ($val) {
-                return date('Y-m-d H:i:s', strtotime($val));
-            });
-            $detail->item('machine_wallet.money',
-                admin_trans('player_platform_cash.platform_name.' . PlayerPlatformCash::PLATFORM_SELF))->display(function (
-                $val,
-                Player $data
-            ) {
-                return Tag::create($val)->color('orange')->style(['cursor' => 'pointer'])->modal([
-                    $this,
-                    'playerRecord'
-                ], ['id' => $data->id])->width('70%')->title($data->name . ' ' . $data->uuid);
-            });
-            $detail->item('id', admin_trans('player.title'))->display(function ($val) {
-                //展示所属下级
-                return Html::create(admin_trans('machine_operation_log.view'))
-                    ->style(['cursor' => 'pointer', 'color' => 'rgb(24, 144, 255)'])
-                    ->modal([$this, 'promoterPlayers'], ['id' => $val])
-                    ->width('80%')->title(admin_trans('player.title'));
-            });
+            $detail->item('created_at', admin_trans('player.fields.created_at'))
+                ->display(function ($value) {
+                    return date('Y-m-d H:i:s', strtotime($value));
+                });
+            $detail->item('the_last_player_login_record.created_at', admin_trans('player.fields.player_login_record'))
+                ->display(function ($value) {
+                    return $value ? date('Y-m-d H:i:s', strtotime($value)) : '';
+                });
+            // $detail->item('machine_wallet.money', admin_trans('player_platform_cash.platform_name.' . PlayerPlatformCash::PLATFORM_SELF))
+            //     ->display(function ($val, Player $data) {
+            //         return Tag::create($val)->color('orange')->style(['cursor' => 'pointer'])
+            //             ->modal([$this, 'playerRecord'], ['id' => $data->id])->width('70%')->title($data->name . ' ' . $data->uuid);
+            //     });
+            // $detail->item('id', admin_trans('player.title'))
+            //     ->display(function ($value) {
+            //         return Html::create(admin_trans('machine_operation_log.view'))
+            //             ->style(['cursor' => 'pointer', 'color' => 'rgb(24, 144, 255)'])
+            //             ->modal([$this, 'promoterPlayers'], ['id' => $value])
+            //             ->width('80%')->title(admin_trans('player.title'));
+            //     });
         })->bordered();
     }
 
@@ -4090,6 +4132,34 @@ class PlayerController
             $options[] = [
                 'value' => $store->id,
                 'label' => $store->nickname ?: $store->username ?: '店家#' . $store->id,
+            ];
+        }
+
+        return Response::success([$optionsField => $options]);
+    }
+
+    /**
+     * 獲取上級會員名單（按渠道篩選）
+     * @return Response
+     */
+    public function getParentOptions(): Response
+    {
+        $request = Request::input();
+        $data = $request['data'] ?? [];
+        $departmentId = (int) ($request['value'] ?? $data['department_id'] ?? 0);
+        $optionsField = $request['optionsField'] ?? 'recommend_id';
+
+        if ($departmentId <= 0) {
+            return Response::success([$optionsField => []]);
+        }
+
+        $players = Player::getParentTreeOptions(-1, $departmentId, ($data['is_test'] ?? 0) === 1, false);
+        $options = [];
+
+        foreach ($players as $player) {
+            $options[] = [
+                'value' => $player['id'],
+                'label' => $player['name']
             ];
         }
 

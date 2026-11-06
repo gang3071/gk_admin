@@ -1,5 +1,6 @@
 <?php
 
+use addons\webman\model\Player;
 use addons\webman\model\PlayerMoneyEditLog;
 
 return [
@@ -83,7 +84,7 @@ return [
         'play_password' => '支付密码',
         'password' => '登录密码',
         'recommend_code' => '推广码',
-        'recommend_promoter_name' => '所属邀请人',
+        'recommend_promoter_name' => '所属上级会员',
         'switch_shop' => '支付相关功能',
         'status_national' => '全民代理',
         'status_machine' => '实体机台',
@@ -202,14 +203,17 @@ return [
     'wallet_action_status_has_closed' => '已关闭渠道钱包操作功能!',
     'player_bank' => '银行账户',
     'platform_accounts' => '游戏账号',
-    'bind_promoter_confirm' => '提示: 推广员关系一旦绑定将无法解除, 请确认是否绑定?',
+    'bind_promoter_confirm' => '提示: 上级会员绑定之後将无法修改, 请确认是否绑定？',
     'player_not_found' => '玩家不存在',
-    'player_has_bind' => '该玩家已绑定推广员',
+    'player_has_bind' => '该玩家已绑定上级会员',
+    'player_too_old' => '该玩家注册时间早于 ' . Player::PARENT_ONLINE_TIME . '，无法绑定上级会员',
     'channel_not_found' => '渠道不存在',
     'channel_close_promoter' => '渠道已关闭推广员功能',
-    'promoter_not_found' => '推广员不存在',
-    'promoter_has_disable' => '该推广员账号已禁用',
-    'bind_promoter' => '绑定推广员',
+    'promoter_not_found' => '上级会员不存在',
+    'promoter_has_disable' => '该上级会员账号已禁用',
+    'promoter_is_children' => '上级会员不能是自己的下级',
+    'promoter_cant_be_self' => '上级会员不能绑定自己',
+    'bind_promoter' => '绑定上级会员',
     'national_promoter' => '全民代理',
     'import_msg' => '完成，共计{total_num}条数据，成功{success_num}条，失败{fail_num}条，会员手机号重复{repeat_num}条，上级代理ID错误{recommend_error_num}条',
     'import' => '导入',

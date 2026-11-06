@@ -1,5 +1,6 @@
 <?php
 
+use addons\webman\model\Player;
 use addons\webman\model\PlayerMoneyEditLog;
 
 return [
@@ -83,7 +84,7 @@ return [
         'play_password' => 'Payment password',
         'password' => 'Login password',
         'recommend_code' => 'Promotion code',
-        'recommend_promoter_name' => 'Promoter',
+        'recommend_promoter_name' => 'Upline Member',
         'switch_shop' => 'Payment related functions',
         'status_national' => 'Full Name Proxy',
         'status_machine' => 'Physical machine',
@@ -202,14 +203,17 @@ return [
     'wallet_action_status_has_closed' => 'The channel wallet operation function has been closed!',
     'player_bank' => 'Bank account',
     'platform_accounts' => 'Game Accounts',
-    'bind_promoter_confirm' => 'Tip: Once the promoter relationship is bound, it cannot be released. Please confirm if you want to bind it?',
+    'bind_promoter_confirm' => 'Tip: Once an upline member is linked, it cannot be changed. Are you sure you want to proceed with the linking?',
     'player_not_found' => 'Player does not exist',
-    'player_has_bind' => 'The player has already bound a promoter',
+    'player_has_bind' => 'The player has already bound an upline member',
+    'player_too_old' => 'This player registered before ' . Player::PARENT_ONLINE_TIME . ' and cannot be linked to an upline member',
     'channel_not_found' => 'Channel does not exist',
     'channel_close_promoter' => 'The channel has disabled the promoter function',
-    'promoter_not_found' => 'The promoter does not exist',
-    'promoter_has_disable' => 'The promoter account has been disabled',
-    'bind_promoter' => 'bind promoter',
+    'promoter_not_found' => 'The upline member does not exist',
+    'promoter_has_disable' => 'The upline member account has been disabled',
+    'promoter_is_children' => 'The upline member cannot be their own subordinate',
+    'promoter_cant_be_self' => 'The upline member cannot bind themselves',
+    'bind_promoter' => 'bind upline member',
     'import_csg' => 'Completed, with a total of {count_num} data, {success_num} successful, {defail_num} failed, {repeat_num} duplicate member phone numbers, and {referd_erroneous num} incorrect superior agent IDs',
     'import' => 'import',
     'clear_test' => 'Clean up test data',

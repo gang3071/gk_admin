@@ -1,5 +1,6 @@
 <?php
 
+use addons\webman\model\Player;
 use addons\webman\model\PlayerMoneyEditLog;
 
 return [
@@ -82,7 +83,7 @@ return [
         'play_password' => '支払いパスワード',
         'password' => 'ログインパスワード',
         'recommend_code' => 'プロモーション コード',
-        'recommend_promoter_name' => 'プロモーター',
+        'recommend_promoter_name' => '上位会員',
         'switch_shop' => '支払い関連機能',
         'status_national' => 'フルネームエージェント',
         'status_machine' => 'ソリッドテーブル',
@@ -202,14 +203,17 @@ return [
     'wallet_action_status_has_closed' => 'チャネルウォレット操作機能がクローズされました!',
     'player_bank' => '銀行口座',
     'platform_accounts' => 'ゲームアカウント',
-    'bind_promoter_confirm' => 'ヒント：プロモーター関係はバインドすると解除できません。バインドするかどうかを確認してください。',
+    'bind_promoter_confirm' => 'ヒント：上位会員を紐付けた後は変更できません。紐付けを行いますか？',
     'player_not_found' => 'プレイヤーは存在しない',
-    'player_has_bind' => 'このプレイヤーはプロモーション担当者をバインドしています',
+    'player_has_bind' => 'このプレイヤーは上位会員と紐付けられています',
+    'player_too_old' => 'このプレイヤーの登録日は ' . Player::PARENT_ONLINE_TIME . 'より前であるため、上位メンバーを紐付けることはできません',
     'channel_not_found' => 'チャネルは存在しません',
     'channel_close_promoter' => 'チャネルがプロモーター機能を停止しました',
-    'promoter_not_found' => 'プロモーターは存在しません',
-    'promoter_has_disable' => 'このプロモーターアカウントは無効になっています',
-    'bind_promoter' => 'バインド・プロモーター',
+    'promoter_not_found' => '上位会員は存在しません',
+    'promoter_has_disable' => '当該上位会員アカウントは無効になっています',
+    'promoter_is_children' => '上位会員は、自分自身の配下会員であってはならない',
+    'promoter_cant_be_self' => '上位会員は自分自身を紐付けることができません',
+    'bind_promoter' => '上位会員との紐付け',
     'import _ msg' => '完了、合計{total _ num}件のデータ、成功{success _ num}件、失敗{fail _ num}件、会員の携帯番号は{repeat _ num}件、上級エージェントIDエラー{recomend _ error _ num}件を繰り返し',
     'import' => 'インポート',
     'clear_test' => 'テストデータのクリーンアップ',

@@ -1,5 +1,6 @@
 <?php
 
+use addons\webman\model\Player;
 use addons\webman\model\PlayerMoneyEditLog;
 
 return [
@@ -83,7 +84,7 @@ return [
         'play_password' => '支付密碼',
         'password' => '登入密碼',
         'recommend_code' => '推廣碼',
-        'recommend_promoter_name' => '所屬推廣員',
+        'recommend_promoter_name' => '所屬上級會員',
         'switch_shop' => '支付相關功能',
         'status_national' => '全民代理',
         'status_machine' => '實體機台',
@@ -202,14 +203,17 @@ return [
     'wallet_action_status_has_closed' => '已關閉通路錢包操作功能！',
     'player_bank' => '銀行帳戶',
     'platform_accounts' => '遊戲賬號',
-    'bind_promoter_confirm' => '提示: 推广员关系一旦绑定将无法解除, 请确认是否绑定?',
+    'bind_promoter_confirm' => '提示: 上級會員綁定之後將無法修改，請確認是否綁定？',
     'player_not_found' => '玩家不存在',
-    'player_has_bind' => '該玩家已綁定推廣員',
+    'player_has_bind' => '該玩家已綁定上級會員',
+    'player_too_old' => '該玩家註冊時間早於 ' . Player::PARENT_ONLINE_TIME . '，無法綁定上級會員',
     'channel_not_found' => '通路不存在',
     'channel_close_promoter' => '通路已關閉推廣員功能',
-    'promoter_not_found' => '推廣員不存在',
-    'promoter_has_disable' => '該推廣員帳號已禁用',
-    'bind_promoter' => '綁定推廣員',
+    'promoter_not_found' => '上級會員不存在',
+    'promoter_has_disable' => '該上級會員帳號已禁用',
+    'promoter_is_children' => '上級會員不能是自己的下級',
+    'promoter_cant_be_self' => '上級會員不能綁定自己',
+    'bind_promoter' => '綁定上級會員',
     'national_promoter' => '全民代理',
     'import_msg' => '完成,共計{total_num}條數據,成功{success_num}條,失敗{fail_num}條,會員手機號重複{repeat_num}條,上級代理ID錯誤{recommend_error_num}條',
     'import' => '導入',

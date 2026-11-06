@@ -33,6 +33,8 @@ return [
         'third_withdraw_amount' => '第三方总洗分点数',
         'pending_cashback_amount' => '待领取反水',
         'total_cashback_amount' => '总反水金额',
+        'pending_children_cashback_amount' => '待领取推广红利',
+        'total_children_cashback_amount' => '总推广红利',
         'created_at' => '创建时间',
         'updated_at' => '更新时间',
         'total_money' => '总金额',

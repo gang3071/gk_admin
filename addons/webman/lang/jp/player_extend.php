@@ -32,6 +32,8 @@ return [
         'third_withdraw_amount' => '第三者の洗分ポイントの合計',
         'pending_cashback_amount' => '受け取り待ちキャッシュバック',
         'total_cashback_amount' => '合計キャッシュバック額',
+        'pending_children_cashback_amount' => '受け取り待ちのプロモーション特典',
+        'total_children_cashback_amount' => 'プロモーション報酬総額',
         'created_at' => '作成時刻',
         'updated_at' => '更新時刻',
         'machine_put_amount' => '総紙幣数',
