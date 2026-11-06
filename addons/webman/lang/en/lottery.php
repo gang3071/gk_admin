@@ -26,6 +26,8 @@ return [
         'updated_at' => 'Update time',
         'deleted_at' => 'Deleted time',
         'win_ratio' => 'probability of winning',
+        'max_pool_amount' => 'Maximum Pool Amount',
+        'pool_ratio_per_point' => 'Pool Entry per +1 Turn (per point)',
     ],
     'created_at_start' => 'Start time',
     'created_at_end' => 'End time',
@@ -122,6 +124,12 @@ return [
     'base_bet_amount_help' => 'Players must accumulate this amount of wagering to participate in the lottery. Set to 0 for no limit (check every bet). Example: Set to 20, players need to accumulate 20+ in wagers to qualify for prizes',
     // New fields
     'max_pool_amount' => 'Maximum Pool Amount',
+    'pool_per_point_col' => [
+        'title'         => 'Pool Entry Detail by Machine Category',
+        'category'      => 'Machine Category',
+        'lottery_point' => 'Lottery Point',
+        'add_amount'    => 'Pool Entry (¥)',
+    ],
     'auto_refill_amount' => 'Guaranteed Amount',
     'enabled' => 'Enabled',
     'disabled' => 'Disabled',

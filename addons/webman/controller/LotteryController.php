@@ -4,6 +4,7 @@ namespace addons\webman\controller;
 
 use addons\webman\model\GameType;
 use addons\webman\model\Lottery;
+use addons\webman\model\MachineCategory;
 use app\service\LotteryServices;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
@@ -15,6 +16,7 @@ use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\FilterColumn;
 use ExAdmin\ui\component\grid\grid\Grid;
+use ExAdmin\ui\component\grid\Popover;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\layout\Layout;
@@ -65,7 +67,12 @@ class LotteryController
      */
     public function getList($type): Grid
     {
-        return Grid::create(new $this->lottery, function (Grid $grid) use ($type) {
+        // 预查该游戏类型下的所有机台类别，避免 display 回调中 N+1
+        $machineCategories = MachineCategory::where('game_id', $type)
+            ->orderBy('sort', 'desc')
+            ->get(['id', 'name', 'lottery_point', 'lottery_add_status']);
+
+        return Grid::create(new $this->lottery, function (Grid $grid) use ($type, $machineCategories) {
             $grid->model()->with(['player'])->where('game_type', $type)->orderBy('sort', 'desc')->orderBy('id', 'desc');
             $requestFilter = Request::input('ex_admin_filter', []);
             if (!empty($requestFilter)) {
@@ -135,12 +142,64 @@ class LotteryController
                 return number_format($val, 4);
             })->align('center');
 
-            // 最大彩池金额（仅随机彩金显示）
-            $grid->column('max_pool_amount', admin_trans('lottery.fields.max_pool_amount'))->display(function ($val, Lottery $data) {
-                if ($data->lottery_type == Lottery::LOTTERY_TYPE_RANDOM) {
+            // 最大彩池金额（所有类型都显示）
+            $grid->column('max_pool_amount', admin_trans('lottery.fields.max_pool_amount'))->display(function ($val) {
+                if ($val > 0) {
                     return number_format($val, 4);
                 }
                 return '-';
+            })->align('center');
+
+            // 每增量1转数大概入池多少元：点击展开各机台类别的明细
+            $grid->column('pool_ratio_per_point', admin_trans('lottery.fields.pool_ratio_per_point'))->display(function ($val, Lottery $data) use ($machineCategories) {
+                $ratio = floatval($data->pool_ratio);
+
+                if ($machineCategories->isEmpty()) {
+                    return number_format($ratio / 100, 6);
+                }
+
+                // 构建 Popover 内容：机台类别 / 打码点数 / 入池(元)
+                $headerRow = Html::div()->content([
+                    Html::span()->content(admin_trans('lottery.pool_per_point_col.category'))->style(['flex' => '1', 'font-weight' => 'bold', 'font-size' => '12px']),
+                    Html::span()->content(admin_trans('lottery.pool_per_point_col.lottery_point'))->style(['width' => '72px', 'text-align' => 'right', 'font-weight' => 'bold', 'font-size' => '12px']),
+                    Html::span()->content(admin_trans('lottery.pool_per_point_col.add_amount'))->style(['width' => '90px', 'text-align' => 'right', 'font-weight' => 'bold', 'font-size' => '12px']),
+                ])->style(['display' => 'flex', 'gap' => '8px', 'padding' => '0 0 4px 0', 'border-bottom' => '1px solid #f0f0f0', 'margin-bottom' => '4px']);
+
+                $dataRows = [];
+                $amounts = [];
+                foreach ($machineCategories as $cat) {
+                    $lotteryPoint = floatval($cat->lottery_point);
+                    $addAmount = round($lotteryPoint * $ratio / 100, 6);
+                    $amounts[] = $addAmount;
+                    $color = $cat->lottery_add_status ? '#000' : '#bbb';
+                    $dataRows[] = Html::div()->content([
+                        Html::span()->content($cat->name)->style(['flex' => '1', 'font-size' => '12px', 'color' => $color]),
+                        Html::span()->content(number_format($lotteryPoint, 4))->style(['width' => '72px', 'text-align' => 'right', 'font-size' => '12px', 'color' => $color]),
+                        Html::span()->content(number_format($addAmount, 6))->style(['width' => '90px', 'text-align' => 'right', 'font-size' => '12px', 'color' => '#1890ff']),
+                    ])->style(['display' => 'flex', 'gap' => '8px', 'padding' => '2px 0']);
+                }
+
+                $popoverContent = Html::div()->content(array_merge([$headerRow], $dataRows))->style(['min-width' => '280px']);
+
+                // 触发按钮：显示金额范围（取 min~max）
+                $minAmt = count($amounts) ? min($amounts) : 0;
+                $maxAmt = count($amounts) ? max($amounts) : 0;
+                $triggerLabel = ($minAmt == $maxAmt)
+                    ? number_format($minAmt, 6)
+                    : number_format($minAmt, 4) . ' ~ ' . number_format($maxAmt, 4);
+
+                $trigger = Html::span()->content($triggerLabel)->style([
+                    'color' => '#1890ff',
+                    'cursor' => 'pointer',
+                    'text-decoration' => 'underline dotted',
+                    'font-size' => '13px',
+                ]);
+
+                return Popover::create($trigger)
+                    ->title(admin_trans('lottery.pool_per_point_col.title'))
+                    ->content($popoverContent)
+                    ->trigger('click')
+                    ->placement('bottom');
             })->align('center');
 
             // 保底金额（固定和随机彩金都显示）

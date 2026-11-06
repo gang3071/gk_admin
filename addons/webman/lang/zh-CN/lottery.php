@@ -14,6 +14,7 @@ return [
         'dispatch_ratio' => '派发比例',
         'win_ratio' => '中奖概率',
         'max_pool_amount' => '最大彩池金额',
+        'pool_ratio_per_point' => '每增量1转数入池(元/点)',
         'auto_refill_amount' => '保底金额',
         'burst_status' => '爆彩状态',
         'game_type' => '游戏类型',
@@ -44,6 +45,12 @@ return [
     'placeholder_max_amount' => '请输入封顶金额',
     // 新增字段
     'max_pool_amount' => '最大彩池金额',
+    'pool_per_point_col' => [
+        'title'         => '各机台类别入池明细',
+        'category'      => '机台类别',
+        'lottery_point' => '打码点数',
+        'add_amount'    => '入池(元)',
+    ],
     'auto_refill_amount' => '保底金额',
     'enabled' => '已启用',
     'disabled' => '未启用',

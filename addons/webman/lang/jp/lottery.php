@@ -26,6 +26,8 @@ return [
         'updated_at' => '更新時刻',
         'deleted_at' => '削除された時間',
         'win_ratio' => '勝利の確率',
+        'max_pool_amount' => '最大プール金額',
+        'pool_ratio_per_point' => '1スピン増分あたりの入池額（ポイント/回）',
     ],
     'created_at_start' => '開始時刻',
     'created_at_end' => '終了時刻',
@@ -123,6 +125,12 @@ return [
     'base_bet_amount_help' => 'プレイヤーは抽選に参加するためにこの累計ベット額に達する必要があります。0に設定すると制限なし（毎回チェック）。例：20に設定すると、プレイヤーは20元以上の累計ベットが必要',
     // 新規フィールド
     'max_pool_amount' => '最大プール金額',
+    'pool_per_point_col' => [
+        'title'         => 'マシンカテゴリ別入池詳細',
+        'category'      => 'マシンカテゴリ',
+        'lottery_point' => 'ベットポイント',
+        'add_amount'    => '入池(元)',
+    ],
     'auto_refill_amount' => '保証金額',
     'enabled' => '有効',
     'disabled' => '無効',
