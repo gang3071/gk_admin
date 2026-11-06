@@ -169,7 +169,7 @@ class LotteryController
 
                 if ($machineCategories->isEmpty()) {
                     return Card::create([
-                        Html::create('<div style="padding:20px;color:#999;text-align:center;">' . admin_trans('lottery.pool_per_point_col.no_category') . '</div>')
+                        Html::raw('<div style="padding:20px;color:#999;text-align:center;">' . admin_trans('lottery.pool_per_point_col.no_category') . '</div>')
                     ]);
                 }
 
@@ -198,7 +198,7 @@ class LotteryController
                 }
 
                 return Card::create([
-                    Html::create('<div style="padding:16px;">
+                    Html::raw('<div style="padding:16px;">
                         <h4 style="margin-bottom:12px;font-size:14px;">' . admin_trans('lottery.pool_per_point_col.title') . '</h4>
                         <table style="width:100%;border-collapse:collapse;border:1px solid #f0f0f0;border-radius:4px;">
                             <thead>' . $tHead . '</thead>
