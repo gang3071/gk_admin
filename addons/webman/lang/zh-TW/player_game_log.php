@@ -73,5 +73,7 @@ return [
     'source_type' => [
         PlayerGameLog::SOURCE_TYPE_ONLINE => '線上系統',
         PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON => '線下實體按鍵',
-    ]
+    ],
+    'ctrl_log'       => '控制日誌',
+    'ctrl_log_title' => '機台控制日誌',
 ];

@@ -7,9 +7,12 @@ return [
     'slot_info_list' => 'スロット機台情報',
     'steel_ball_info_list' => '鋼球機台情報',
 
-    'gaming_device' => 'ゲーム中デバイス',
-    'device_info' => 'デバイス情報',
+    'gaming_device'  => 'ゲーム中デバイス',
+    'device_info'    => 'デバイス情報',
     'device_balance' => 'デバイス残高',
+    'reward_status'  => '大当たり状態',
+    'reward_on'      => '大当たり中',
+    'reward_off'     => '未大当たり',
 
     // 操作
     'actions' => [

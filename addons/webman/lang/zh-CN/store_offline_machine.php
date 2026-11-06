@@ -7,9 +7,12 @@ return [
     'slot_info_list' => '斯洛机台资讯',
     'steel_ball_info_list' => '钢珠机台资讯',
 
-    'gaming_device' => '游戏中设备',
-    'device_info' => '设备资讯',
+    'gaming_device'  => '游戏中设备',
+    'device_info'    => '设备资讯',
     'device_balance' => '设备余额',
+    'reward_status'  => '开奖状态',
+    'reward_on'      => '开奖中',
+    'reward_off'     => '未开奖',
 
     // 操作
     'actions' => [

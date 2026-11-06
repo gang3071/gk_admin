@@ -7,9 +7,12 @@ return [
     'slot_info_list' => '斯洛機台資訊',
     'steel_ball_info_list' => '鋼珠機台資訊',
 
-    'gaming_device' => '遊戲中設備',
-    'device_info' => '設備資訊',
+    'gaming_device'  => '遊戲中設備',
+    'device_info'    => '設備資訊',
     'device_balance' => '設備餘額',
+    'reward_status'  => '開獎狀態',
+    'reward_on'      => '開獎中',
+    'reward_off'     => '未開獎',
 
     // 操作
     'actions' => [

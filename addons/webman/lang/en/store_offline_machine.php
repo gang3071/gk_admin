@@ -7,9 +7,12 @@ return [
     'slot_info_list' => 'Slot Machine Info',
     'steel_ball_info_list' => 'Steel Ball Machine Info',
 
-    'gaming_device' => 'Gaming Device',
-    'device_info' => 'Device Info',
+    'gaming_device'  => 'Gaming Device',
+    'device_info'    => 'Device Info',
     'device_balance' => 'Device Balance',
+    'reward_status'  => 'Jackpot Status',
+    'reward_on'      => 'Jackpot Active',
+    'reward_off'     => 'No Jackpot',
 
     // Actions
     'actions' => [
