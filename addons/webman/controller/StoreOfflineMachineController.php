@@ -160,6 +160,7 @@ class StoreOfflineMachineController
                         0 => admin_trans('admin.close')
                     ]);
             });
+            $grid->expandFilter(false);
         });
     }
 
@@ -274,6 +275,7 @@ class StoreOfflineMachineController
                 $filter->like()->text('machine.code')->placeholder(admin_trans('machine.fields.code'));
                 $filter->like()->text('machineLabel.name')->placeholder(admin_trans('machine.fields.name'));
             });
+            $grid->expandFilter(false);
 
             $grid->hideDelete();
             $grid->hideSelection();
@@ -395,6 +397,7 @@ class StoreOfflineMachineController
                 $filter->like()->text('machine.code')->placeholder(admin_trans('machine.fields.code'));
                 $filter->like()->text('machineLabel.name')->placeholder(admin_trans('machine.fields.name'));
             });
+            $grid->expandFilter(false);
 
             $grid->hideDelete();
             $grid->hideSelection();

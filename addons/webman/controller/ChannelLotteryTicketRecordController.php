@@ -197,6 +197,7 @@ class ChannelLotteryTicketRecordController
                         admin_trans('common.end_time')
                     ]);
             });
+            $grid->expandFilter(false);
 
             // 操作按钮
             $grid->actions(function (Actions $actions, $data) {

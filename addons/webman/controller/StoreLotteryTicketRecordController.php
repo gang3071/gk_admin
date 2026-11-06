@@ -160,6 +160,7 @@ class StoreLotteryTicketRecordController
                         LotteryTicketRecord::STATUS_CANCELLED => admin_trans('lottery_ticket.record_status.cancelled'),
                     ]);
             });
+            $grid->expandFilter(false);
 
             // 店家后台只读：隐藏删除和选择
             $grid->hideDelete();

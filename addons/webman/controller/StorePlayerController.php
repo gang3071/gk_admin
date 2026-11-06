@@ -932,6 +932,7 @@ class StorePlayerController
                         admin_trans('player.device_created_end_time')
                     ]);
             });
+            $grid->expandFilter(false);
 
             $grid->actions(function ($actions, $data) use ($admin) {
                 // 打码统计按钮
