@@ -66,8 +66,10 @@ class LotteryController
      */
     public function getList($type): Grid
     {
-        // 预查该游戏类型下的所有机台类别，避免 display 回调中 N+1
-        $machineCategories = MachineCategory::where('game_id', $type)
+        // 预查该游戏类型下的所有机台类别（game_id 是 GameType 主键，需通过关联查 type）
+        $machineCategories = MachineCategory::whereHas('gameType', function ($query) use ($type) {
+                $query->where('type', $type);
+            })
             ->orderBy('sort', 'desc')
             ->get(['id', 'name', 'lottery_point', 'lottery_add_status']);
 
@@ -143,24 +145,7 @@ class LotteryController
 
             // 最大彩池金额（所有类型都显示）
             $grid->column('max_pool_amount', admin_trans('lottery.fields.max_pool_amount'))->display(function ($val) {
-                if ($val > 0) {
-                    return number_format($val, 4);
-                }
-                return '-';
-            })->align('center');
-
-            // 每增量1转数大概入池多少元：展示金额范围，详情见行展开
-            $grid->column('pool_ratio_per_point', admin_trans('lottery.fields.pool_ratio_per_point'))->display(function ($val, Lottery $data) use ($machineCategories) {
-                $ratio = floatval($data->pool_ratio);
-                if ($machineCategories->isEmpty()) {
-                    return number_format($ratio / 100, 6);
-                }
-                $amounts = $machineCategories->map(fn($c) => round(floatval($c->lottery_point) * $ratio / 100, 6));
-                $min = $amounts->min();
-                $max = $amounts->max();
-                return $min == $max
-                    ? number_format($min, 6)
-                    : number_format($min, 4) . ' ~ ' . number_format($max, 4);
+                return number_format(floatval($val), 4);
             })->align('center');
 
             // 行展开 - 各机台类别对应配置得到的入池金额明细
