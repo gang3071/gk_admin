@@ -118,7 +118,7 @@ class GameController
                         'getGamePlatformOptions'
                     ]));
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions, $data) {
                 $actions->hideDel();
                 $actions->hideDetail();

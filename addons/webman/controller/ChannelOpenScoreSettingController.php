@@ -63,7 +63,7 @@ class ChannelOpenScoreSettingController
             $grid->column('updated_at', admin_trans('open_score_setting.fields.updated_at'))->align('center');
 
             $grid->setForm()->drawer($this->form());
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions) {
                 $actions->hideDetail();
             })->align('center');

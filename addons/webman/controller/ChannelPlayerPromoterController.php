@@ -474,7 +474,7 @@ class ChannelPlayerPromoterController
                 ->hideAdd()
                 ->hideDel()
                 ->searchPlaceholder(admin_trans('admin.search_department'));
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideTrashed();
@@ -674,7 +674,7 @@ class ChannelPlayerPromoterController
                     admin_trans('public_msg.created_at_end')
                 ]);;
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideTrashed();
@@ -1039,7 +1039,7 @@ class ChannelPlayerPromoterController
                 );
             }
         });
-        $grid->expandFilter();
+        $grid->expandFilter(false);
     }
 
     /**
@@ -2804,7 +2804,7 @@ class ChannelPlayerPromoterController
                     admin_trans('public_msg.created_at_end')
                 ]);;
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideTrashed();

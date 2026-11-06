@@ -215,7 +215,7 @@ class ChannelAgentController
 
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -674,7 +674,7 @@ class ChannelAgentController
 
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->attr('is_mongo', true);
             $grid->attr('is_mongo_total', $total);
             $grid->attr('mongo_model', $list);
@@ -843,7 +843,7 @@ class ChannelAgentController
                     ]);
             });
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         })->selection($selectedGameIds);
     }
 
@@ -2219,7 +2219,7 @@ class ChannelAgentController
                         PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS),
                     ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -2264,7 +2264,7 @@ class ChannelAgentController
                 $actions->hideEdit();
             });
             $grid->hideDelete();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

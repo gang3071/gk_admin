@@ -899,7 +899,7 @@ class ChannelPlayerController
                 ]);
             });
             $grid->hideDelete();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $tools = [];
             // 线下渠道：添加批量生成按钮和创建代理按钮
             if ($channel && $channel->is_offline == 1) {
@@ -2834,7 +2834,7 @@ class ChannelPlayerController
             });
             $grid->hideDelete();
             $grid->hideAdd();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->tools(
                 $grid->addButton()->modal($this->form())
             );
@@ -3646,7 +3646,7 @@ class ChannelPlayerController
                 }
             }
             $grid->autoHeight();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->bordered(true);
             $grid->column('id', admin_trans('promoter_profit_record.fields.id'))->align('center');
             $grid->column('lottery_name', admin_trans('player_lottery_record.fields.lottery_name'))->align('center');
@@ -3905,7 +3905,7 @@ class ChannelPlayerController
                     admin_trans('public_msg.created_at_end')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -3939,7 +3939,7 @@ class ChannelPlayerController
                 }
             }
             $grid->autoHeight();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->bordered(true);
             $grid->column('id', admin_trans('player_delivery_record.fields.id'))->align('center');
             $grid->column('source', admin_trans('player_delivery_record.fields.source'))->display(function (
@@ -5222,7 +5222,7 @@ class ChannelPlayerController
                     ]);
             });
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideSelection();
         });
     }
@@ -6277,7 +6277,7 @@ class ChannelPlayerController
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideAdd();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -6420,7 +6420,7 @@ class ChannelPlayerController
                     ]);
             });
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideSelection();
         });
     }

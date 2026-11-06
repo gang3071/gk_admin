@@ -82,7 +82,7 @@ class VipLevelController
             $grid->filter(function (Filter $filter) {
                 $filter->like('name', admin_trans('vip_level.fields.name'));
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

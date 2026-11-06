@@ -67,7 +67,7 @@ class ChannelBankController
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('bankContent.name')->placeholder(admin_trans('bank.fields.name'));
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions, $data) {
                 $actions->hideDel();
                 $actions->hideDetail();

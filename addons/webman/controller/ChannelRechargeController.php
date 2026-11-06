@@ -92,7 +92,7 @@ class ChannelRechargeController
             });
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDeleteSelection();
             $grid->hideTrashed();
             $grid->addButton()->drawer($this->form());

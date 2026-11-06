@@ -169,7 +169,7 @@ class AgentController
             });
 
             $grid->setForm()->drawer($this->createAgentForm());
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

@@ -84,7 +84,7 @@ class MenuController
             $grid->column('status', admin_trans('menu.fields.status'))->switch();
             $grid->column('open', admin_trans('menu.fields.open'))->switch();
             $grid->sortInput();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
 
             // ✅ 只允许编辑，禁用创建和删除
             $grid->setForm()->modal($this->form());

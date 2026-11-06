@@ -393,7 +393,7 @@ class StoreMachineController
             $grid->hideDelete();
             $grid->hideAdd(); // 屏蔽添加按钮
             $grid->setForm()->drawer($this->createStoreMachineForm());
-            $grid->expandFilter();
+            $grid->expandFilter(false);
 
             // 处理可编辑列的保存
             $grid->updateing(function ($ids, $data) use ($currentDepartmentId) {
@@ -1478,7 +1478,7 @@ class StoreMachineController
             $grid->hideDelete(); // 去掉删除
             $grid->hideTrashed(); // 去掉回收站
             $grid->setForm()->drawer($this->openScoreSettingForm($storeId));
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions) {
                 $actions->hideDetail();
                 $actions->hideDel(); // 去掉删除按钮
@@ -1637,7 +1637,7 @@ class StoreMachineController
             $grid->hideDelete(); // 去掉删除
             $grid->hideTrashed(); // 去掉回收站
             $grid->setForm()->drawer($this->washPointSettingForm($storeId));
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions) {
                 $actions->hideDetail();
                 $actions->hideDel(); // 去掉删除按钮
@@ -2215,7 +2215,7 @@ class StoreMachineController
             $grid->hideDelete(); // 去掉删除
             $grid->hideTrashed(); // 去掉回收站
             $grid->setForm()->drawer($this->purchaseScoreSettingForm($storeId));
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions) {
                 $actions->hideDetail();
                 $actions->hideDel(); // 去掉删除按钮

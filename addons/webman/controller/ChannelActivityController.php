@@ -140,7 +140,7 @@ class ChannelActivityController
             });
             $grid->hideDelete();
             $grid->hideTrashed();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
             });

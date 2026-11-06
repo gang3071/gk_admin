@@ -158,7 +158,7 @@ class AgentDepositBonusOrderController
                     ]);
             });
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->setForm()->drawer($this->form());
             $grid->hideDelete();
             $grid->hideTrashed();

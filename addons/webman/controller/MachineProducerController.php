@@ -33,7 +33,7 @@ class MachineProducerController
             $grid->column('name', admin_trans('machine_producer.fields.name'))->align('center');
             $grid->sortInput('sort', admin_trans('machine_producer.fields.sort'))->align('center');
             $grid->column('status', admin_trans('machine_producer.fields.status'))->switch()->align('center');
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->setForm()->modal($this->form())->width('20%');
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();

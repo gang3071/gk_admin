@@ -184,7 +184,7 @@ class ChannelMachineKeepingLogController
                     admin_trans('machine_keeping_log.created_at_end')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 }

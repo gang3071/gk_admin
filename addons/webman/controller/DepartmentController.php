@@ -44,7 +44,7 @@ class DepartmentController
                 }
             }
             $grid->autoHeight();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->tree();
             $grid->column('name', admin_trans('department.fields.name'));
             $grid->column('leader', admin_trans('department.fields.leader'));

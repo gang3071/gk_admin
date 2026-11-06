@@ -77,7 +77,7 @@ class AgentGameVendorReportController
             $grid->driver()->setPk('platform_id');
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
 
             $grid->actions(function (Actions $action) {
                 $action->hideDel();

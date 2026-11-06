@@ -60,7 +60,7 @@ class ChannelPostController
                 $filter->form()->dateRange('created_at_start', 'created_at_end', '')->placeholder([admin_trans('public_msg.created_at_start'), admin_trans('public_msg.created_at_end')]);;
             });
             $grid->setForm()->modal($this->form());
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

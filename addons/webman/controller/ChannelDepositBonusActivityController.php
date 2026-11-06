@@ -120,7 +120,7 @@ class ChannelDepositBonusActivityController
                 ]);
             });
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDelete();
             $grid->hideTrashed();
             $grid->actions(function (Actions $actions) {

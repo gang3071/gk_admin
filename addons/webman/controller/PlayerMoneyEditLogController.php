@@ -423,7 +423,7 @@ class PlayerMoneyEditLogController
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('player.name')->placeholder(admin_trans('player.fields.name'));
                 $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));

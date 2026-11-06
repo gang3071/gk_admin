@@ -335,7 +335,7 @@ class ChannelWithdrawRecordController
                     admin_trans('player_withdraw_record.fields.created_at')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -440,7 +440,7 @@ class ChannelWithdrawRecordController
                     admin_trans('player_recharge_record.fields.finish_time')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -551,7 +551,7 @@ class ChannelWithdrawRecordController
                         6 => admin_trans('machine_report.date_type.6'),
                     ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
             })->align('center');
@@ -722,7 +722,7 @@ class ChannelWithdrawRecordController
                     admin_trans('player_withdraw_record.fields.created_at')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -1159,7 +1159,7 @@ class ChannelWithdrawRecordController
                     admin_trans('player_withdraw_record.fields.finish_time')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -1597,7 +1597,7 @@ class ChannelWithdrawRecordController
                     admin_trans('player_withdraw_record.fields.finish_time')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -1752,7 +1752,7 @@ class ChannelWithdrawRecordController
                 admin_trans('player_withdraw_record.fields.finish_time'))->sortable()->align('center');
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
                 $actions->hideEdit();

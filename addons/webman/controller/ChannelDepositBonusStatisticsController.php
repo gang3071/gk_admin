@@ -250,7 +250,7 @@ class ChannelDepositBonusStatisticsController
                 ]);
             });
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideAdd();

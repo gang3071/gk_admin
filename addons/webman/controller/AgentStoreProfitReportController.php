@@ -262,7 +262,7 @@ class AgentStoreProfitReportController
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideAdd();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->attr('is_mongo', true);
             $grid->attr('is_mongo_total', count($reportData));
             $grid->attr('mongo_model', $reportData);

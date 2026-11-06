@@ -313,7 +313,7 @@ class ChannelMachineController
             $actions->hideDel();
         });
         $grid->hideDelete();
-        $grid->expandFilter();
+        $grid->expandFilter(false);
     }
 
     /**
@@ -454,7 +454,7 @@ class ChannelMachineController
                     admin_trans('machine.fields.last_game_at')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideSelection();
             $grid->actions(function (Actions $actions, $data) {
                 $actions->hideDel();

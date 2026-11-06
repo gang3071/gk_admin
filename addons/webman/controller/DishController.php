@@ -42,7 +42,7 @@ class DishController
             $grid->model()->whereIn('admin_user_id', array_keys($stores));
             $grid->model()->orderBy('admin_user_id', 'asc')->orderBy('category_id', 'asc')->orderBy('top', 'desc')->orderBy('sort', 'desc');
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->filter(function (Filter $filter) use ($categories, $stores) {
                 $filter->like()->text('title')->placeholder(admin_trans('dish.fields.title'));
                 $filter->eq()->select('status')

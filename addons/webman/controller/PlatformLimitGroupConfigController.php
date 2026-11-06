@@ -124,7 +124,7 @@ class PlatformLimitGroupConfigController
                     0 => '禁用'
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
 
             $grid->setForm()->drawer($this->form());
 

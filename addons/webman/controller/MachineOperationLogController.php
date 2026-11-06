@@ -154,7 +154,7 @@ class MachineOperationLogController
                     ]);
             });
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 }

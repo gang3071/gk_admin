@@ -288,7 +288,7 @@ class ChannelController
                         3 => admin_trans('channel.type.' . Channel::TYPE_AGENT),
                     ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
 
             $grid->deleted(function ($ids) {
                 DB::beginTransaction();
