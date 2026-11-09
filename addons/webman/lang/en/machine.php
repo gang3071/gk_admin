@@ -76,6 +76,7 @@ return [
         'label_id' => 'Machine label',
         'is_special' => 'Is it a special machine',
         'min_vip_level_id' => 'Min VIP Level',
+        'is_high_setting' => 'High Setting',
         'use_turn' => 'Using RPM',
         'has_lock' => 'Is it locked',
         'viewers' => 'Number of viewers',

@@ -55,6 +55,7 @@ class VipLevelController
             $grid->column('birthday_bonus', admin_trans('vip_level.fields.birthday_bonus'))->align('center');
             $grid->column('upgrade_bonus', admin_trans('vip_level.fields.upgrade_bonus'))->align('center');
             $grid->column('daily_login_bonus', admin_trans('vip_level.fields.daily_login_bonus'))->align('center');
+            $grid->column('high_setting_machine_play_num', admin_trans('vip_level.fields.high_setting_machine_play_num'))->align('center');
             $grid->column('sort', admin_trans('vip_level.fields.sort'))->sortable()->width(80)->align('center');
             $grid->actions(function (Actions $actions, $data) {
                 $actions->prepend(
@@ -138,6 +139,10 @@ class VipLevelController
                 ->step(0.01)
                 ->default(0)
                 ->help(admin_trans('vip_level.help.daily_login_bonus'));
+            $form->number('high_setting_machine_play_num', admin_trans('vip_level.fields.high_setting_machine_play_num'))
+                ->min(0)
+                ->default(0)
+                ->help(admin_trans('vip_level.help.high_setting_machine_play_num'));
             $form->number('sort', admin_trans('vip_level.fields.sort'))
                 ->min(0)
                 ->default(0)
