@@ -5,6 +5,7 @@ namespace addons\webman\controller;
 use addons\webman\Admin;
 use addons\webman\model\AdminUser;
 use addons\webman\model\GameType;
+use addons\webman\model\Machine;
 use addons\webman\model\MachineReport;
 use addons\webman\service\MachineReportAggregator;
 use ExAdmin\ui\component\common\Button;
@@ -63,7 +64,15 @@ class ChannelMachineReportController
             ->get()
             ->toArray();
         $storeOptions = $this->storeOptions();
-        return Grid::create($list, function (Grid $grid) use ($total, $list, $exAdminFilter, $storeOptions) {
+        // 线下机台绑定的门店（channel_machine.store_admin_id），只查当前页机台
+        $channelMachineModel = plugin()->webman->config('database.channel_machine_model');
+        $channelMachines = $channelMachineModel::query()
+            ->where('department_id', Admin::user()->department_id)
+            ->whereIn('machine_id', array_column($list, 'machine_id'))
+            ->with(['storeAdmin'])
+            ->get()
+            ->keyBy('machine_id');
+        return Grid::create($list, function (Grid $grid) use ($total, $list, $exAdminFilter, $storeOptions, $channelMachines) {
             $grid->title(admin_trans('machine_report.title'));
             $grid->bordered(true);
             $grid->autoHeight();
@@ -107,6 +116,29 @@ class ChannelMachineReportController
                 return Html::create()->content([
                     !empty($data['machine']['producer']['name']) ? Tag::create($data['machine']['producer']['name'])->color('green') : ''
                 ]);
+            })->align('center');
+            // 机台来源（线上/线下），不能 sortable：排序会落到 player_game_log 上，该表无 machine_source 列
+            $grid->column('machine_source', admin_trans('machine.fields.machine_source'))->display(function ($val, $data) {
+                $source = $data['machine']['machine_source'] ?? null;
+                if ($source == Machine::MACHINE_SOURCE_OFFLINE) {
+                    return Tag::create(admin_trans('machine.machine_source.offline'))->color('purple');
+                }
+                if ($source == Machine::MACHINE_SOURCE_ONLINE) {
+                    return Tag::create(admin_trans('machine.machine_source.online'))->color('blue');
+                }
+                return '';
+            })->align('center');
+            // 绑定门店（仅线下机台展示所绑定的店家）
+            $grid->column('bound_store', admin_trans('machine.fields.bound_store'))->display(function ($val, $data) use ($channelMachines) {
+                $source = $data['machine']['machine_source'] ?? null;
+                if ($source != Machine::MACHINE_SOURCE_OFFLINE) {
+                    return '';
+                }
+                $storeAdmin = $channelMachines->get($data['machine_id'])->storeAdmin ?? null;
+                if (!$storeAdmin) {
+                    return Tag::create(admin_trans('machine.store.unbound'))->color('orange');
+                }
+                return Tag::create($storeAdmin->nickname ?: $storeAdmin->username)->color('green');
             })->align('center');
             $grid->column('odds', admin_trans('machine_report.fields.odds'))->sortable()->align('center');
             $grid->column('open_amount',
@@ -157,6 +189,15 @@ class ChannelMachineReportController
             $grid->filter(function (Filter $filter) use ($storeOptions) {
                 $filter->like()->text('machine.name')->placeholder(admin_trans('machine.fields.name'));
                 $filter->like()->text('machine.code')->placeholder(admin_trans('machine.fields.code'));
+                // 线上/线下来源筛选
+                $filter->eq()->select('machine_source')
+                    ->placeholder(admin_trans('machine.fields.machine_source'))
+                    ->style(['width' => '150px'])
+                    ->dropdownMatchSelectWidth()
+                    ->options([
+                        Machine::MACHINE_SOURCE_ONLINE => admin_trans('machine.machine_source.online'),
+                        Machine::MACHINE_SOURCE_OFFLINE => admin_trans('machine.machine_source.offline'),
+                    ]);
                 $filter->hidden('date_start');
                 $filter->hidden('date_end');
                 $filter->form()->dateTimeRange('date_start', 'date_end',
