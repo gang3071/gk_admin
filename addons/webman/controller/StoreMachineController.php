@@ -1302,6 +1302,16 @@ class StoreMachineController
                         return Tag::create(admin_trans('store_setting.disable'))->color('red');
                     }
                 })->align('center')
+                // 积分开关
+                ->if(function ($value, StoreSetting $data) {
+                    return $data->feature === 'enable_points';
+                })->display(function ($val, StoreSetting $data) {
+                    if ($data->status == 1) {
+                        return Tag::create(admin_trans('store_setting.enable'))->color('green');
+                    } else {
+                        return Tag::create(admin_trans('store_setting.disable'))->color('red');
+                    }
+                })->align('center')
                 // 爆机金额
                 ->if(function ($value, StoreSetting $data) {
                     return $data->feature === 'machine_crash_amount';
