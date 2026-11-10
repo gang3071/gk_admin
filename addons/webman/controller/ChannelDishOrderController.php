@@ -103,6 +103,11 @@ class ChannelDishOrderController
 
                     return Html::create()->content([$tag]);
                 });
+            $grid->column('remark', admin_trans('dish_order.fields.remark'))
+                ->display(function ($value) {
+                    if (empty($value)) return '-';
+                    return Html::create($value)->style(['color' => '#fa8c16', 'fontSize' => '12px']);
+                });
             $grid->column('created_at', admin_trans('dish_order.fields.created_at'))->align('center');
             $grid->column('updated_at', admin_trans('dish_order.fields.updated_at'))->align('center');
             $grid->column('admin_user_id', admin_trans('dish_order.fields.admin_user_id'))->align('center')

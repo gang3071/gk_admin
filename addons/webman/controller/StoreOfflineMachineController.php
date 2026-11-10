@@ -269,6 +269,17 @@ class StoreOfflineMachineController
                 })
                 ->width(100)->align('center');
 
+            // 开奖状态
+            $grid->column('reward_status', admin_trans('store_offline_machine.reward_status'))
+                ->display(function ($val, Machine $data) {
+                    $services = $this->getMachineStatusViaApi($data);
+                    $reward = $services->reward_status ?? 0;
+                    return $reward == 1
+                        ? Tag::create(admin_trans('store_offline_machine.reward_on'))->color('volcano')
+                        : Tag::create(admin_trans('store_offline_machine.reward_off'))->color('default');
+                })
+                ->width(100)->align('center');
+
             $grid->column('last_game_at', admin_trans('machine.fields.last_game_at'))->width(160)->align('center');
 
             $grid->filter(function (Filter $filter) {
@@ -388,6 +399,17 @@ class StoreOfflineMachineController
                     return $keeping == 1
                         ? Tag::create(admin_trans('machine.keeping'))->color('red')
                         : Tag::create(admin_trans('machine.un_keeping'))->color('default');
+                })
+                ->width(100)->align('center');
+
+            // 开奖状态
+            $grid->column('reward_status', admin_trans('store_offline_machine.reward_status'))
+                ->display(function ($val, Machine $data) {
+                    $services = $this->getMachineStatusViaApi($data);
+                    $reward = $services->reward_status ?? 0;
+                    return $reward == 1
+                        ? Tag::create(admin_trans('store_offline_machine.reward_on'))->color('volcano')
+                        : Tag::create(admin_trans('store_offline_machine.reward_off'))->color('default');
                 })
                 ->width(100)->align('center');
 

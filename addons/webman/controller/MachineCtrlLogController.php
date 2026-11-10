@@ -156,10 +156,11 @@ class MachineCtrlLogController
 
             $marker = null;
             $desc   = $row['action_desc'] ?? '';
-            if (str_contains($desc, '開分開始'))      { $marker = 'open_start'; }
-            elseif (str_contains($desc, '開分結束'))  { $marker = 'open_end';   if ($displayType === 'noise') $displayType = 'response'; }
-            elseif (str_contains($desc, '下分開始'))  { $marker = 'wash_start'; }
-            elseif (str_contains($desc, '下分結束'))  { $marker = 'wash_end'; }
+            $action = $row['action'] ?? '';
+            if (str_contains($desc, '開分開始'))                                                           { $marker = 'open_start'; }
+            elseif (str_contains($desc, '開分結束'))                                                       { $marker = 'open_end';   if ($displayType === 'noise') $displayType = 'response'; }
+            elseif (str_contains($desc, '下分開始') || ($action === 'wash' && str_contains($desc, '收到洗分請求')))   { $marker = 'wash_start'; }
+            elseif (str_contains($desc, '下分結束') || ($action === 'check_reset' && str_contains($desc, '重置壓分/得分'))) { $marker = 'wash_end'; }
 
             $state = [];
             if (!empty($row['machine_state'])) {
