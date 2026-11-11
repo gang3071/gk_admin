@@ -439,9 +439,10 @@ class Player extends Model
      * @param $departmentId
      * @param bool $isTest
      * @param bool $isTree
+     * @param bool $withSearchText
      * @return array
      */
-    public static function getParentTreeOptions(int $playerId, int $departmentId, bool $isTest = false, bool $isTree = true): array
+    public static function getParentTreeOptions(int $playerId, int $departmentId, bool $isTest = false, bool $isTree = true, bool $withSearchText = true): array
     {
         $list = [];
         $players = Player::query()
@@ -457,11 +458,21 @@ class Player extends Model
             ->get();
 
         foreach ($players as $value) {
-            $list[] = [
+            $option = [
                 'id' => $value->id,
                 'name' => $value->name,
                 'pid' => $value->recommend_id
             ];
+
+            if ($withSearchText) {
+                $option['search_text'] = trim(
+                    ($value->name ?? '') . ' ' .
+                    ($value->phone ?? '') . ' ' .
+                    ($value->uuid ?? '')
+                );
+            }
+
+            $list[] = $option;
         }
 
         return $isTree ? Arr::tree($list) : $list;

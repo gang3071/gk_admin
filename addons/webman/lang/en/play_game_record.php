@@ -24,6 +24,8 @@ return [
         'vip_level_id' => 'VIP Level',
         'cashback_ratio' => 'Cashback Ratio',
         'cashback_amount' => 'Cashback Amount',
+        'parent_cashback_ratio' => 'Referral Bonus Ratio',
+        'parent_cashback_amount' => 'Referral Bonus Amount',
     ],
     'status' => [
         PlayGameRecord::STATUS_UNSETTLED => 'Undistributed',

@@ -44,7 +44,7 @@ return [
         'retain_level_bet_amount' => 'Bet amount required to retain level',
         'upgrade_bet_amount' => 'Bet amount required to upgrade',
         'min_claim_amount' => 'Reach this threshold in the Energy Pool & Promotional Bonus to be eligible for a withdrawal',
-        'children_cashback_ratio' => '100 = 100%，0.1 = 0.1%',
+        'children_cashback_ratio' => '100 = 100%，0.1 = 0.1%。Players can claim promotional bonuses based on this ratio from their subordinates\' cashbacks. Ex. If a subordinate earns a cashback of 50, and this ratio is set to 10%, the player can claim a promotional bonus of 5, while the subordinate can still receive the remaining cashback of 45',
         'birthday_bonus' => 'Birthday bonus amount',
         'upgrade_bonus' => 'Upgrade bonus amount players can claim when reaching this level',
         'daily_login_bonus' => 'Daily login bonus amount players can claim',

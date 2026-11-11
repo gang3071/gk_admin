@@ -1031,6 +1031,7 @@ class PlayerController
                     ->load(
                         $form->select('recommend_id', admin_trans('player.fields.recommend_promoter_name'))
                             ->showSearch()
+                            ->optionFilterProp('search_text')
                             ->placeholder(admin_trans('player.fields.recommend_promoter_name')),
                         admin_url([$this, 'getParentOptions'])
                     )
@@ -1813,7 +1814,7 @@ class PlayerController
         return Form::create($player, function (Form $form) use ($player) {
             $form->push(Html::markdown('><font size=1 color="#ff4d4f">' . admin_trans('player.bind_promoter_confirm') . '</font>'));
             $options = Player::getParentTreeOptions($player->id, $player->department_id, $player->is_test == 1);
-            $form->treeSelect('recommend_id')->options($options);
+            $form->treeSelect('recommend_id')->options($options)->treeNodeFilterProp('search_text');
 
             $form->saving(function (Form $form) use ($player) {
                 $parent = Player::query()
@@ -4227,7 +4228,8 @@ class PlayerController
         foreach ($players as $player) {
             $options[] = [
                 'value' => $player['id'],
-                'label' => $player['name']
+                'label' => $player['name'],
+                'search_text' => $player['search_text']
             ];
         }
 

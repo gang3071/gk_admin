@@ -44,7 +44,7 @@ return [
         'retain_level_bet_amount' => '保級所需打碼量',
         'upgrade_bet_amount' => '升級所需打碼量',
         'min_claim_amount' => '能量池＆推廣紅利達到此額度才可領取',
-        'children_cashback_ratio' => '100 = 100%，0.1 = 0.1%',
+        'children_cashback_ratio' => '100 = 100%，0.1 = 0.1%。玩家根據此比例從下級玩家的反水抽成。Ex. 下級玩家獲取反水 50，此比例設定 10%，則玩家可得推廣紅利 5，下級玩家可得反水剩餘 45',
         'birthday_bonus' => '生日禮金',
         'upgrade_bonus' => '玩家達到此等級時可領取的升級禮金',
         'daily_login_bonus' => '玩家每日登入可領取的獎勵',

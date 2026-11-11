@@ -24,6 +24,8 @@ return [
         'vip_level_id' => 'VIP等级',
         'cashback_ratio' => '反水比例',
         'cashback_amount' => '反水金额',
+        'parent_cashback_ratio' => '推广红利比例',
+        'parent_cashback_amount' => '推广红利金额',
     ],
     'status' => [
         PlayGameRecord::STATUS_UNSETTLED => '未分润',

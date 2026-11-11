@@ -1133,7 +1133,7 @@ class StorePlayerController
                     ->options($options);
 
                 $options = Player::getParentTreeOptions(-1, Admin::user()->department_id);
-                $form->treeSelect('recommend_id', admin_trans('player.bind_promoter'))->options($options);
+                $form->treeSelect('recommend_id', admin_trans('player.bind_promoter'))->options($options)->treeNodeFilterProp('search_text');
 
                 $form->text('name', admin_trans('player.fields.name'))->maxlength(50)->required();
                 $form->text('real_name', admin_trans('player.fields.real_name'))->maxlength(50)->required();
@@ -1612,7 +1612,7 @@ class StorePlayerController
         return Form::create($player, function (Form $form) use ($player) {
             $form->push(Html::markdown('><font size=1 color="#ff4d4f">' . admin_trans('player.bind_promoter_confirm') . '</font>'));
             $options = Player::getParentTreeOptions($player->id, $player->department_id, $player->is_test == 1);
-            $form->treeSelect('recommend_id')->options($options);
+            $form->treeSelect('recommend_id')->options($options)->treeNodeFilterProp('search_text');
 
             $form->saving(function (Form $form) use ($player) {
                 $parent = Player::query()

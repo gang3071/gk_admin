@@ -2281,7 +2281,7 @@ class ChannelPlayerController
         return Form::create($player, function (Form $form) use ($player) {
             $form->push(Html::markdown('><font size=1 color="#ff4d4f">' . admin_trans('player.bind_promoter_confirm') . '</font>'));
             $options = Player::getParentTreeOptions($player->id, $player->department_id, $player->is_test == 1);
-            $form->treeSelect('recommend_id')->options($options);
+            $form->treeSelect('recommend_id')->options($options)->treeNodeFilterProp('search_text');
 
             $form->saving(function (Form $form) use ($player) {
                 $parent = Player::query()
@@ -4261,8 +4261,8 @@ class ChannelPlayerController
                 })->span(12);
 
                 $form->column(function (Form $form) use ($currentDepartmentId) {
-                    $options = Player::getParentTreeOptions(-1, $currentDepartmentId);
-                    $form->treeSelect('recommend_id', admin_trans('player.bind_promoter'))->options($options);
+                    $options = Player::getParentTreeOptions(-1, $currentDepartmentId, false);
+                    $form->treeSelect('recommend_id', admin_trans('player.bind_promoter'))->options($options)->treeNodeFilterProp('search_text');
                 })->span(12);
             })->gutter(16);
 
