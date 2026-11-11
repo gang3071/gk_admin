@@ -37,6 +37,8 @@ return [
         'action_type' => '操作來源',
         'action' => '操作',
         'chip_amount' => '打碼量',
+        'cashback_ratio' => '機台反水比例',
+        'cashback_amount' => '機台反水金額',
         'source_type' => '來源類型',
     ],
     'total_data' => [

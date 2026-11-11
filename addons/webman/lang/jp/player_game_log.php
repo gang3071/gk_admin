@@ -37,6 +37,8 @@ return [
         'action_type' => 'アクションソース',
         'action' => 'アクション',
         'chip_amount' => '打ヤード量',
+        'cashback_ratio' => '機台キャッシュバック比率',
+        'cashback_amount' => '機台キャッシュバック金額',
         'source_type' => 'ソースタイプ',
     ],
     'total_data' => [
