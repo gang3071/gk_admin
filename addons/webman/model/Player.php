@@ -108,7 +108,7 @@ class Player extends Model
     const AUDIT_STATUS_APPROVED = 1;  // 已通过
     const AUDIT_STATUS_REJECTED = 2;  // 未通过
 
-    const PARENT_ONLINE_TIME = '2020-11-11 00:00:00';  // 推廣紅利上線日期
+    const PARENT_ONLINE_TIME = '2026-10-01 00:00:00';  // 推廣紅利上線日期
 
     //数据权限字段
     protected $dataAuth = ['department_id' => 'department_id'];
