@@ -50,6 +50,7 @@ use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\detail\Detail;
 use ExAdmin\ui\component\form\field\Switches;
+use ExAdmin\ui\component\form\field\select\SelectOption;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\card\Card;
@@ -2281,7 +2282,16 @@ class ChannelPlayerController
         return Form::create($player, function (Form $form) use ($player) {
             $form->push(Html::markdown('><font size=1 color="#ff4d4f">' . admin_trans('player.bind_promoter_confirm') . '</font>'));
             $options = Player::getParentTreeOptions($player->id, $player->department_id, $player->is_test == 1);
-            $form->treeSelect('recommend_id')->options($options)->treeNodeFilterProp('search_text');
+            $select = $form->select('recommend_id')->showSearch()->optionFilterProp('search_text');
+
+            foreach ($options as $option) {
+                $select->content(
+                    SelectOption::create()
+                        ->value($option['id'])
+                        ->attr('search_text', $option['search_text'])
+                        ->content($option['name'])
+                );
+            }
 
             $form->saving(function (Form $form) use ($player) {
                 $parent = Player::query()
@@ -4262,7 +4272,16 @@ class ChannelPlayerController
 
                 $form->column(function (Form $form) use ($currentDepartmentId) {
                     $options = Player::getParentTreeOptions(-1, $currentDepartmentId, false);
-                    $form->treeSelect('recommend_id', admin_trans('player.bind_promoter'))->options($options)->treeNodeFilterProp('search_text');
+                    $select = $form->select('recommend_id', admin_trans('player.bind_promoter'))->showSearch()->optionFilterProp('search_text');
+
+                    foreach ($options as $option) {
+                        $select->content(
+                            SelectOption::create()
+                                ->value($option['id'])
+                                ->attr('search_text', $option['search_text'])
+                                ->content($option['name'])
+                        );
+                    }
                 })->span(12);
             })->gutter(16);
 
