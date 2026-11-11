@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property float birthday_bonus 生日礼金
  * @property float upgrade_bonus 升级礼金
  * @property float daily_login_bonus 每日登录奖励
+ * @property int high_setting_machine_play_num 高设定机台可玩数量(0=不可玩)
  * @property int sort 排序
  * @property int status 状态
  * @property string created_at 创建时间
@@ -46,6 +47,7 @@ class VipLevel extends Model
         'birthday_bonus',
         'upgrade_bonus',
         'daily_login_bonus',
+        'high_setting_machine_play_num',
         'sort',
         'status',
     ];

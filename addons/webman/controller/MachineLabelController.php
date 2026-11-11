@@ -82,7 +82,7 @@ class MachineLabelController
             $grid->column('courtyard', admin_trans('machine_label.fields.courtyard'))->align('center');
             $grid->sortInput('sort', admin_trans('machine_label.fields.sort'))->align('center');
             $grid->column('status', admin_trans('machine_label.fields.status'))->switch()->align('center');
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->setForm()->drawer($this->form());
             $grid->hideDelete();
             $grid->filter(function (Filter $filter) {
@@ -253,7 +253,7 @@ class MachineLabelController
             $grid->column('correct_rate', admin_trans('machine_label.fields.correct_rate'))->align('center');
             $grid->sortInput('sort', admin_trans('machine_label.fields.sort'))->align('center');
             $grid->column('status', admin_trans('machine_label.fields.status'))->switch()->align('center');
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->setForm()->drawer($this->form());
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('name')->placeholder(admin_trans('machine_label.fields.name'));

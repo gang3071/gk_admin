@@ -359,7 +359,7 @@ class AgentPromoterController
                 ->hideAdd()
                 ->hideDel()
                 ->searchPlaceholder(admin_trans('admin.search_department'));
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDelete();
             $grid->hideDeleteSelection();
             $grid->hideTrashed();
@@ -618,7 +618,7 @@ class AgentPromoterController
                     admin_trans('public_msg.created_at_end')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideTrashed();

@@ -34,7 +34,7 @@ class MachineReportAggregator
     /**
      * 构建按 machine_id + odds 分组的机台报表查询
      *
-     * @param array $exAdminFilter 后台筛选条件（date_start/date_end/date_type/department_id/is_test/machine[...]）
+     * @param array $exAdminFilter 后台筛选条件（date_start/date_end/date_type/department_id/is_test/machine_source/machine[...]）
      * @param \Closure|null $extraFilter 额外过滤（数据权限等），签名 function($query, string $table): void
      * @return Builder
      */
@@ -184,6 +184,12 @@ class MachineReportAggregator
                 if (!empty($exAdminFilter['machine']['cate_id'])) {
                     $q->whereIn('cate_id', $exAdminFilter['machine']['cate_id']);
                 }
+            });
+        }
+        // 线上/线下来源筛选（machine.machine_source，独立成块避免空值触发 whereHas）
+        if (!empty($exAdminFilter['machine_source'])) {
+            $query->whereHas('machine', function ($q) use ($exAdminFilter) {
+                $q->where('machine_source', $exAdminFilter['machine_source']);
             });
         }
     }

@@ -15,6 +15,7 @@ return [
         'win_ratio' => '中獎機率',
         'win_ratio_help' => '每次押注玩家的中獎概率1為100%中獎, 最小設置1億/1的中獎概率',
         'max_pool_amount' => '最大彩池金額',
+        'pool_ratio_per_point' => '每增量1轉數入池(元/點)',
         'auto_refill_amount' => '保底金額',
         'burst_status' => '爆彩狀態',
         'game_type' => '遊戲類型',
@@ -110,6 +111,14 @@ return [
     'base_bet_amount_help' => '玩家必須累計達到此打碼量才能參與抽獎。設定為0表示不限制（每次下注都檢查）。例如：設定20，玩家需累計下注20元以上才有資格中獎',
     // 新增字段
     'max_pool_amount' => '最大彩池金額',
+    'pool_per_point_col' => [
+        'title'             => '各機台類別入池明細',
+        'category'          => '機台類別',
+        'lottery_point'     => '打碼點數',
+        'add_amount'        => '入池(元/增量1)',
+        'accumulate_status' => '彩金累加',
+        'no_category'       => '暫無機台類別配置',
+    ],
     'auto_refill_amount' => '保底金額',
     'enabled' => '已啟用',
     'disabled' => '未啟用',

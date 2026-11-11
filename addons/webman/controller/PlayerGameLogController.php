@@ -355,17 +355,17 @@ class PlayerGameLogController
                 }
                 if (!empty($data->machine_id)) {
                     $actions->prepend(
-                        Button::create('控制日志')
+                        Button::create(admin_trans('player_game_log.ctrl_log'))
                             ->type('link')
                             ->modal([$this, 'machineCtrlLogs'], ['id' => $data->id])
                             ->width('80%')
-                            ->title('机台控制日志（' . ($data->machine->code ?? '') . '）')
+                            ->title(admin_trans('player_game_log.ctrl_log_title') . '（' . ($data->machine->code ?? '') . '）')
                     );
                 }
             })->align('center');
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -523,7 +523,7 @@ class PlayerGameLogController
             })->align('center');
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

@@ -149,6 +149,7 @@ return [
         'machine_edit_log' => '机台异动日志',
         'lottery_add_log' => '彩金奖池累积日志',
         'player_money_edit_log' => '钱包操作日志',
+        'machine_ctrl_log' => '机台控制日志',
         /** TODO end 翻译 */
         'computer_game' => '电子游戏',
         'game_platforms' => '游戏平台列表',

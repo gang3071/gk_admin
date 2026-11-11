@@ -45,7 +45,7 @@ class StoreDishOrderController
             $grid->model()->where('admin_user_id', Admin::user()->id);
             $grid->model()->with('items')->orderBy('id', 'desc');
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('order_no')->placeholder(admin_trans('dish_order.fields.order_no'));
                 $filter->like()->text('player.name')->placeholder(admin_trans('dish_order.fields.player_id'));
@@ -92,6 +92,11 @@ class StoreDishOrderController
                     }
 
                     return Html::create()->content([$tag]);
+                });
+            $grid->column('remark', admin_trans('dish_order.fields.remark'))
+                ->display(function ($value) {
+                    if (empty($value)) return '-';
+                    return Html::create($value)->style(['color' => '#fa8c16', 'fontSize' => '12px']);
                 });
             $grid->column('created_at', admin_trans('dish_order.fields.created_at'))->align('center');
             $grid->column('updated_at', admin_trans('dish_order.fields.updated_at'))->align('center');
@@ -261,7 +266,7 @@ class StoreDishOrderController
                 ->orderBy('dish_order_item.admin_user_id', 'asc')
                 ->orderBy('dish_order_item.dish_id', 'asc');
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->filter(function (Filter $filter) use ($categories)  {
                 $filter->like()->text('dish_title')->placeholder(admin_trans('dish_order_item.fields.dish_title'));
 

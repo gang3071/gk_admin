@@ -115,7 +115,7 @@ class AdminController
             $grid->column('created_at', admin_trans('admin.fields.create_at'));
             $grid->hideDelete();
             $grid->setForm()->modal($this->form());
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('username')->placeholder(admin_trans('admin.fields.username'));
                 $filter->like()->text('phone')->placeholder(admin_trans('admin.fields.phone'));

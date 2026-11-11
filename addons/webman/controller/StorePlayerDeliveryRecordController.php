@@ -406,7 +406,7 @@ class StorePlayerDeliveryRecordController
                     ->multiple()
                     ->options(PlayerDeliveryRecord::typeOptions());
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

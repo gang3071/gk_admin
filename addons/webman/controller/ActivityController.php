@@ -160,7 +160,7 @@ class ActivityController
             });
             $grid->hideDelete();
             $grid->hideTrashed();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->setForm()->drawer($this->activity());
         });
     }

@@ -19,6 +19,11 @@ return [
         'lottery_add_status' => '彩金累加狀態',
         'lottery_assign_status' => '彩金分配狀態',
         'turn_used_point' => '每轉消耗遊戲點數',
+        'machine_source' => '機台來源',
+    ],
+    'machine_source' => [
+        'online' => '線上機台（有直播）',
+        'offline' => '線下機台（無直播）',
     ],
     'opening_gift' => [
         'opening_gift' => '開分贈點',

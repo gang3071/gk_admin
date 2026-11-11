@@ -343,7 +343,7 @@ class ChannelAutoShiftController
             });
 
             $grid->hideDelete();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

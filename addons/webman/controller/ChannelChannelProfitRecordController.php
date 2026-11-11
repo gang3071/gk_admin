@@ -182,7 +182,7 @@ class ChannelChannelProfitRecordController
         $grid->hideDelete();
         $grid->hideSelection();
         $grid->hideTrashed();
-        $grid->expandFilter();
+        $grid->expandFilter(false);
     }
     
     /**
@@ -245,7 +245,7 @@ class ChannelChannelProfitRecordController
                         0 => admin_trans('channel.disable')
                     ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideTrashed();
@@ -379,7 +379,7 @@ class ChannelChannelProfitRecordController
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideTrashed();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
             });
@@ -578,7 +578,7 @@ class ChannelChannelProfitRecordController
                     admin_trans('public_msg.created_at_end')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideTrashed();

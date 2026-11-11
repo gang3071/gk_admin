@@ -231,7 +231,7 @@ class ChannelPlayerWalletTransferController
                         PlayerWalletTransfer::TYPE_IN => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN),
                     ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 }

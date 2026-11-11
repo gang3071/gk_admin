@@ -73,5 +73,7 @@ return [
     'source_type' => [
         PlayerGameLog::SOURCE_TYPE_ONLINE => 'オンラインシステム',
         PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON => '物理ボタン',
-    ]
+    ],
+    'ctrl_log'       => '制御ログ',
+    'ctrl_log_title' => 'マシン制御ログ',
 ];

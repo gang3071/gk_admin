@@ -74,5 +74,7 @@ return [
     'source_type' => [
         PlayerGameLog::SOURCE_TYPE_ONLINE => 'Online System',
         PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON => 'Physical Button',
-    ]
+    ],
+    'ctrl_log'       => 'Control Log',
+    'ctrl_log_title' => 'Machine Control Log',
 ];

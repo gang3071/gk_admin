@@ -67,6 +67,7 @@ class StoreSettingController
             // - business_hours: 营业时间段
             // - enable_physical_machine: 是否开启实体机台
             // - enable_live_baccarat: 是否开启真人百家
+            // - enable_points: 积分开关
             // - machine_crash_amount: 爆机金额
             // - menu_image: 点菜菜单图片
             $grid->column('feature', admin_trans('store_setting.fields.feature'))
@@ -136,6 +137,16 @@ class StoreSettingController
                 // 是否开启真人百家
                 ->if(function ($value, StoreSetting $data) {
                     return $data->feature === 'enable_live_baccarat';
+                })->display(function ($val, StoreSetting $data) {
+                    if ($data->status == 1) {
+                        return Tag::create(admin_trans('store_setting.enable'))->color('green');
+                    } else {
+                        return Tag::create(admin_trans('store_setting.disable'))->color('red');
+                    }
+                })->align('center')
+                // 积分开关
+                ->if(function ($value, StoreSetting $data) {
+                    return $data->feature === 'enable_points';
                 })->display(function ($val, StoreSetting $data) {
                     if ($data->status == 1) {
                         return Tag::create(admin_trans('store_setting.enable'))->color('green');

@@ -110,7 +110,7 @@ class ChannelSliderController
                     ]);
             });
             $grid->hideDelete();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

@@ -239,7 +239,7 @@ class AgentTicketRecordController
             }
 
             // 筛选器
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->filter(function (Filter $filter) use ($storeOptions) {
                 $filter->like()->text('player.name')->placeholder(admin_trans('ticket_machine.record.player_name'));
                 $filter->like()->text('order_id')->placeholder(admin_trans('ticket_machine.record.order_id'));

@@ -227,7 +227,7 @@ class ChannelPromoterProfitGameRecordController
                     admin_trans('public_msg.created_at_end')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -346,7 +346,7 @@ class ChannelPromoterProfitGameRecordController
                     admin_trans('public_msg.created_at_end')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 }

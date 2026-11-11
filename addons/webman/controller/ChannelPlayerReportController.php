@@ -394,7 +394,7 @@ class ChannelPlayerReportController
             // 隐藏一些不需要的功能按钮
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $action, $data) use ($grid) {
                 $action->hideDel();
                 $action->hideEdit();

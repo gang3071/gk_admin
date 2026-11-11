@@ -19,6 +19,11 @@ return [
         'lottery_add_status' => 'Lottery accumulation status',
         'lottery_assign_status' => 'Lottery assignment status',
         'turn_used_point' => 'turn used point',
+        'machine_source' => 'Machine source',
+    ],
+    'machine_source' => [
+        'online' => 'Online machine (with live stream)',
+        'offline' => 'Offline machine (no live stream)',
     ],
     'opening_gift' => [
         'opening_gift' => 'opening points',

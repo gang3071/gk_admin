@@ -108,7 +108,7 @@ class AnnouncementController
                     ->placeholder(admin_trans('announcement.fields.department_id'))
                     ->remoteOptions(admin_url(['addons-webman-controller-ChannelController', 'getDepartmentOptions']));
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 

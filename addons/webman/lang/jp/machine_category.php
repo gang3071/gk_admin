@@ -19,6 +19,11 @@ return [
         'lottery_add_status' => '宝くじ累計ステータス',
         'lottery_assign_status' => '宝くじの割り当てステータス',
         'turn_used_point' => '1回転あたりのゲームポイント消費',
+        'machine_source' => 'マシン種別',
+    ],
+    'machine_source' => [
+        'online' => 'オンラインマシン（ライブ配信あり）',
+        'offline' => 'オフラインマシン（ライブ配信なし）',
     ],
     'opening_gift' => [
         'opening_gift' => 'オープニングポイント',

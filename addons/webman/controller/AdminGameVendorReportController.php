@@ -75,7 +75,7 @@ class AdminGameVendorReportController
             $grid->driver()->setPk('platform_id');
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
 
             $grid->actions(function (Actions $action) {
                 $action->hideDel();
@@ -258,7 +258,7 @@ class AdminGameVendorReportController
         $rows = $this->buildBaseQuery($exAdminFilter)
             ->groupBy("$pgr.platform_id", "$gp.cate_id", "$gp.name")
             ->selectRaw("$pgr.platform_id, $gp.cate_id, $gp.name as platform_name,
-                SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status=1  THEN $pgr.bet  ELSE 0 END) as valid_bet,
+                SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status IN (0, 1) THEN $pgr.bet ELSE 0 END) as valid_bet,
                 SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status!=2 THEN $pgr.bet  ELSE 0 END) as total_bet,
                 SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status=1  THEN $pgr.diff ELSE 0 END) as player_win_loss,
                 SUM(CASE WHEN $pgr.type=2 THEN $pgr.bet ELSE 0 END) as gift_amount,

@@ -264,6 +264,7 @@ class MachineController
         $grid->column('status', admin_trans('machine.fields.status'))->switch()->align('center');
         $grid->column('is_use', admin_trans('machine.fields.is_use'))->switch()->align('center');
         $grid->column('maintaining', admin_trans('machine.fields.maintaining'))->switch()->align('center');
+        $grid->column('is_high_setting', admin_trans('machine.fields.is_high_setting'))->switch()->align('center');
         $grid->column('has_lock', admin_trans('machine.fields.has_lock'))->display(function (
             $val,
             Machine $data
@@ -429,7 +430,7 @@ class MachineController
                 ->size('small'),
         ]);
         $grid->hideDelete();
-        $grid->expandFilter();
+        $grid->expandFilter(false);
     }
 
     /**
@@ -1336,7 +1337,7 @@ class MachineController
             });
             $grid->hideSelection();
             $grid->hideTrashed();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions, $data) {
                 $actions->hideDel();
                 $actions->hideEdit();
@@ -2164,7 +2165,7 @@ class MachineController
             });
             $grid->hideSelection();
             $grid->hideTrashed();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions, $data) {
                 $actions->hideDel();
                 $actions->hideEdit();
@@ -2419,7 +2420,7 @@ class MachineController
                 ]);
             });
             $grid->hideSelection();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
                 $actions->hideEdit();

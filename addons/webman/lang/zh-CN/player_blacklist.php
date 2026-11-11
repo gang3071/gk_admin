@@ -13,7 +13,9 @@ return [
     ],
 
     'action' => [
-        'add' => '加入黑名单',
+        'add'            => '加入黑名单',
+        'remove'         => '移除',
+        'remove_confirm' => '确定要将此身份证号码从黑名单中移除吗？',
     ],
 
     'placeholder' => [
@@ -23,6 +25,7 @@ return [
 
     'message' => [
         'add_success'      => '已成功加入黑名单',
+        'remove_success'   => '已成功从黑名单中移除',
         'not_blacklisted'  => '✓ 未加入黑名单',
     ],
 

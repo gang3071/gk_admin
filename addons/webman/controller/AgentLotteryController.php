@@ -357,7 +357,7 @@ class AgentLotteryController
                     ]);
             });
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 }

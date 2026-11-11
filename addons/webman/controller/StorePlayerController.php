@@ -179,10 +179,63 @@ class StorePlayerController
         $sortFieldMapping = [
             'vip_level_name' => 'vip_level_sort',
         ];
-        $actualSortField = $sortFieldMapping[$exAdminSortField] ?? $exAdminSortField;
+
+        // 打码量排序：聚合 join 仅在按打码列排序时挂载（count 之后挂，保持 count 轻量），
+        // 口径与页内批量统计一致（dataAuth 全局作用域自动生效）
+        $sortNeedsElectronicBet = ($exAdminSortField === 'electronic_bet_amount' && $exAdminSortBy !== '');
+        $sortNeedsMachineBet = ($exAdminSortField === 'machine_bet_amount' && $exAdminSortBy !== '');
+        $sortNeedsTotalBet = ($exAdminSortField === 'total_bet_amount' && $exAdminSortBy !== '');
 
         // SQL 层分页：count 去掉 select（相关子查询不参与 count），distinct 防止 vip_retain_period 一对多放大
         $playerCount = (clone $query)->toBase()->distinct()->count('player.id');
+
+        // 本店玩家集合（聚合 join 限定范围内 GROUP BY，避免全站聚合）
+        $storePlayerIds = Player::query()
+            ->select('id')
+            ->where('department_id', $departmentId)
+            ->where('store_admin_id', $storeAdminId)
+            ->where('is_promoter', 0);
+
+        if ($sortNeedsElectronicBet || $sortNeedsTotalBet) {
+            $eleSub = \addons\webman\model\PlayGameRecord::query()
+                ->selectRaw('player_id, COALESCE(SUM(bet), 0) as electronic_bet_amount')
+                // 电子打码量：过滤结算状态为已取消的订单
+                ->where('settlement_status', '!=', \addons\webman\model\PlayGameRecord::SETTLEMENT_STATUS_CANCELLED)
+                ->whereIn('player_id', $storePlayerIds)
+                ->groupBy('player_id');
+            if (!empty($requestFilter['stats_start_time'])) {
+                $eleSub->where('created_at', '>=', $requestFilter['stats_start_time']);
+            }
+            if (!empty($requestFilter['stats_end_time'])) {
+                $eleSub->where('created_at', '<=', $requestFilter['stats_end_time']);
+            }
+            $query->leftJoinSub($eleSub, 'electronic_bet_stats', function ($join) {
+                $join->on('player.id', '=', 'electronic_bet_stats.player_id');
+            });
+            $sortFieldMapping['electronic_bet_amount'] = 'electronic_bet_stats.electronic_bet_amount';
+        }
+        if ($sortNeedsMachineBet || $sortNeedsTotalBet) {
+            $machineSub = \addons\webman\model\PlayerGameLog::query()
+                ->selectRaw('player_id, COALESCE(SUM(chip_amount), 0) as machine_bet_amount')
+                ->whereIn('player_id', $storePlayerIds)
+                ->groupBy('player_id');
+            if (!empty($requestFilter['stats_start_time'])) {
+                $machineSub->where('created_at', '>=', $requestFilter['stats_start_time']);
+            }
+            if (!empty($requestFilter['stats_end_time'])) {
+                $machineSub->where('created_at', '<=', $requestFilter['stats_end_time']);
+            }
+            $query->leftJoinSub($machineSub, 'machine_bet_stats', function ($join) {
+                $join->on('player.id', '=', 'machine_bet_stats.player_id');
+            });
+            $sortFieldMapping['machine_bet_amount'] = 'machine_bet_stats.machine_bet_amount';
+        }
+        if ($sortNeedsTotalBet) {
+            // 总打码 = 电子 + 机台（与列表展示口径一致）
+            $sortFieldMapping['total_bet_amount'] = Db::raw('(COALESCE(electronic_bet_stats.electronic_bet_amount, 0) + COALESCE(machine_bet_stats.machine_bet_amount, 0))');
+        }
+
+        $actualSortField = $sortFieldMapping[$exAdminSortField] ?? $exAdminSortField;
 
         $page = max(1, (int)Request::input('ex_admin_page', 1));
         $size = max(1, (int)Request::input('ex_admin_size', 20));
@@ -324,6 +377,31 @@ class StorePlayerController
             $currentLotteryTicketRewardByPlayer = $currentLotteryTicketRewardQuery->selectRaw('player_id, SUM(amount) as total_amount')
                 ->groupBy('player_id')->pluck('total_amount', 'player_id')->toArray();
 
+            // 批量查询电子打码量（过滤结算状态为已取消的订单；支持统计时间筛选）
+            $electronicBetQuery = \addons\webman\model\PlayGameRecord::query()
+                ->whereIn('player_id', $playerIds)
+                ->where('settlement_status', '!=', \addons\webman\model\PlayGameRecord::SETTLEMENT_STATUS_CANCELLED);
+            if (!empty($requestFilter['stats_start_time'])) {
+                $electronicBetQuery->where('created_at', '>=', $requestFilter['stats_start_time']);
+            }
+            if (!empty($requestFilter['stats_end_time'])) {
+                $electronicBetQuery->where('created_at', '<=', $requestFilter['stats_end_time']);
+            }
+            $electronicBetByPlayer = $electronicBetQuery->selectRaw('player_id, SUM(bet) as total_bet')
+                ->groupBy('player_id')->pluck('total_bet', 'player_id')->toArray();
+
+            // 批量查询机台打码量（支持统计时间筛选）
+            $machineBetQuery = \addons\webman\model\PlayerGameLog::query()
+                ->whereIn('player_id', $playerIds);
+            if (!empty($requestFilter['stats_start_time'])) {
+                $machineBetQuery->where('created_at', '>=', $requestFilter['stats_start_time']);
+            }
+            if (!empty($requestFilter['stats_end_time'])) {
+                $machineBetQuery->where('created_at', '<=', $requestFilter['stats_end_time']);
+            }
+            $machineBetByPlayer = $machineBetQuery->selectRaw('player_id, SUM(chip_amount) as total_chip')
+                ->groupBy('player_id')->pluck('total_chip', 'player_id')->toArray();
+
             // === 合并数据到列表 ===
             foreach ($list as &$item) {
                 $playerId = $item['id'];
@@ -371,6 +449,11 @@ class StorePlayerController
                 $item['current_lottery_ticket_reward'] = floatval($currentLotteryTicketRewardByPlayer[$playerId] ?? 0);
                 $item['current_electronic_game_bet'] = floatval($currentElectronicGameBetByPlayer[$playerId] ?? 0);
                 $item['current_machine_bet'] = floatval($currentMachineBetByPlayer[$playerId] ?? 0);
+
+                // 打码量：电子（过滤已取消）/ 机台 / 总（电子 + 机台）
+                $item['electronic_bet_amount'] = floatval($electronicBetByPlayer[$playerId] ?? 0);
+                $item['machine_bet_amount'] = floatval($machineBetByPlayer[$playerId] ?? 0);
+                $item['total_bet_amount'] = $item['electronic_bet_amount'] + $item['machine_bet_amount'];
 
                 // 计算当前未交班总利润 = (开分 + 投钞) - 洗分
                 // 注意：current_total_outcome 只包含洗分(TYPE_WITHDRAWAL)，不包含彩金
@@ -577,6 +660,26 @@ class StorePlayerController
             })->sortable()->width(110)->align('center');
 
             $grid->column('withdraw_amount', admin_trans('player.total_withdraw_amount'))->display(function ($value) {
+                return Html::create(number_format(floatval($value), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500'
+                ]);
+            })->sortable()->width(110)->align('center');
+
+            // 打码量：电子（过滤已取消）/ 机台 / 总
+            $grid->column('electronic_bet_amount', admin_trans('player.electronic_bet_amount'))->display(function ($value) {
+                return Html::create(number_format(floatval($value), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500'
+                ]);
+            })->sortable()->width(110)->align('center');
+            $grid->column('machine_bet_amount', admin_trans('player.machine_bet_amount'))->display(function ($value) {
+                return Html::create(number_format(floatval($value), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500'
+                ]);
+            })->sortable()->width(110)->align('center');
+            $grid->column('total_bet_amount', admin_trans('player.total_bet_amount'))->display(function ($value) {
                 return Html::create(number_format(floatval($value), 2))->style([
                     'fontSize' => '13px',
                     'fontWeight' => '500'
@@ -859,6 +962,7 @@ class StorePlayerController
                         admin_trans('player.device_created_end_time')
                     ]);
             });
+            $grid->expandFilter(false);
 
             $grid->actions(function ($actions, $data) use ($admin) {
                 // 打码统计按钮

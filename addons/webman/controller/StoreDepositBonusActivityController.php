@@ -128,7 +128,7 @@ class StoreDepositBonusActivityController
                 ]);
             });
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideAdd(); // 店家不能创建活动
             $grid->hideDelete();
             $grid->hideTrashed();

@@ -228,7 +228,7 @@ class ChannelStoreAgentProfitRecordController
                     admin_trans('public_msg.created_at_end')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideTrashed();

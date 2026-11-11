@@ -185,7 +185,7 @@ class StoreTicketRedeemController
                 $storeOptions[$store] = $store;
             }
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->filter(function (Filter $filter) use ($storeOptions) {
                 $filter->like()->text('order_id')->placeholder(admin_trans('ticket_machine.redeem.order_id'));
                 // 玩家姓名筛选（使用关系）

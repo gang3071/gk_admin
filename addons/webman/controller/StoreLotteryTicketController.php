@@ -149,6 +149,7 @@ class StoreLotteryTicketController
                         LotteryTicket::SOURCE_MANUAL => admin_trans('lottery_ticket.source.manual'),
                     ]);
             });
+            $grid->expandFilter(false);
 
             // 店家后台只读：隐藏删除和选择
             $grid->hideDelete();

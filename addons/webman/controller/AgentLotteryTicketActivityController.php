@@ -143,6 +143,7 @@ class AgentLotteryTicketActivityController
                         admin_trans('lottery_ticket.fields.end_time')
                     ]);
             });
+            $grid->expandFilter(false);
 
             // 代理后台只读：隐藏删除和选择
             $grid->hideDelete();

@@ -129,8 +129,15 @@ class MachineCategoryController
                 ]);
             })->align('center');
             $grid->sortInput('sort', admin_trans('machine_category.fields.sort'))->align('center');
+            $grid->column('machine_source', admin_trans('machine_category.fields.machine_source'))->display(function ($val) {
+                $map = [
+                    MachineCategory::MACHINE_SOURCE_ONLINE  => admin_trans('machine_category.machine_source.online'),
+                    MachineCategory::MACHINE_SOURCE_OFFLINE => admin_trans('machine_category.machine_source.offline'),
+                ];
+                return Html::create()->content([$map[$val] ?? $val]);
+            })->align('center');
             $grid->column('status', admin_trans('machine_category.fields.status'))->switch()->align('center');
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->setForm()->drawer($this->form());
             $grid->hideDelete();
             $grid->deling(function ($ids) {
@@ -217,8 +224,15 @@ class MachineCategoryController
                 ]);
             })->align('center');
             $grid->sortInput('sort', admin_trans('machine_category.fields.sort'))->align('center');
+            $grid->column('machine_source', admin_trans('machine_category.fields.machine_source'))->display(function ($val) {
+                $map = [
+                    MachineCategory::MACHINE_SOURCE_ONLINE  => admin_trans('machine_category.machine_source.online'),
+                    MachineCategory::MACHINE_SOURCE_OFFLINE => admin_trans('machine_category.machine_source.offline'),
+                ];
+                return Html::create()->content([$map[$val] ?? $val]);
+            })->align('center');
             $grid->column('status', admin_trans('machine_category.fields.status'))->switch()->align('center');
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->setForm()->drawer($this->form());
             $grid->hideDelete();
             $grid->deling(function ($ids) {
@@ -315,8 +329,15 @@ class MachineCategoryController
                 ]);
             })->align('center');
             $grid->sortInput('sort', admin_trans('machine_category.fields.sort'))->align('center');
+            $grid->column('machine_source', admin_trans('machine_category.fields.machine_source'))->display(function ($val) {
+                $map = [
+                    MachineCategory::MACHINE_SOURCE_ONLINE  => admin_trans('machine_category.machine_source.online'),
+                    MachineCategory::MACHINE_SOURCE_OFFLINE => admin_trans('machine_category.machine_source.offline'),
+                ];
+                return Html::create()->content([$map[$val] ?? $val]);
+            })->align('center');
             $grid->column('status', admin_trans('machine_category.fields.status'))->switch()->align('center');
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->setForm()->drawer($this->form());
             $grid->hideDelete();
             $grid->deling(function ($ids) {
@@ -419,6 +440,13 @@ class MachineCategoryController
                     $form->switch('lottery_assign_status', admin_trans('machine_category.fields.lottery_assign_status'))->span(6)->help(admin_trans('machine_category.lottery_assign_status_help'));
                 })->span(6)->style(['margin-left' => '59px']);
             }, admin_trans('machine_category.lottery_setting'));
+            $form->radio('machine_source', admin_trans('machine_category.fields.machine_source'))
+                ->options([
+                    MachineCategory::MACHINE_SOURCE_ONLINE  => admin_trans('machine_category.machine_source.online'),
+                    MachineCategory::MACHINE_SOURCE_OFFLINE => admin_trans('machine_category.machine_source.offline'),
+                ])
+                ->default(MachineCategory::MACHINE_SOURCE_ONLINE)
+                ->required();
             $form->row(function (Form $form) {
                 $form->column(function (Form $form) {
                     $form->number('sort', admin_trans('machine_category.fields.sort'))->default($this->model::max('sort') + 1)->style(['width' => '100%']);

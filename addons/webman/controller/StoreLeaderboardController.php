@@ -93,7 +93,7 @@ class StoreLeaderboardController
                     }
                 ], 'prize_amount');
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('name')->placeholder(admin_trans('leaderboard.fields.name'));
                 $filter->like()->text('period_key')->placeholder(admin_trans('leaderboard.fields.period_key'));
@@ -187,7 +187,7 @@ class StoreLeaderboardController
             $grid->model()->where('leaderboard_id', $id)->where('store_admin_id', Admin::user()->id);
             $grid->model()->with('leaderboard')->orderBy('rank', 'asc');
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('player.name')->placeholder(admin_trans('leaderboard_entry.fields.player_id'));
                 $filter->eq()->select('grant_status')

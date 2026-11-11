@@ -213,7 +213,7 @@ class AgentDepositBonusTaskController
                     ]);
             });
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideAdd();
             $grid->hideDelete();
             $grid->hideTrashed();

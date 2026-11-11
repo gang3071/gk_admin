@@ -75,7 +75,9 @@ class ChannelIndexController
             ->selectRaw("
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_total,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdrawal_total,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `source` = 'channel_withdrawal' THEN `amount` ELSE 0 END) AS channel_withdrawal_amount,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " AND `source` = 'storage_recharge' THEN `amount` ELSE 0 END) AS storage_recharge_amount,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . " THEN `amount` ELSE 0 END) AS activity_total,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . " THEN `amount` ELSE 0 END) AS lottery_ticket_reward_amount,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS . " THEN `amount` ELSE 0 END) AS birthday_bonus_amount,
@@ -86,7 +88,9 @@ class ChannelIndexController
         $operationStatistics = [
             'recharge_total' => $operationStatisticsQuery->recharge_total ?? 0,
             'withdrawal_total' => $operationStatisticsQuery->withdrawal_total ?? 0,
+            'channel_withdrawal_amount' => $operationStatisticsQuery->channel_withdrawal_amount ?? 0,
             'machine_put_point' => $operationStatisticsQuery->machine_put_point ?? 0,
+            'storage_recharge_amount' => $operationStatisticsQuery->storage_recharge_amount ?? 0,
             'activity_total' => $operationStatisticsQuery->activity_total ?? 0,
             'lottery_ticket_reward_amount' => $operationStatisticsQuery->lottery_ticket_reward_amount ?? 0,
             'birthday_bonus_amount' => $operationStatisticsQuery->birthday_bonus_amount ?? 0,
@@ -116,6 +120,41 @@ class ChannelIndexController
             'lottery_amount' => $lotteryStatisticsQuery->lottery_amount ?? 0,
         ];
 
+        // ✅ 出票金额（开分票票面额，只计正常/后台使用/机台使用，口径同店机中心开票）
+        $ticketOpenScoreQuery = TicketRecord::query()
+            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->whereIn('status', [
+                TicketRecord::STATUS_NORMAL,
+                TicketRecord::STATUS_BACKEND_USED,
+                TicketRecord::STATUS_MACHINE_USED,
+            ])
+            ->when($data_type && $data_type !== 'all', function ($query) use ($data_type) {
+                $this->applyDateWhere($query, $data_type, 'created_at');
+            })
+            ->sum('score');
+
+        // ✅ 核销金额（后台使用的开分/洗分票，按核销时间 scanned_at 归属，口径同店机中心核销）
+        $ticketRedeemQuery = TicketRecord::query()
+            ->whereIn('ticket_type', [
+                TicketRecord::TYPE_RECHARGE,
+                TicketRecord::TYPE_WITHDRAW,
+            ])
+            ->where('status', TicketRecord::STATUS_BACKEND_USED)
+            ->when($data_type && $data_type !== 'all', function ($query) use ($data_type) {
+                $this->applyDateWhere($query, $data_type, 'scanned_at');
+            })
+            ->sum('score');
+
+        // 计算盈余小计 = (开票 + 储值机储值) - (洗分 + 核销)
+        // 与店机中心「总利润」同口径：收入只认开票 + 储值机储值（人工储值/钱包开分不计入收入），
+        // 支出 = 洗分（source=channel_withdrawal，仅现金出款）+ 后台核销（开分/洗分票兑付）
+        // 与「总洗分」卡的口径差异是刻意的：总洗分卡是全来源钱包出款（含票出款/寄存码），
+        // 公式只扣现金出款，票出款兑现金时由核销扣一次，避免重复计
+        // 注意：彩金和活动奖励只用于展示，不参与利润计算（发放后客户洗分会洗掉）
+        $incomeTotal = bcadd($ticketOpenScoreQuery, $operationStatistics['storage_recharge_amount'] ?? 0, 2);
+        $outcomeTotal = bcadd($operationStatistics['channel_withdrawal_amount'] ?? 0, $ticketRedeemQuery, 2);
+        $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
+
         $dropdown = Dropdown::create(
             Button::create(admin_trans('data_center.data_cycle') . ' (' . admin_trans('data_center.data_type.' . ($data_type == null || $data_type == 'all' ? 'all' : $data_type)) . ')')
         )->trigger(['click']);
@@ -132,17 +171,8 @@ class ChannelIndexController
         $dropdown->item(admin_trans('data_center.data_type.last_month'))->redirect([$this, 'index'],
             ['data_type' => 'last_month']);
         $layout = Layout::create();
-        $layout->row(function (Row $row) use ($rechargeData, $withdrawData, $playerData, $loginData, $dropdown, $operationStatistics, $lotteryStatistics) {
+        $layout->row(function (Row $row) use ($rechargeData, $withdrawData, $playerData, $loginData, $dropdown, $operationStatistics, $lotteryStatistics, $subtotal) {
             $row->gutter([10, 10]);
-            // 计算运营统计的小计（基于时间筛选的数据）
-            // 盈余小计 = (开分 + 投钞) - 洗分
-            // 注意：彩金和活动奖励只用于展示，不参与利润计算（发放后客户洗分会洗掉）
-            $incomeTotal = bcadd(
-                $operationStatistics['recharge_total'] ?? 0,
-                $operationStatistics['machine_put_point'] ?? 0,
-                2
-            );
-            $subtotal = bcsub($incomeTotal, $operationStatistics['withdrawal_total'] ?? 0, 2);
 
             // 数据周期筛选
             $row->column(
@@ -1049,7 +1079,7 @@ class ChannelIndexController
                     default:
                         break;
                 }
-            })->sum('point'),
+            })->sum('money'),
             'business' => PlayerPresentRecord::where('type', PlayerPresentRecord::TYPE_IN)->when($data_type,
                 function (Builder $q, $value) {
                     switch ($value) {
@@ -1177,7 +1207,7 @@ class ChannelIndexController
             ->orderBy('date', 'DESC')
             ->get([
                 DB::raw('Date(`created_at`) as date'),
-                DB::raw('SUM(`point`) as value')
+                DB::raw('SUM(`money`) as value')
             ])
             ->toArray();
         $data = $data ? array_column($data, 'value', 'date') : [];
@@ -1253,48 +1283,52 @@ class ChannelIndexController
             ->where('is_promoter', 0)
             ->count();
 
-        // 4. 构建时间筛选闭包
-        $timeFilter = function ($query) use ($data_type) {
-            if ($data_type) {
-                switch ($data_type) {
-                    case 'today':
-                        $query->where('created_at', '>=', Carbon::today()->startOfDay())
-                            ->where('created_at', '<=', Carbon::today()->endOfDay());
-                        break;
-                    case 'yesterday':
-                        $query->where('created_at', '>=', Carbon::yesterday()->startOfDay())
-                            ->where('created_at', '<=', Carbon::yesterday()->endOfDay());
-                        break;
-                    case 'week':
-                        $query->where('created_at', '>=', Carbon::today()->startOfWeek()->startOfDay())
-                            ->where('created_at', '<=', Carbon::today()->endOfWeek()->endOfDay());
-                        break;
-                    case 'last_week':
-                        $query->where('created_at', '>=', Carbon::today()->subWeek()->startOfWeek()->startOfDay())
-                            ->where('created_at', '<=', Carbon::today()->subWeek()->endOfWeek()->endOfDay());
-                        break;
-                    case 'month':
-                        $query->where('created_at', '>=', Carbon::today()->firstOfMonth()->startOfDay())
-                            ->where('created_at', '<=', Carbon::today()->endOfMonth()->endOfDay());
-                        break;
-                    case 'last_month':
-                        $startDate = Carbon::create(
-                            Carbon::now()->subMonthNoOverflow()->year,
-                            Carbon::now()->subMonthNoOverflow()->month,
-                            1, 0, 0, 0
-                        );
-                        $endDate = Carbon::create(
-                            Carbon::now()->subMonthNoOverflow()->year,
-                            Carbon::now()->subMonthNoOverflow()->month,
-                            Carbon::now()->subMonthNoOverflow()->daysInMonth,
-                            23, 59, 59
-                        );
-                        $query->where('created_at', '>=', $startDate)
-                            ->where('created_at', '<=', $endDate);
-                        break;
+        // 4. 构建时间筛选闭包（$column 指定时间列：常规统计按 created_at，核销按 scanned_at 归属）
+        $timeFilterFactory = function (string $column) use ($data_type) {
+            return function ($query) use ($data_type, $column) {
+                if ($data_type) {
+                    switch ($data_type) {
+                        case 'today':
+                            $query->where($column, '>=', Carbon::today()->startOfDay())
+                                ->where($column, '<=', Carbon::today()->endOfDay());
+                            break;
+                        case 'yesterday':
+                            $query->where($column, '>=', Carbon::yesterday()->startOfDay())
+                                ->where($column, '<=', Carbon::yesterday()->endOfDay());
+                            break;
+                        case 'week':
+                            $query->where($column, '>=', Carbon::today()->startOfWeek()->startOfDay())
+                                ->where($column, '<=', Carbon::today()->endOfWeek()->endOfDay());
+                            break;
+                        case 'last_week':
+                            $query->where($column, '>=', Carbon::today()->subWeek()->startOfWeek()->startOfDay())
+                                ->where($column, '<=', Carbon::today()->subWeek()->endOfWeek()->endOfDay());
+                            break;
+                        case 'month':
+                            $query->where($column, '>=', Carbon::today()->firstOfMonth()->startOfDay())
+                                ->where($column, '<=', Carbon::today()->endOfMonth()->endOfDay());
+                            break;
+                        case 'last_month':
+                            $startDate = Carbon::create(
+                                Carbon::now()->subMonthNoOverflow()->year,
+                                Carbon::now()->subMonthNoOverflow()->month,
+                                1, 0, 0, 0
+                            );
+                            $endDate = Carbon::create(
+                                Carbon::now()->subMonthNoOverflow()->year,
+                                Carbon::now()->subMonthNoOverflow()->month,
+                                Carbon::now()->subMonthNoOverflow()->daysInMonth,
+                                23, 59, 59
+                            );
+                            $query->where($column, '>=', $startDate)
+                                ->where($column, '<=', $endDate);
+                            break;
+                    }
                 }
-            }
+            };
         };
+        $timeFilter = $timeFilterFactory('created_at');
+        $scannedTimeFilter = $timeFilterFactory('scanned_at');
 
         // ✅ 内存优化：使用子查询替代 playerIds
         // 统一使用 PlayerDeliveryRecord 查询
@@ -1311,7 +1345,9 @@ class ChannelIndexController
             ->selectRaw("
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_total,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdrawal_total,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `source` = 'channel_withdrawal' THEN `amount` ELSE 0 END) AS channel_withdrawal_amount,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " AND `source` = 'storage_recharge' THEN `amount` ELSE 0 END) AS storage_recharge_amount,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . " THEN `amount` ELSE 0 END) AS activity_total,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . " THEN `amount` ELSE 0 END) AS lottery_ticket_reward_amount,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS . " THEN `amount` ELSE 0 END) AS birthday_bonus_amount,
@@ -1320,14 +1356,16 @@ class ChannelIndexController
             ->first();
 
         $rechargeAmount = $deliveryStatisticsQuery->recharge_total ?? 0;
-        $withdrawAmount = $deliveryStatisticsQuery->withdrawal_total ?? 0;
+        $withdrawAmount = $deliveryStatisticsQuery->channel_withdrawal_amount ?? 0; // 盈余公式用：银行卡洗分（现金出款）
+        $withdrawTotal = $deliveryStatisticsQuery->withdrawal_total ?? 0; // 总洗分卡用：全来源洗分（含票/寄存码出款）
         $machinePutPoint = $deliveryStatisticsQuery->machine_put_point ?? 0;
+        $storageRechargeAmount = $deliveryStatisticsQuery->storage_recharge_amount ?? 0;
         $activityTotal = $deliveryStatisticsQuery->activity_total ?? 0;
         $lotteryTicketRewardAmount = $deliveryStatisticsQuery->lottery_ticket_reward_amount ?? 0;
         $birthdayBonusAmount = $deliveryStatisticsQuery->birthday_bonus_amount ?? 0;
         $upgradeBonusAmount = $deliveryStatisticsQuery->upgrade_bonus_amount ?? 0;
 
-        // ✅ 查询电子游戏总押注（使用子查询）
+        // ✅ 查询电子游戏总押注（使用子查询，排除取消投注）
         $electronicBetTotal = PlayGameRecord::query()
             ->whereExists(function ($query) use ($agent, $storeIds) {
                 $query->selectRaw(1)
@@ -1337,32 +1375,31 @@ class ChannelIndexController
                     ->whereIn('player.store_admin_id', $storeIds)
                     ->where('player.is_promoter', 0);
             })
+            ->where('play_game_record.settlement_status', '!=', PlayGameRecord::SETTLEMENT_STATUS_CANCELLED)
             ->when($data_type, $timeFilter)
             ->sum('bet') ?? 0;
 
-        // 查询实体机押注 - 钢珠
+        // 查询实体机押注 - 钢珠（按 player_game_log.type 分类；钢珠押分取 chip_amount，同交班统计口径）
         $steelBallBetTotal = PlayerGameLog::query()
-            ->whereHas('player', function ($q) use ($storeIds) {
-                $q->whereIn('store_admin_id', $storeIds)
+            ->whereHas('player', function ($q) use ($agent, $storeIds) {
+                $q->where('department_id', $agent->department_id)
+                    ->whereIn('store_admin_id', $storeIds)
                     ->where('is_promoter', 0);
             })
-            ->whereHas('machine.machineCategory.gameType', function ($query) {
-                $query->where('type', GameType::TYPE_STEEL_BALL);
-            })
+            ->where('player_game_log.type', GameType::TYPE_STEEL_BALL)
             ->when($data_type, $timeFilter)
-            ->sum('pressure') ?? 0;
+            ->sum('player_game_log.chip_amount') ?? 0;
 
-        // 查询实体机押注 - Slot
+        // 查询实体机押注 - Slot（斯洛取 chip_amount 打码量，与钢珠同口径，2026-11-09 定稿）
         $slotBetTotal = PlayerGameLog::query()
-            ->whereHas('player', function ($q) use ($storeIds) {
-                $q->whereIn('store_admin_id', $storeIds)
+            ->whereHas('player', function ($q) use ($agent, $storeIds) {
+                $q->where('department_id', $agent->department_id)
+                    ->whereIn('store_admin_id', $storeIds)
                     ->where('is_promoter', 0);
             })
-            ->whereHas('machine.machineCategory.gameType', function ($query) {
-                $query->where('type', GameType::TYPE_SLOT);
-            })
+            ->where('player_game_log.type', GameType::TYPE_SLOT)
             ->when($data_type, $timeFilter)
-            ->sum('pressure') ?? 0;
+            ->sum('player_game_log.chip_amount') ?? 0;
 
         // ✅ 查询拉彩统计数据（使用子查询）
         $lotteryStatisticsQuery = PlayerLotteryRecord::query()
@@ -1387,9 +1424,32 @@ class ChannelIndexController
             'lottery_amount' => $lotteryStatisticsQuery->lottery_amount ?? 0,
         ];
 
+        // ✅ 出票金额（开分票票面额，只计正常/后台使用/机台使用，口径同店机中心开票）
+        $ticketOpenScoreAmount = TicketRecord::query()
+            ->whereIn('store_admin_id', $storeIds)
+            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->whereIn('status', [
+                TicketRecord::STATUS_NORMAL,
+                TicketRecord::STATUS_BACKEND_USED,
+                TicketRecord::STATUS_MACHINE_USED,
+            ])
+            ->when($data_type, $timeFilter)
+            ->sum('score');
+
+        // ✅ 核销金额（后台使用的开分/洗分票，按核销时间 scanned_at 归属，口径同店机中心核销）
+        $ticketRedeemAmount = TicketRecord::query()
+            ->whereIn('store_admin_id', $storeIds)
+            ->whereIn('ticket_type', [
+                TicketRecord::TYPE_RECHARGE,
+                TicketRecord::TYPE_WITHDRAW,
+            ])
+            ->where('status', TicketRecord::STATUS_BACKEND_USED)
+            ->when($data_type, $scannedTimeFilter)
+            ->sum('score');
+
         $statisticsData = [
             'recharge_amount' => $rechargeAmount,
-            'withdraw_amount' => $withdrawAmount,
+            'withdraw_amount' => $withdrawTotal,
             'machine_put_point' => $machinePutPoint,
             'activity_total' => $activityTotal,
             'lottery_ticket_reward_amount' => $lotteryTicketRewardAmount,
@@ -1466,14 +1526,15 @@ class ChannelIndexController
         $dropdown->item(admin_trans('data_center.data_type.month'))->redirect([$this, 'agentIndex'], ['data_type' => 'month']);
         $dropdown->item(admin_trans('data_center.data_type.last_month'))->redirect([$this, 'agentIndex'], ['data_type' => 'last_month']);
 
-        // 计算盈余小计 = (开分 + 投钞) - 洗分
+        // 计算盈余小计 = (开票 + 储值机储值) - (洗分 + 核销)
+        // 与店机中心「总利润」同口径：收入只认开票 + 储值机储值（人工储值/钱包开分不计入收入），
+        // 支出 = 洗分（source=channel_withdrawal，仅现金出款）+ 后台核销（开分/洗分票兑付）
+        // 与「总洗分」卡的口径差异是刻意的：总洗分卡是全来源钱包出款（含票出款/寄存码），
+        // 公式只扣现金出款，票出款兑现金时由核销扣一次，避免重复计
         // 注意：彩金和活动奖励只用于展示，不参与利润计算（发放后客户洗分会洗掉）
-        $incomeTotal = bcadd(
-            $statisticsData['recharge_amount'] ?? 0,
-            $statisticsData['machine_put_point'] ?? 0,
-            2
-        );
-        $subtotal = bcsub($incomeTotal, $statisticsData['withdraw_amount'] ?? 0, 2);
+        $incomeTotal = bcadd($ticketOpenScoreAmount, $storageRechargeAmount, 2);
+        $outcomeTotal = bcadd($withdrawAmount, $ticketRedeemAmount, 2);
+        $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
 
         $layout = Layout::create();
         $layout->row(function (Row $row) use (

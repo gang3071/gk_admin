@@ -58,7 +58,7 @@ class ChannelDeviceController
                 ->orderBy('id', 'desc');
 
             // 默认展开筛选
-            $grid->expandFilter();
+            $grid->expandFilter(false);
 
             // 列配置
             $grid->column('id', 'ID')->width(80)->sortable()->fixed(true);

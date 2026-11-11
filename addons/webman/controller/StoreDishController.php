@@ -41,7 +41,7 @@ class StoreDishController
             $grid->model()->where('admin_user_id', $adminUser->id);
             $grid->model()->orderBy('category_id', 'asc')->orderBy('top', 'desc')->orderBy('sort', 'desc');
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->filter(function (Filter $filter) use ($categories) {
                 $filter->like()->text('title')->placeholder(admin_trans('dish.fields.title'));
                 $filter->eq()->select('status')

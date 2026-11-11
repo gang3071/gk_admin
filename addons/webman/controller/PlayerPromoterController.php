@@ -358,7 +358,7 @@ class PlayerPromoterController
                 ->hideAdd()
                 ->hideDel()
                 ->searchPlaceholder(admin_trans('admin.search_department'));
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideTrashed();
@@ -563,7 +563,7 @@ class PlayerPromoterController
                     admin_trans('public_msg.created_at_end')
                 ]);;
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideTrashed();
@@ -939,7 +939,7 @@ class PlayerPromoterController
                 );
             }
         });
-        $grid->expandFilter();
+        $grid->expandFilter(false);
     }
 
     /**
@@ -2387,7 +2387,7 @@ class PlayerPromoterController
                     admin_trans('public_msg.created_at_end')
                 ]);;
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideTrashed();

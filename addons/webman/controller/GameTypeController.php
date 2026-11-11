@@ -62,7 +62,7 @@ class GameTypeController
             })->align('center');
             $grid->sortInput('sort', admin_trans('game_type.fields.sort'))->align('center');
             $grid->column('status', admin_trans('game_type.fields.status'))->switch()->align('center');
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->setForm()->modal($this->form());
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();

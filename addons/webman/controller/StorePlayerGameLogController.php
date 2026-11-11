@@ -4,6 +4,7 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\PlayerGameLog;
+use Carbon\Carbon;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
@@ -14,6 +15,7 @@ use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\navigation\dropdown\Dropdown;
 use ExAdmin\ui\support\Request;
+use support\Log;
 
 /**
  * 店家后台 - 上下分报表
@@ -369,10 +371,260 @@ class StorePlayerGameLogController
                         $dropdown
                     );
                 }
+                if (!empty($data->machine_id)) {
+                    $actions->prepend(
+                        Button::create(admin_trans('player_game_log.ctrl_log'))
+                            ->type('link')
+                            ->modal([$this, 'machineCtrlLogs'], ['id' => $data->id])
+                            ->width('80%')
+                            ->title(admin_trans('player_game_log.ctrl_log_title') . '（' . ($data->machine->code ?? '') . '）')
+                    );
+                }
             })->align('center');
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
+    }
+
+    /**
+     * 機台控制日誌彈窗
+     * @auth true
+     * @group store
+     */
+    public function machineCtrlLogs(int $id)
+    {
+        return admin_view(plugin()->webman->getPath() . '/views/machine_ctrl_logs.vue')
+            ->attrs([
+                'id'       => $id,
+                'fetchUrl' => '/ex-admin/addons-webman-controller-StorePlayerGameLogController/fetchCtrlLogs',
+            ]);
+    }
+
+    /**
+     * 查詢上下分事件前後的 ClickHouse 機台控制日誌（JSON 接口）
+     * @auth true
+     * @group store
+     */
+    public function fetchCtrlLogs()
+    {
+        $id = (int) Request::input('id');
+        /** @var PlayerGameLog $record */
+        $record = ($this->model)::findOrFail($id);
+
+        // 店家權限：只允許查詢屬於本店玩家的記錄
+        $storeAdminId = Admin::user()->id;
+        $ownsPlayer = \addons\webman\model\Player::query()
+            ->where('id', $record->player_id)
+            ->where('store_admin_id', $storeAdminId)
+            ->exists();
+        if (!$ownsPlayer) {
+            return json(['code' => 403, 'msg' => '無權限查看此記錄']);
+        }
+
+        $base      = Carbon::parse($record->created_at)->timezone('Asia/Shanghai');
+        $createdAt = $base->format('Y-m-d H:i:s.000');
+        $machineId = (int) $record->machine_id;
+
+        $isOpen      = $record->action == PlayerGameLog::ACTION_OPEN;
+        $startMarker = $isOpen ? '開分開始' : '洗分開始';
+        $endMarker   = $isOpen ? '開分結束' : '下分結束';
+
+        $lookbackStart = $base->copy()->subMinutes(1)->format('Y-m-d H:i:s.000');
+        $lookforward   = $base->copy()->addMinutes(5)->format('Y-m-d H:i:s.999');
+        $heartbeatCond = "action IN ('heartbeat', 'field_update') OR source_type = 'heartbeat'";
+
+        $cfg    = config('clickhouse');
+        $client = new \GuzzleHttp\Client();
+
+        $chPost = fn(string $sql) => json_decode(
+            $client->post($cfg['endpoint'], [
+                'auth'    => [$cfg['user'], $cfg['password']],
+                'body'    => $sql,
+                'timeout' => 5,
+            ])->getBody()->getContents(),
+            true
+        )['data'][0] ?? [];
+
+        $isValid = fn(?string $v): bool => !empty($v) && !str_starts_with($v, '1970') && !str_starts_with($v, '0000');
+
+        $opStart = $opEnd = null;
+        try {
+            $row = $chPost("SELECT
+                              minIf(datetime, action_desc LIKE '%{$startMarker}%') AS op_start,
+                              maxIf(datetime, action_desc LIKE '%{$endMarker}%')   AS op_end
+                            FROM {$cfg['database']}.machine_ctrl
+                            WHERE machine_id = {$machineId}
+                              AND datetime >= '{$lookbackStart}'
+                              AND datetime <= '{$lookforward}'
+                            FORMAT JSON");
+            if ($isValid($row['op_start'] ?? null)) $opStart = $row['op_start'];
+            if ($isValid($row['op_end']   ?? null)) $opEnd   = $row['op_end'];
+        } catch (\Throwable $e) {
+            Log::channel('default')->error('StorePlayerGameLogController ClickHouse marker查询失败', ['error' => $e->getMessage()]);
+        }
+
+        $startPivot = $opStart ?? $createdAt;
+        $startTime  = Carbon::parse($startPivot)->timezone('Asia/Shanghai')->format('Y-m-d H:i:s.000');
+        try {
+            $row = $chPost("SELECT max(datetime) AS pre_heartbeat
+                            FROM {$cfg['database']}.machine_ctrl
+                            WHERE machine_id = {$machineId}
+                              AND datetime < '{$startPivot}'
+                              AND datetime >= '{$lookbackStart}'
+                              AND ({$heartbeatCond})
+                            FORMAT JSON");
+            if ($isValid($row['pre_heartbeat'] ?? null)) {
+                $startTime = Carbon::parse($row['pre_heartbeat'])->timezone('Asia/Shanghai')->format('Y-m-d H:i:s.000');
+            }
+        } catch (\Throwable $e) {
+            Log::channel('default')->error('StorePlayerGameLogController ClickHouse pre_heartbeat查询失败', ['error' => $e->getMessage()]);
+        }
+
+        $endPivot = $opEnd ?? $createdAt;
+        $endTime  = Carbon::parse($endPivot)->timezone('Asia/Shanghai')->addSeconds(5)->format('Y-m-d H:i:s.999');
+        try {
+            $row = $chPost("SELECT min(datetime) AS post_heartbeat
+                            FROM {$cfg['database']}.machine_ctrl
+                            WHERE machine_id = {$machineId}
+                              AND datetime > '{$endPivot}'
+                              AND datetime <= '{$lookforward}'
+                              AND ({$heartbeatCond})
+                            FORMAT JSON");
+            if ($isValid($row['post_heartbeat'] ?? null)) {
+                $endTime = Carbon::parse($row['post_heartbeat'])->timezone('Asia/Shanghai')->format('Y-m-d H:i:s.999');
+            }
+        } catch (\Throwable $e) {
+            Log::channel('default')->error('StorePlayerGameLogController ClickHouse post_heartbeat查询失败', ['error' => $e->getMessage()]);
+        }
+
+        $sql = "SELECT datetime, level, source_type, log_direction, action, action_desc, raw_send, raw_recv, extra_data, machine_state
+                FROM {$cfg['database']}.machine_ctrl
+                WHERE machine_id = {$machineId}
+                  AND datetime >= '{$startTime}'
+                  AND datetime <= '{$endTime}'
+                ORDER BY datetime ASC
+                FORMAT JSON";
+        try {
+            $response = $client->post($cfg['endpoint'], [
+                'auth'    => [$cfg['user'], $cfg['password']],
+                'body'    => $sql,
+                'timeout' => 10,
+            ]);
+            if ($response->getStatusCode() === 200) {
+                $rows = json_decode($response->getBody()->getContents(), true)['data'] ?? [];
+                return json(['code' => 200, 'data' => [
+                    'logs'       => $this->processCtrlLogs($rows),
+                    'time_range' => "{$startTime} 至 {$endTime}",
+                ]]);
+            }
+            return json(['code' => 500, 'msg' => 'ClickHouse 返回異常：' . $response->getStatusCode()]);
+        } catch (\Throwable $e) {
+            Log::channel('default')->error('StorePlayerGameLogController ClickHouse 查询失败', ['error' => $e->getMessage()]);
+            return json(['code' => 500, 'msg' => $e->getMessage()]);
+        }
+    }
+
+    private function processCtrlLogs(array $rows): array
+    {
+        $hiddenActions = ['read_point', 'read_win_number', 'push', 'clear_log'];
+        $result  = [];
+        $prevMs  = null;
+        $stateKeys = [
+            'point'             => ['label' => '當前分',  'color' => '#1890ff'],
+            'gaming'            => ['label' => '遊戲中',  'color' => '#52c41a', 'skip_zero' => true, 'bool' => true],
+            'gaming_user_id'    => ['label' => '玩家ID',  'color' => '#1890ff', 'skip_zero' => true],
+            'reward_status'     => ['label' => '開獎中',  'color' => '#eb2f96', 'skip_zero' => true, 'bool' => true],
+            'has_lock'          => ['label' => '鎖定中',  'color' => '#f5222d', 'skip_zero' => true, 'bool' => true],
+            'keeping'           => ['label' => '保留中',  'color' => '#fa8c16', 'skip_zero' => true, 'bool' => true],
+            'keeping_user_id'   => ['label' => '保留玩家','color' => '#fa8c16', 'skip_zero' => true],
+            'open_point'        => ['label' => '開分',    'color' => '#13c2c2'],
+            'wash_point'        => ['label' => '洗分',    'color' => '#52c41a'],
+            'pressure'          => ['label' => '壓分',    'color' => '#fa8c16'],
+            'score'             => ['label' => '得分',    'color' => '#722ed1'],
+            'bet'               => ['label' => '總押',    'color' => '#f5222d'],
+            'win'               => ['label' => '總贏',    'color' => '#2f54eb'],
+            'card_score'        => ['label' => '卡分',    'color' => '#d46b08'],
+            'machine_score'     => ['label' => '機台分',  'color' => '#08979c'],
+            'player_win_number' => ['label' => '打碼轉',  'color' => '#531dab'],
+            'turn'              => ['label' => '剩餘轉',  'color' => '#595959'],
+        ];
+
+        foreach ($rows as $row) {
+            if (in_array($row['action'] ?? '', $hiddenActions, true)) continue;
+
+            $dtStr = $row['datetime'] ?? '';
+            preg_match('/(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2})(?:\.(\d+))?/', $dtStr, $m);
+            $baseTs = isset($m[1]) ? strtotime($m[1]) * 1000 : 0;
+            $fracMs = isset($m[2]) ? (int) str_pad(substr($m[2], 0, 3), 3, '0') : 0;
+            $curMs  = $baseTs + $fracMs;
+
+            $elapsedMs = $prevMs !== null ? $curMs - $prevMs : null;
+            $prevMs    = $curMs;
+
+            if ($row['action'] === 'open' && $row['log_direction'] === 'response') {
+                $displayType = 'noise';
+            } elseif (in_array($row['action'], ['heartbeat', 'field_update']) || $row['source_type'] === 'heartbeat') {
+                $displayType = 'heartbeat';
+            } elseif ($row['log_direction'] === 'command') {
+                $displayType = 'command';
+            } elseif ($row['log_direction'] === 'response') {
+                $displayType = 'response';
+            } else {
+                $displayType = 'event';
+            }
+
+            $marker = null;
+            $desc   = $row['action_desc'] ?? '';
+            $action = $row['action'] ?? '';
+            if (str_contains($desc, '開分開始'))                                                                       { $marker = 'open_start'; }
+            elseif (str_contains($desc, '開分結束'))                                                                   { $marker = 'open_end';   if ($displayType === 'noise') $displayType = 'response'; }
+            elseif (str_contains($desc, '下分開始') || ($action === 'wash' && str_contains($desc, '收到洗分請求')))   { $marker = 'wash_start'; }
+            elseif (str_contains($desc, '下分結束') || ($action === 'check_reset' && str_contains($desc, '重置壓分/得分'))) { $marker = 'wash_end'; }
+
+            $state = [];
+            if (!empty($row['machine_state'])) {
+                $parsed     = json_decode($row['machine_state'], true) ?? [];
+                $seenLabels = [];
+                foreach ($stateKeys as $key => $meta) {
+                    if (!array_key_exists($key, $parsed)) continue;
+                    $val = $parsed[$key];
+                    if (!empty($meta['skip_zero']) && !$val) continue;
+                    if (in_array($meta['label'], $seenLabels)) continue;
+                    $displayVal   = !empty($meta['bool']) ? '是' : $val;
+                    $state[]      = ['label' => $meta['label'], 'color' => $meta['color'], 'val' => $displayVal];
+                    $seenLabels[] = $meta['label'];
+                }
+            }
+
+            $extra = [];
+            if (!empty($row['extra_data'])) {
+                $parsed = json_decode($row['extra_data'], true) ?? [];
+                foreach ($parsed as $k => $v) {
+                    if (!is_array($v) && !is_null($v) && $v !== '') {
+                        $extra[] = ['key' => $k, 'val' => $v];
+                    }
+                }
+                $extra = array_slice($extra, 0, 6);
+            }
+
+            $result[] = [
+                'time'          => substr($dtStr, 11, 8),
+                'elapsed_ms'    => $elapsedMs,
+                'level'         => $row['level'],
+                'display_type'  => $displayType,
+                'source_type'   => $row['source_type'],
+                'log_direction' => $row['log_direction'],
+                'action'        => $row['action'],
+                'action_desc'   => $row['action_desc'],
+                'marker'        => $marker,
+                'state'         => $state,
+                'extra'         => $extra,
+                'raw_send'      => $row['raw_send'] ?? '',
+                'raw_recv'      => $row['raw_recv'] ?? '',
+            ];
+        }
+
+        return $result;
     }
 }

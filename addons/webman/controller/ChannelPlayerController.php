@@ -248,17 +248,26 @@ class ChannelPlayerController
             'vip_level_name' => Db::raw('COALESCE(vip_level.sort, ' . (int)$minVipSort . ')'),
             'subtotal' => Db::raw('(COALESCE(player_extend.recharge_amount, 0) - COALESCE(player_extend.withdraw_amount, 0))'),
         ];
-        // 只有按彩金/电子打码排序时才挂聚合 join（限定本渠道玩家，避免全站 GROUP BY）
+        // 只有按彩金/打码量排序时才挂聚合 join（限定本渠道玩家，避免全站 GROUP BY）
         $sortNeedsLottery = ($exAdminSortField === 'lottery_amount' && $exAdminSortBy !== '');
         $sortNeedsElectronicBet = ($exAdminSortField === 'electronic_game_bet_amount' && $exAdminSortBy !== '');
+        $sortNeedsMachineBet = ($exAdminSortField === 'machine_bet_amount' && $exAdminSortBy !== '');
+        $sortNeedsTotalBet = ($exAdminSortField === 'total_bet_amount' && $exAdminSortBy !== '');
 
         if ($sortNeedsLottery) {
             $selectFields[] = 'lottery_stats.lottery_amount';
             $sortFieldMapping['lottery_amount'] = 'lottery_stats.lottery_amount';
         }
-        if ($sortNeedsElectronicBet) {
+        if ($sortNeedsElectronicBet || $sortNeedsTotalBet) {
             $selectFields[] = 'electronic_game_stats.electronic_game_bet_amount';
             $sortFieldMapping['electronic_game_bet_amount'] = 'electronic_game_stats.electronic_game_bet_amount';
+        }
+        if ($sortNeedsMachineBet || $sortNeedsTotalBet) {
+            $sortFieldMapping['machine_bet_amount'] = 'machine_game_stats.machine_bet_amount';
+        }
+        if ($sortNeedsTotalBet) {
+            // 总打码 = 电子 + 机台（与列表展示口径一致）
+            $sortFieldMapping['total_bet_amount'] = Db::raw('(COALESCE(electronic_game_stats.electronic_game_bet_amount, 0) + COALESCE(machine_game_stats.machine_bet_amount, 0))');
         }
         $actualSortField = $sortFieldMapping[$exAdminSortField] ?? $exAdminSortField;
 
@@ -296,9 +305,11 @@ class ChannelPlayerController
                 }
             );
         }
-        if ($sortNeedsElectronicBet) {
+        if ($sortNeedsElectronicBet || $sortNeedsTotalBet) {
             $eleSub = PlayGameRecord::query()
                 ->selectRaw('player_id, COALESCE(SUM(bet), 0) as electronic_game_bet_amount')
+                // 电子打码量：过滤结算状态为已取消的订单
+                ->where('settlement_status', '!=', PlayGameRecord::SETTLEMENT_STATUS_CANCELLED)
                 ->whereIn('player_id', Player::query()
                     ->select('id')
                     ->where('department_id', $departmentId)
@@ -312,6 +323,24 @@ class ChannelPlayerController
             }
             $query->leftJoinSub($eleSub, 'electronic_game_stats', function ($join) {
                 $join->on('player.id', '=', 'electronic_game_stats.player_id');
+            });
+        }
+        if ($sortNeedsMachineBet || $sortNeedsTotalBet) {
+            $machineSub = PlayerGameLog::query()
+                ->selectRaw('player_id, COALESCE(SUM(chip_amount), 0) as machine_bet_amount')
+                ->whereIn('player_id', Player::query()
+                    ->select('id')
+                    ->where('department_id', $departmentId)
+                    ->where('type', Player::TYPE_PLAYER))
+                ->groupBy('player_id');
+            if (!empty($dataTimeStart)) {
+                $machineSub->where('created_at', '>=', $dataTimeStart);
+            }
+            if (!empty($dataTimeEnd)) {
+                $machineSub->where('created_at', '<=', $dataTimeEnd);
+            }
+            $query->leftJoinSub($machineSub, 'machine_game_stats', function ($join) {
+                $join->on('player.id', '=', 'machine_game_stats.player_id');
             });
         }
 
@@ -354,7 +383,9 @@ class ChannelPlayerController
                 ->pluck('total_amount', 'player_id');
 
             // 电子游戏打码量（仅当前页，支持数据时间筛选；未排序时不在主查询聚合）
-            $eleQuery = PlayGameRecord::query()->whereIn('player_id', $playerIds);
+            // 电子打码量：过滤结算状态为已取消的订单
+            $eleQuery = PlayGameRecord::query()->whereIn('player_id', $playerIds)
+                ->where('settlement_status', '!=', PlayGameRecord::SETTLEMENT_STATUS_CANCELLED);
             if (!empty($dataTimeStart)) {
                 $eleQuery->where('created_at', '>=', $dataTimeStart);
             }
@@ -364,6 +395,18 @@ class ChannelPlayerController
             $electronicBetByPlayer = $eleQuery->groupBy('player_id')
                 ->selectRaw('player_id, COALESCE(SUM(bet), 0) as total_bet')
                 ->pluck('total_bet', 'player_id');
+
+            // 机台打码量（仅当前页，支持数据时间筛选）
+            $machineQuery = PlayerGameLog::query()->whereIn('player_id', $playerIds);
+            if (!empty($dataTimeStart)) {
+                $machineQuery->where('created_at', '>=', $dataTimeStart);
+            }
+            if (!empty($dataTimeEnd)) {
+                $machineQuery->where('created_at', '<=', $dataTimeEnd);
+            }
+            $machineBetByPlayer = $machineQuery->groupBy('player_id')
+                ->selectRaw('player_id, COALESCE(SUM(chip_amount), 0) as total_chip')
+                ->pluck('total_chip', 'player_id');
 
             // 钱包锁定状态（仅当前页）
             $walletLockedByPlayer = PlayerPlatformCash::query()
@@ -390,6 +433,9 @@ class ChannelPlayerController
                 // 统计列（排序走 SQL 时已有值，此处兜底并统一口径）
                 $item['lottery_amount'] = floatval($lotteryByPlayer[$item['id']] ?? ($item['lottery_amount'] ?? 0));
                 $item['electronic_game_bet_amount'] = floatval($electronicBetByPlayer[$item['id']] ?? ($item['electronic_game_bet_amount'] ?? 0));
+                // 机台打码量 + 总打码量（电子 + 机台）
+                $item['machine_bet_amount'] = floatval($machineBetByPlayer[$item['id']] ?? 0);
+                $item['total_bet_amount'] = $item['electronic_game_bet_amount'] + $item['machine_bet_amount'];
                 $item['wallet_locked'] = intval($walletLockedByPlayer[$item['id']] ?? 0);
 
                 // 保级周期打码量：与原 join 一致，按 player_id + vip_level_id 对齐
@@ -689,7 +735,17 @@ class ChannelPlayerController
             })->sortable()->width(120)->align('center');
 
             // 电子游戏打码量
-            $grid->column('electronic_game_bet_amount', admin_trans('player.electronic_game_bet_amount'))->display(function ($value) {
+            $grid->column('electronic_game_bet_amount', admin_trans('player.electronic_bet_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->sortable()->width(120)->align('center');
+
+            // 机台打码量
+            $grid->column('machine_bet_amount', admin_trans('player.machine_bet_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->sortable()->width(120)->align('center');
+
+            // 总打码量
+            $grid->column('total_bet_amount', admin_trans('player.total_bet_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->sortable()->width(120)->align('center');
 
@@ -871,7 +927,7 @@ class ChannelPlayerController
                 ]);
             });
             $grid->hideDelete();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $tools = [];
             // 线下渠道：添加批量生成按钮和创建代理按钮
             if ($channel && $channel->is_offline == 1) {
@@ -2815,7 +2871,7 @@ class ChannelPlayerController
             });
             $grid->hideDelete();
             $grid->hideAdd();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->tools(
                 $grid->addButton()->modal($this->form())
             );
@@ -3627,7 +3683,7 @@ class ChannelPlayerController
                 }
             }
             $grid->autoHeight();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->bordered(true);
             $grid->column('id', admin_trans('promoter_profit_record.fields.id'))->align('center');
             $grid->column('lottery_name', admin_trans('player_lottery_record.fields.lottery_name'))->align('center');
@@ -3726,20 +3782,26 @@ class ChannelPlayerController
             $settledData = (clone $baseQuery)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)
                 ->selectRaw('sum(bet) as total_bet, sum(diff) as total_diff, count(*) as count')->first();
             $unsettledData = (clone $baseQuery)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_UNSETTLED)
-                ->selectRaw('sum(bet) as total_bet, count(*) as count')->first();
+                ->selectRaw('sum(bet) as total_bet, sum(diff) as total_diff, count(*) as count')->first();
             $cancelledData = (clone $baseQuery)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_CANCELLED)
                 ->selectRaw('sum(bet) as total_bet, count(*) as count')->first();
+
+            // 总投注/总盈亏 = 已结算 + 未结算
+            $totalBet = floatval($settledData['total_bet'] ?? 0) + floatval($unsettledData['total_bet'] ?? 0);
+            $totalDiff = floatval($settledData['total_diff'] ?? 0) + floatval($unsettledData['total_diff'] ?? 0);
+            $totalCount = intval($settledData['count'] ?? 0) + intval($unsettledData['count'] ?? 0);
+
             $layout = Layout::create();
-            $layout->row(function (Row $row) use ($settledData, $unsettledData, $cancelledData) {
+            $layout->row(function (Row $row) use ($settledData, $unsettledData, $cancelledData, $totalBet, $totalDiff, $totalCount) {
                 $row->gutter([10, 0]);
 
-                // 已结算统计
+                // 总投注统计（已结算 + 未结算）
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
-                            ->title('已结算投注')
-                            ->value(!empty($settledData['total_bet']) ? floatval($settledData['total_bet']) : 0)
-                            ->suffix('(' . ($settledData['count'] ?? 0) . '笔)')
+                            ->title('总投注')
+                            ->value($totalBet)
+                            ->suffix('(' . $totalCount . '笔)')
                             ->valueStyle(['color' => '#3f8600'])
                             ->style(['font-size' => '14px', 'text-align' => 'center'])),
                     ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '72px'])
@@ -3748,9 +3810,9 @@ class ChannelPlayerController
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
-                            ->title('已结算盈亏')
-                            ->value(!empty($settledData['total_diff']) ? floatval($settledData['total_diff']) : 0)
-                            ->valueStyle(['color' => floatval($settledData['total_diff'] ?? 0) > 0 ? '#3f8600' : '#cf1322'])
+                            ->title('总盈亏')
+                            ->value($totalDiff)
+                            ->valueStyle(['color' => $totalDiff > 0 ? '#3f8600' : '#cf1322'])
                             ->style(['font-size' => '14px', 'text-align' => 'center'])),
                     ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '72px'])
                         ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px']), 6);
@@ -3880,7 +3942,7 @@ class ChannelPlayerController
                     admin_trans('public_msg.created_at_end')
                 ]);
             });
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -3914,7 +3976,7 @@ class ChannelPlayerController
                 }
             }
             $grid->autoHeight();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->bordered(true);
             $grid->column('id', admin_trans('player_delivery_record.fields.id'))->align('center');
             $grid->column('source', admin_trans('player_delivery_record.fields.source'))->display(function (
@@ -4596,7 +4658,7 @@ class ChannelPlayerController
 
             // enable_physical_machine
             $storeSettingMachine = new StoreSetting();
-            $storeSetting->department_id = $currentDepartmentId;
+            $storeSettingMachine->department_id = $currentDepartmentId;
             $storeSettingMachine->admin_user_id = $adminUser->id;
             $storeSettingMachine->feature = 'enable_physical_machine';
             $storeSettingMachine->num = 1; // 默认启用
@@ -4605,12 +4667,21 @@ class ChannelPlayerController
 
             // enable_live_baccarat
             $storeSettingBaccarat = new StoreSetting();
-            $storeSetting->department_id = $currentDepartmentId;
+            $storeSettingBaccarat->department_id = $currentDepartmentId;
             $storeSettingBaccarat->admin_user_id = $adminUser->id;
             $storeSettingBaccarat->feature = 'enable_live_baccarat';
             $storeSettingBaccarat->num = 1; // 默认启用
             $storeSettingBaccarat->status = 1;
             $storeSettingBaccarat->save();
+
+            // enable_points（积分开关，默认开启）
+            $storeSettingPoints = new StoreSetting();
+            $storeSettingPoints->department_id = $currentDepartmentId;
+            $storeSettingPoints->admin_user_id = $adminUser->id;
+            $storeSettingPoints->feature = 'enable_points';
+            $storeSettingPoints->num = 1; // 默认启用
+            $storeSettingPoints->status = 1;
+            $storeSettingPoints->save();
 
             // machine_crash_amount（爆机金额）
             $storeSettingCrashAmount = new StoreSetting();
@@ -4878,6 +4949,15 @@ class ChannelPlayerController
             $storeSettingBaccarat->num = 1; // 默认启用
             $storeSettingBaccarat->status = 1;
             $storeSettingBaccarat->save();
+
+            // enable_points（积分开关，默认开启）
+            $storeSettingPoints = new StoreSetting();
+            $storeSettingPoints->department_id = $departmentId;
+            $storeSettingPoints->admin_user_id = $adminUser->id;
+            $storeSettingPoints->feature = 'enable_points';
+            $storeSettingPoints->num = 1; // 默认启用
+            $storeSettingPoints->status = 1;
+            $storeSettingPoints->save();
 
             // machine_crash_amount（爆机金额）
             $storeSettingCrashAmount = new StoreSetting();
@@ -5194,7 +5274,7 @@ class ChannelPlayerController
                     ]);
             });
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideSelection();
         });
     }
@@ -6249,7 +6329,7 @@ class ChannelPlayerController
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideAdd();
-            $grid->expandFilter();
+            $grid->expandFilter(false);
         });
     }
 
@@ -6392,7 +6472,7 @@ class ChannelPlayerController
                     ]);
             });
 
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->hideSelection();
         });
     }

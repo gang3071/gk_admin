@@ -92,7 +92,7 @@ class RoleController
                     ]);
                 })->sortable();
             $grid->setForm()->modal($this->form());
-            $grid->expandFilter();
+            $grid->expandFilter(false);
             $grid->actions(function (Actions $actions, AdminRole $data) {
                 $dropdown = $actions->dropdown();
                 $dropdown->prepend(admin_trans('auth.auth_grant'), 'safety-certificate-filled')

@@ -10,6 +10,7 @@ use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
+use ExAdmin\ui\response\Msg;
 use ExAdmin\ui\support\Request;
 
 /**
@@ -60,15 +61,42 @@ class ChannelPlayerIdCardBlacklistController
             $grid->column('created_at', admin_trans('player_blacklist.fields.created_at'))->align('center');
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->actions(function (Actions $actions) {
+            $grid->actions(function (Actions $actions, $data) {
                 $actions->hideDel();
                 $actions->hideEdit();
-            });
+                $actions->prepend(
+                    Button::create(admin_trans('player_blacklist.action.remove'))
+                        ->type('link')
+                        ->style(['color' => '#ff4d4f'])
+                        ->confirm(admin_trans('player_blacklist.action.remove_confirm'), [$this, 'removeFromBlacklist'], ['id' => $data['id']])
+                        ->gridRefresh()
+                );
+            })->align('center');
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('id_number')
                     ->placeholder(admin_trans('player_blacklist.filter.id_number'));
             });
+            $grid->expandFilter(false);
         });
+    }
+
+    /**
+     * 从黑名单移除（硬删除）
+     * @group channel
+     * @auth true
+     * @param $id
+     * @return Msg
+     */
+    public function removeFromBlacklist($id): Msg
+    {
+        $record = PlayerIdCardBlacklist::find($id);
+        if (!$record) {
+            return message_error(admin_trans('public_msg.not_found'));
+        }
+
+        $record->delete();
+
+        return message_success(admin_trans('player_blacklist.message.remove_success'));
     }
 
     /**

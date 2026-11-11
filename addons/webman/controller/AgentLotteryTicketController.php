@@ -176,6 +176,7 @@ class AgentLotteryTicketController
                         admin_trans('common.end_time')
                     ]);
             });
+            $grid->expandFilter(false);
 
             // 代理后台只读
             $grid->hideDelete();
