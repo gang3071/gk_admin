@@ -955,8 +955,12 @@ class AutoShiftService
             $experienceCoupon = (float)($experienceCouponMap[$player->id] ?? 0);
             $welfareCoupon = (float)($welfareCouponMap[$player->id] ?? 0);
 
-            // 如果没有 PlayerDeliveryRecord 记录，也没有核销记录，也没有票券记录，则跳过
-            if (!$stat && $redeemAmountExport <= 0 && $experienceCoupon <= 0 && $welfareCoupon <= 0 && $ticketUnredeemed <= 0) {
+            // 如果没有 PlayerDeliveryRecord 记录，也没有核销记录，也没有票券记录，也没有打码量，则跳过
+            // 注意：machineBet / electronicGameBet 必须参与判断——洗分 money<=0 的分支只写 chip_amount
+            // 不写 PlayerDeliveryRecord（gk_work machineWashZero「即使没有下分，也要计算打码量」），
+            // 只有打码量的玩家若被跳过，设备明细的机器打码量合计会比汇总口径少
+            if (!$stat && $redeemAmountExport <= 0 && $experienceCoupon <= 0 && $welfareCoupon <= 0
+                && $ticketUnredeemed <= 0 && $electronicGameBet <= 0 && $machineBet <= 0) {
                 continue;
             }
 
