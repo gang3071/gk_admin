@@ -288,6 +288,14 @@ class StorePlayerGameLogController
                 }
                 return '-';
             })->align('center');
+            $grid->column('parent_cashback_ratio', admin_trans('player_game_log.fields.parent_cashback_ratio'))->align('center')
+                ->display(function ($value) {
+                    return number_format((float)$value, 2) . '%';
+                });
+            $grid->column('parent_cashback_amount', admin_trans('player_game_log.fields.parent_cashback_amount'))->align('center')
+                ->display(function ($value) {
+                    return Html::create()->content(['+' . number_format((float)$value, 5)])->style(['color' => 'green']);
+                });
             $grid->column('created_at', admin_trans('player_game_log.fields.create_at'))->align('center');
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.device_uuid'));

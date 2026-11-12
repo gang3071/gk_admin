@@ -310,6 +310,7 @@ return [
         'damage_rebate' => 'Customer Loss Rebate',
         'reverse_water' => 'Reverse water',
         'reverse_water_pool' => 'Cashback Pool Claim',
+        'reverse_children_cashback' => 'Claim Promotional Bonuses',
         'gb_recharge' => 'Open Score with Goubao Wallet',
         'gb_withdrawal' => 'Wash Score from Goubao Wallet',
         'wallet_transfer_out' => 'Platform transfer out {name}',

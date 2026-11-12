@@ -24,12 +24,12 @@ use ExAdmin\ui\support\Request;
 class ChannelPlayerGameLogController
 {
     protected $model;
-    
+
     public function __construct()
     {
         $this->model = plugin()->webman->config('database.player_game_log_model');
     }
-    
+
     /**
      * 上下分记录
      * @group channel
@@ -250,6 +250,14 @@ class ChannelPlayerGameLogController
                 }
                 return '-';
             })->align('center');
+            $grid->column('parent_cashback_ratio', admin_trans('player_game_log.fields.parent_cashback_ratio'))->align('center')
+                ->display(function ($value) {
+                    return number_format((float)$value, 2) . '%';
+                });
+            $grid->column('parent_cashback_amount', admin_trans('player_game_log.fields.parent_cashback_amount'))->align('center')
+                ->display(function ($value) {
+                    return Html::create()->content(['+' . number_format((float)$value, 5)])->style(['color' => 'green']);
+                });
             $grid->column('created_at', admin_trans('player_game_log.fields.create_at'))->align('center');
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('player.phone')->placeholder(admin_trans('player.fields.phone'));

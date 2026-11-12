@@ -40,6 +40,8 @@ return [
         'cashback_ratio' => 'Machine Cashback Ratio',
         'cashback_amount' => 'Machine Cashback Amount',
         'total_chip_amount' => 'Total coding volume',
+        'parent_cashback_ratio' => 'Promotional Bonus Percentage',
+        'parent_cashback_amount' => 'Promotional Bonus Amount',
         'source_type' => 'Source Type',
     ],
     'total_data' => [

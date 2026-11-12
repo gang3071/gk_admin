@@ -309,6 +309,7 @@ return [
         'damage_rebate' => '客損返奉',
         'reverse_water' => '電子ゲームの反水',
         'reverse_water_pool' => 'キャッシュバックプール受取',
+        'reverse_children_cashback' => 'プロモーション特典の受け取り',
         'gb_recharge' => '宝の財布のチャージ',
         'gb_withdrawal' => '宝の財布を買って現金を引き出す',
         'wallet_transfer_out' => 'プラットフォーム転出{name}',

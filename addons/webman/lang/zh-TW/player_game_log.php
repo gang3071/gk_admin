@@ -39,6 +39,8 @@ return [
         'chip_amount' => '打碼量',
         'cashback_ratio' => '機台反水比例',
         'cashback_amount' => '機台反水金額',
+        'parent_cashback_ratio' => '推廣紅利比例',
+        'parent_cashback_amount' => '推廣紅利金額',
         'source_type' => '來源類型',
     ],
     'total_data' => [

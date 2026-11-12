@@ -197,11 +197,11 @@ class ChannelPlayGameRecordController
 
             $grid->column('parent_cashback_ratio', admin_trans('play_game_record.fields.parent_cashback_ratio'))->align('center')
                 ->display(function ($value) {
-                    return number_format((float)$value, 4) . '%';
+                    return number_format((float)$value, 2) . '%';
                 });
             $grid->column('parent_cashback_amount', admin_trans('play_game_record.fields.parent_cashback_amount'))->align('center')
                 ->display(function ($value) {
-                    return Html::create()->content(['+' . number_format((float)$value, 4)])->style(['color' => 'green']);
+                    return Html::create()->content(['+' . number_format((float)$value, 5)])->style(['color' => 'green']);
                 });
 
             // ✅ 添加结算状态显示列

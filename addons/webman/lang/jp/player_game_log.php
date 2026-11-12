@@ -39,6 +39,8 @@ return [
         'chip_amount' => '打ヤード量',
         'cashback_ratio' => '機台キャッシュバック比率',
         'cashback_amount' => '機台キャッシュバック金額',
+        'parent_cashback_ratio' => 'プロモーション特典の割合',
+        'parent_cashback_amount' => 'プロモーション特典額',
         'source_type' => 'ソースタイプ',
     ],
     'total_data' => [
