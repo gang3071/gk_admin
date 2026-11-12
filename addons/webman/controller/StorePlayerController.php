@@ -1197,17 +1197,21 @@ class StorePlayerController
                         return message_error(trans('channel_not_found', [], 'message'));
                     }
 
-                    $parent = Player::query()
-                        ->where('id', $form->input('recommend_id'))
-                        ->where('department_id', $departmentId)
-                        ->first();
+                    $parent = null;
 
-                    if (empty($parent)) {
-                        return message_error(admin_trans('player.promoter_not_found'));
-                    }
+                    if (! empty($form->input('recommend_id'))) {
+                        $parent = Player::query()
+                            ->where('id', $form->input('recommend_id'))
+                            ->where('department_id', $departmentId)
+                            ->first();
 
-                    if ($parent->status == 0) {
-                        return message_error(admin_trans('player.promoter_has_disable'));
+                        if (empty($parent)) {
+                            return message_error(admin_trans('player.promoter_not_found'));
+                        }
+
+                        if ($parent->status == 0) {
+                            return message_error(admin_trans('player.promoter_has_disable'));
+                        }
                     }
 
                     DB::beginTransaction();

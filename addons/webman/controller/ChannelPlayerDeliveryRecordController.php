@@ -477,6 +477,7 @@ class ChannelPlayerDeliveryRecordController
                         'storage_recharge' => admin_trans('message.target.storage_recharge'),
                         'retry_refund' => admin_trans('message.target.retry_refund'),
                         'leaderboard_reward' => admin_trans('message.target.leaderboard_reward'),
+                        'reverse_children_cashback' => admin_trans('message.target.reverse_children_cashback'),
                     ]);
                 $filter->select('search_type')
                     ->showSearch()

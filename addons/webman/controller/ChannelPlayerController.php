@@ -4452,17 +4452,21 @@ class ChannelPlayerController
                 ->first();
         }
 
-        $parent = Player::query()
-            ->where('id', $recommendId)
-            ->where('department_id', Admin::user()->department_id)
-            ->first();
+        $parent = null;
 
-        if (empty($parent)) {
-            return message_error(admin_trans('player.promoter_not_found'));
-        }
+        if (! empty($form->input('recommend_id'))) {
+            $parent = Player::query()
+                ->where('id', $recommendId)
+                ->where('department_id', Admin::user()->department_id)
+                ->first();
 
-        if ($parent->status == 0) {
-            return message_error(admin_trans('player.promoter_has_disable'));
+            if (empty($parent)) {
+                return message_error(admin_trans('player.promoter_not_found'));
+            }
+
+            if ($parent->status == 0) {
+                return message_error(admin_trans('player.promoter_has_disable'));
+            }
         }
 
         Db::beginTransaction();

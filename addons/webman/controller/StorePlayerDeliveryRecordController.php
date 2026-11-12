@@ -231,6 +231,7 @@ class StorePlayerDeliveryRecordController
                     case PlayerDeliveryRecord::TYPE_RECHARGE_REWARD:
                     case PlayerDeliveryRecord::TYPE_DAMAGE_REBATE:
                     case PlayerDeliveryRecord::TYPE_LOTTERY:
+                    case PlayerDeliveryRecord::TYPE_CHILDREN_CASHBACK:
                         return Tag::create($translatedText)->color('orange');
                     case PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT:
                         /** @var PlayerWalletTransfer $playerWalletTransfer */
@@ -382,6 +383,7 @@ class StorePlayerDeliveryRecordController
                         'storage_recharge' => admin_trans('message.target.storage_recharge'),
                         'retry_refund' => admin_trans('message.target.retry_refund'),
                         'leaderboard_reward' => admin_trans('message.target.leaderboard_reward'),
+                        'reverse_children_cashback' => admin_trans('message.target.reverse_children_cashback'),
                     ]);
                 $filter->select('search_type')
                     ->showSearch()
