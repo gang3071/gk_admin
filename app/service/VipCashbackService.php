@@ -225,7 +225,7 @@ class VipCashbackService
                                 }
                             }
                         } else {
-                            $this->log('debug', '跳过记录：上級玩家不存在，不計算推廣紅利', [
+                            $this->log('debug', '跳過紀錄：上級玩家不存在，不計算電子遊戲推廣紅利', [
                                 'record_id' => $record->id,
                                 'player_id' => $record->player_id,
                             ]);
@@ -590,6 +590,7 @@ class VipCashbackService
 
             // 批量获取玩家信息
             $playerIds = $records->pluck('player_id')->unique();
+            $playerIds = $records->pluck('parent_player_id')->unique()->merge($playerIds);
             $players = $this->queryPlayers($playerIds);
 
             // 获取默认VIP等级
@@ -599,10 +600,8 @@ class VipCashbackService
                 ->first();
 
             // 批量预加载机台反水比例
-            $allVipLevelIds = VipLevel::query()
-                ->where('status', VipLevel::STATUS_ENABLED)
-                ->pluck('id')
-                ->toArray();
+            $allVipLevel = VipLevel::query()->where('status', VipLevel::STATUS_ENABLED)->get()->keyBy('id')->toArray();
+            $allVipLevelIds = array_column($allVipLevel, 'id');
             $machineRatioMap = $this->preloadMachineRatios($allVipLevelIds);
 
             // 批量获取机台类型映射
@@ -645,15 +644,44 @@ class VipCashbackService
                         continue;
                     }
 
-                    // 计算机台反水
+                    // ---------------------------------------- 推廣紅利 ----------------------------------------
+                    $parentRatio = 0;
+                    $parentAmount = 0;
                     $cashbackRatio = $machineRatioMap[$vipLevelId][$machineType] ?? 0;
-                    $cashbackAmount = VipLevelMachineRatio::calculateMachineAmount($record->chip_amount, $cashbackRatio);
-                    $storageData = VipLevelMachineRatio::formatForStorage($cashbackRatio, $cashbackAmount);
+
+                    if (! empty($record->parent_player_id)) {
+                        $parent = $players->get($record->parent_player_id);
+
+                        if ($parent) {
+                            $vipLevel = $allVipLevel[$parent->vip_level_id] ?? null;
+
+                            if (! empty($vipLevel['children_cashback_ratio'])) {
+                                $parentRatio = $vipLevel['children_cashback_ratio'];
+                                $parentAmount = $record->chip_amount * ($cashbackRatio / 100) * ($parentRatio / 100);
+                                $parentAmount = round($parentAmount, 5);
+
+                                if ($parentAmount > 0) {
+                                    $this->updateParentCashbackAmount($parent, $parentAmount);
+                                }
+                            }
+                        } else {
+                            $this->log('debug', '跳過紀錄：上級玩家不存在，不計算機台推廣紅利', [
+                                'record_id' => $record->id,
+                                'player_id' => $record->player_id,
+                            ]);
+                        }
+                    }
+
+                    // 计算机台反水
+                    $cashbackAmount = VipLevelMachineRatio::calculateMachineAmount($record->chip_amount, $cashbackRatio, $parentRatio);
+                    $storageData = VipLevelMachineRatio::formatForStorage($cashbackRatio, $cashbackAmount, $parentRatio, $parentAmount);
 
                     // 更新记录
                     $record->vip_level_id = $vipLevelId;
                     $record->cashback_ratio = $storageData['cashback_ratio'];
                     $record->cashback_amount = $storageData['cashback_amount'];
+                    $record->parent_cashback_ratio = $storageData['parent_cashback_ratio'];
+                    $record->parent_cashback_amount = $storageData['parent_cashback_amount'];
                     $record->save();
 
                     // 更新玩家反水金额
