@@ -53,7 +53,7 @@ class ChannelDeviceController
 
             // 只显示当前渠道的设备
             $grid->model()
-                ->with(['agent', 'store'])
+                ->with(['agent', 'store', 'currentPlayer.machine_wallet'])
                 ->where('admin_device.department_id', $departmentId)
                 ->orderBy('id', 'desc');
 
@@ -115,6 +115,39 @@ class ChannelDeviceController
                         return Tag::create($value)->color('purple');
                     });
             }
+
+            // 当前登录玩家
+            $grid->column('current_player_id', admin_trans('device.fields.current_player'))
+                ->width(160)
+                ->align('center')
+                ->display(function ($val, $row) {
+                    /** @var \addons\webman\model\AdminDevice $row */
+                    $player = $row->currentPlayer;
+                    if (empty($player)) {
+                        return Tag::create(admin_trans('device.no_player'))->color('default');
+                    }
+                    $name = $player->name ?: $player->phone;
+                    return Html::create(
+                        '<div style="line-height:1.6">' .
+                        '<span>' . htmlspecialchars($name) . '</span><br>' .
+                        '<span style="color:#8c8c8c;font-size:12px">' . htmlspecialchars($player->phone) . '</span>' .
+                        '</div>'
+                    );
+                });
+
+            // 钱包余额
+            $grid->column('current_player_id', admin_trans('device.fields.wallet_balance'))
+                ->width(120)
+                ->align('center')
+                ->display(function ($val, $row) {
+                    /** @var \addons\webman\model\AdminDevice $row */
+                    $player = $row->currentPlayer;
+                    if (empty($player) || empty($player->machine_wallet)) {
+                        return '—';
+                    }
+                    $balance = number_format($player->machine_wallet->money, 2);
+                    return Html::create('<span style="color:#1890ff;font-weight:600">' . $balance . '</span>');
+                });
 
             $grid->column('status', admin_trans('device.fields.status'))
                 ->display(function ($val) {

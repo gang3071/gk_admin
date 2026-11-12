@@ -29,6 +29,8 @@ return [
         'store_help' => 'デバイスの所属ストアを選択（オフラインチャネルのみ）',
         'status' => 'ステータス',
         'remark' => '備考',
+        'current_player' => '現在のプレイヤー',
+        'wallet_balance' => 'ウォレット残高',
         'created_at' => '作成日時',
         'updated_at' => '更新日時',
         'ip_count' => 'IP数',
@@ -63,6 +65,7 @@ return [
     // オプション
     'no_agent' => 'エージェントなし',
     'no_store' => 'ストアなし',
+    'no_player' => 'プレイヤーなし',
 
     // 機能
     'batch_disable' => '一括無効化',

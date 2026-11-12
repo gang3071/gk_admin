@@ -29,6 +29,8 @@ return [
         'store_help' => '选择设备所属的店家（仅线下渠道）',
         'status' => '状态',
         'remark' => '备注',
+        'current_player' => '当前玩家',
+        'wallet_balance' => '钱包余额',
         'created_at' => '创建时间',
         'updated_at' => '更新时间',
         'ip_count' => 'IP数量',
@@ -63,6 +65,7 @@ return [
     // 选项
     'no_agent' => '无代理',
     'no_store' => '无店家',
+    'no_player' => '无玩家',
 
     // 功能
     'batch_disable' => '批量关闭',

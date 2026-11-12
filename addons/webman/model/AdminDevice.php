@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int $department_id 所属部门ID
  * @property int $agent_admin_id 所属代理ID
  * @property int $store_admin_id 所属店家ID
+ * @property int $current_player_id 当前登录的玩家ID
  * @property string $device_name 设备名称
  * @property string $device_no 设备号（安卓设备唯一标识）
  * @property string $device_model 设备型号
@@ -50,6 +51,7 @@ class AdminDevice extends Model
         'department_id',
         'agent_admin_id',
         'store_admin_id',
+        'current_player_id',
         'device_name',
         'device_no',
         'device_model',
@@ -129,6 +131,15 @@ class AdminDevice extends Model
     {
         $statusList = self::getStatusList();
         return $statusList[$this->status] ?? '';
+    }
+
+    /**
+     * 当前登录的玩家
+     * @return BelongsTo
+     */
+    public function currentPlayer(): BelongsTo
+    {
+        return $this->belongsTo(Player::class, 'current_player_id', 'id');
     }
 
     /**

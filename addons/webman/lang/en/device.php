@@ -29,6 +29,8 @@ return [
         'store_help' => 'Select the store for this device (offline channel only)',
         'status' => 'Status',
         'remark' => 'Remark',
+        'current_player' => 'Current Player',
+        'wallet_balance' => 'Wallet Balance',
         'created_at' => 'Created At',
         'updated_at' => 'Updated At',
         'ip_count' => 'IP Count',
@@ -63,6 +65,7 @@ return [
     // Options
     'no_agent' => 'No Agent',
     'no_store' => 'No Store',
+    'no_player' => 'No Player',
 
     // Functions
     'batch_disable' => 'Batch Disable',
