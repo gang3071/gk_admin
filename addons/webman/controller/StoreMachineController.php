@@ -632,9 +632,18 @@ class StoreMachineController
             $storeSettingSteelBallGift->department_id = $departmentId;
             $storeSettingSteelBallGift->admin_user_id = $adminUser->id;
             $storeSettingSteelBallGift->feature = 'steel_ball_points_gift';
-            $storeSettingSteelBallGift->num = 100; // 每次下珠赠送固定积分数，默认100
+            $storeSettingSteelBallGift->num = 0;
             $storeSettingSteelBallGift->status = 0; // 默认不开启
             $storeSettingSteelBallGift->save();
+
+            // steel_ball_points_gift_amount（钢珠下珠赠送固定积分数，默认100）
+            $storeSettingSteelBallGiftAmount = new StoreSetting();
+            $storeSettingSteelBallGiftAmount->department_id = $departmentId;
+            $storeSettingSteelBallGiftAmount->admin_user_id = $adminUser->id;
+            $storeSettingSteelBallGiftAmount->feature = 'steel_ball_points_gift_amount';
+            $storeSettingSteelBallGiftAmount->num = 100;
+            $storeSettingSteelBallGiftAmount->status = 1;
+            $storeSettingSteelBallGiftAmount->save();
 
             // machine_crash_amount（爆机金额）
             $storeSettingCrashAmount = new StoreSetting();
@@ -1330,6 +1339,19 @@ class StoreMachineController
                     } else {
                         return Tag::create(admin_trans('store_setting.disable'))->color('red');
                     }
+                })->align('center')
+                // 钢珠下珠赠送积分数
+                ->if(function ($value, StoreSetting $data) {
+                    return $data->feature === 'steel_ball_points_gift_amount';
+                })->editable(
+                    (new \ExAdmin\ui\component\grid\grid\Editable)->number('num')
+                        ->rule([
+                            'integer' => admin_trans('store_setting.validation.integer'),
+                            'min:1' => admin_trans('store_setting.validation.min', null, ['{min}' => 1]),
+                        ])
+                        ->precision(0)
+                )->display(function ($val, StoreSetting $data) {
+                    return (int)$data->num;
                 })->align('center')
                 // 爆机金额
                 ->if(function ($value, StoreSetting $data) {

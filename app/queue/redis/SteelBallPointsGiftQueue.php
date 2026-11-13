@@ -26,16 +26,21 @@ class SteelBallPointsGiftQueue implements Consumer
             return;
         }
 
-        $setting = StoreSetting::query()
+        $toggle = StoreSetting::query()
             ->where('admin_user_id', $storeAdminId)
             ->where('feature', 'steel_ball_points_gift')
             ->first();
 
-        if (!$setting || $setting->status != 1) {
+        if (!$toggle || $toggle->status != 1) {
             return;
         }
 
-        $points = (int)$setting->num;
+        $amountSetting = StoreSetting::query()
+            ->where('admin_user_id', $storeAdminId)
+            ->where('feature', 'steel_ball_points_gift_amount')
+            ->first();
+
+        $points = $amountSetting ? (int)$amountSetting->num : 0;
 
         if ($points <= 0) {
             return;
