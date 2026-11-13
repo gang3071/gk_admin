@@ -35,8 +35,7 @@ class SteelBallPointsGiftQueue implements Consumer
             return;
         }
 
-        $ratio = max(1, (int)$setting->num);
-        $points = (int)floor($score * $ratio);
+        $points = (int)$setting->num;
 
         if ($points <= 0) {
             return;
@@ -57,7 +56,6 @@ class SteelBallPointsGiftQueue implements Consumer
                 'department_id' => $departmentId,
                 'score'         => $score,
                 'points'        => $points,
-                'ratio'         => $ratio,
             ]);
         } catch (\Throwable $e) {
             Log::error('SteelBallPointsGiftQueue: 积分赠送失败', [

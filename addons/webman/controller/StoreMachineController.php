@@ -632,7 +632,7 @@ class StoreMachineController
             $storeSettingSteelBallGift->department_id = $departmentId;
             $storeSettingSteelBallGift->admin_user_id = $adminUser->id;
             $storeSettingSteelBallGift->feature = 'steel_ball_points_gift';
-            $storeSettingSteelBallGift->num = 1; // 每颗球赠送积分比例，默认1:1
+            $storeSettingSteelBallGift->num = 100; // 每次下珠赠送固定积分数，默认100
             $storeSettingSteelBallGift->status = 0; // 默认不开启
             $storeSettingSteelBallGift->save();
 
