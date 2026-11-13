@@ -103,7 +103,15 @@ class AgentSubAdminController
             });
 
             $form->saved(function (Form $form) {
-                $this->syncRole((int) $form->model()->id);
+                // 新建時 $form->model()->id 可能為空，改用 username 反查（username 唯一）
+                $userId = (int) ($form->model()->id ?? 0);
+                if (!$userId) {
+                    $username = trim((string) ($form->input('username') ?: ($form->model()->username ?? '')));
+                    if ($username !== '') {
+                        $userId = (int) AdminUser::query()->where('username', $username)->value('id');
+                    }
+                }
+                $this->syncRole($userId);
             });
         });
     }
@@ -170,7 +178,15 @@ class AgentSubAdminController
     private function syncRole(int $userId): void
     {
         $roleId = $this->subRoleId();
+        \support\Log::info('AgentSubAdmin::syncRole', [
+            'user_id' => $userId,
+            'role_id' => $roleId,
+        ]);
         if (!$roleId || !$userId) {
+            \support\Log::warning('AgentSubAdmin::syncRole 跳過（roleId/userId 為空）', [
+                'user_id' => $userId,
+                'role_id' => $roleId,
+            ]);
             return;
         }
         Db::table('admin_role_users')->where('user_id', $userId)->delete();
