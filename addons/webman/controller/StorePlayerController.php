@@ -1133,7 +1133,7 @@ class StorePlayerController
                     ->default(1)
                     ->options($options);
 
-                $options = Player::getParentTreeOptions(-1, Admin::user()->store_admin_id);
+                $options = Player::getParentTreeOptions(-1, Admin::user()->id);
                 $select = $form->select('recommend_id', admin_trans('player.bind_promoter'))->showSearch()->optionFilterProp('search_text');
 
                 foreach ($options as $option) {
@@ -1202,7 +1202,7 @@ class StorePlayerController
                     if (! empty($form->input('recommend_id'))) {
                         $parent = Player::query()
                             ->where('id', $form->input('recommend_id'))
-                            ->where('store_admin_id', Admin::user()->store_admin_id)
+                            ->where('store_admin_id', Admin::user()->id)
                             ->first();
 
                         if (empty($parent)) {
