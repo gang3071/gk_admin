@@ -1023,18 +1023,19 @@ class PlayerController
                             ->load(
                                 $form->select('store_admin_id', admin_trans('player.fields.store_admin_id'))
                                     ->required()
-                                    ->placeholder(admin_trans('player.fields.store_admin_id')),
+                                    ->placeholder(admin_trans('player.fields.store_admin_id'))
+                                    ->load(
+                                        $form->select('recommend_id', admin_trans('player.fields.recommend_promoter_name'))
+                                            ->showSearch()
+                                            ->optionFilterProp('search_text')
+                                            ->placeholder(admin_trans('player.fields.recommend_promoter_name')),
+                                        admin_url([$this, 'getParentOptions'])
+                                    )
+                                    ->event('change', ['recommend_id' => null], 'variable'),
                                 admin_url([$this, 'getStoreOptions'])
                             )
                             ->event('change', ['store_admin_id' => null], 'variable'),
                         admin_url([$this, 'getAgentOptions'])
-                    )
-                    ->load(
-                        $form->select('recommend_id', admin_trans('player.fields.recommend_promoter_name'))
-                            ->showSearch()
-                            ->optionFilterProp('search_text')
-                            ->placeholder(admin_trans('player.fields.recommend_promoter_name')),
-                        admin_url([$this, 'getParentOptions'])
                     )
                     ->event('change', ['agent_admin_id' => null, 'store_admin_id' => null, 'recommend_id' => null,], 'variable');
                 $form->text('player_extend.id_number', admin_trans('player_extend.fields.id_number'))->maxlength(50)->required();
@@ -1814,7 +1815,7 @@ class PlayerController
 
         return Form::create($player, function (Form $form) use ($player) {
             $form->push(Html::markdown('><font size=1 color="#ff4d4f">' . admin_trans('player.bind_promoter_confirm') . '</font>'));
-            $options = Player::getParentTreeOptions($player->id, $player->department_id, $player->is_test == 1);
+            $options = Player::getParentTreeOptions($player->id, $player->store_admin_id, $player->is_test);
             $select = $form->select('recommend_id')->showSearch()->optionFilterProp('search_text');
 
             foreach ($options as $option) {
@@ -1829,7 +1830,7 @@ class PlayerController
             $form->saving(function (Form $form) use ($player) {
                 $parent = Player::query()
                     ->where('id', $form->input('recommend_id'))
-                    ->where('department_id', $player->department_id)
+                    ->where('store_admin_id', $player->store_admin_id)
                     ->first();
 
                 if (empty($parent)) {
@@ -4218,21 +4219,21 @@ class PlayerController
     }
 
     /**
-     * 獲取上級會員名單（按渠道篩選）
+     * 獲取上級會員名單（按門店篩選）
      * @return Response
      */
     public function getParentOptions(): Response
     {
         $request = Request::input();
         $data = $request['data'] ?? [];
-        $departmentId = (int) ($request['value'] ?? $data['department_id'] ?? 0);
+        $storeId = (int) ($request['value'] ?? $data['store_admin_id'] ?? 0);
         $optionsField = $request['optionsField'] ?? 'recommend_id';
 
-        if ($departmentId <= 0) {
+        if ($storeId <= 0) {
             return Response::success([$optionsField => []]);
         }
 
-        $players = Player::getParentTreeOptions(-1, $departmentId, ($data['is_test'] ?? 0) === 1);
+        $players = Player::getParentTreeOptions(-1, $storeId, ($data['is_test'] ?? 0) == 1);
         $options = [];
 
         foreach ($players as $player) {

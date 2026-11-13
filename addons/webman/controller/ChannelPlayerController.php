@@ -2281,7 +2281,7 @@ class ChannelPlayerController
 
         return Form::create($player, function (Form $form) use ($player) {
             $form->push(Html::markdown('><font size=1 color="#ff4d4f">' . admin_trans('player.bind_promoter_confirm') . '</font>'));
-            $options = Player::getParentTreeOptions($player->id, $player->department_id, $player->is_test == 1);
+            $options = Player::getParentTreeOptions($player->id, $player->store_admin_id, $player->is_test);
             $select = $form->select('recommend_id')->showSearch()->optionFilterProp('search_text');
 
             foreach ($options as $option) {
@@ -2296,7 +2296,7 @@ class ChannelPlayerController
             $form->saving(function (Form $form) use ($player) {
                 $parent = Player::query()
                     ->where('id', $form->input('recommend_id'))
-                    ->where('department_id', $player->department_id)
+                    ->where('store_admin_id', $player->store_admin_id)
                     ->first();
 
                 if (empty($parent)) {
@@ -4242,19 +4242,20 @@ class ChannelPlayerController
 
         $storeTreeOptions = Arr::tree($storeOptions);
 
-        return Form::create([], function (Form $form) use ($storeTreeOptions, $currentDepartmentId) {
+        return Form::create([], function (Form $form) use ($storeTreeOptions) {
             $form->title(admin_trans('offline_channel.batch_generate_players_title'));
 
             $form->push(Html::markdown(admin_trans('common.tips.batch_generate_bind_notice')));
 
             $form->divider()->content(admin_trans('offline_channel.basic_config'));
 
-            $form->row(function (Form $form) use ($storeTreeOptions, $currentDepartmentId) {
+            $form->row(function (Form $form) use ($storeTreeOptions) {
                 $form->column(function (Form $form) use ($storeTreeOptions) {
                     // 绑定店家（必选，只能选择店家）
                     $form->treeSelect('store_admin_id', admin_trans('offline_channel.bind_store_machine'))
                         ->options($storeTreeOptions)
                         ->help(admin_trans('offline_channel.help_bind_store_machine'))
+                        ->event('change', ['recommend_id' => null], 'variable')
                         ->required();
                 })->span(12);
 
@@ -4270,18 +4271,11 @@ class ChannelPlayerController
                         ->required();
                 })->span(12);
 
-                $form->column(function (Form $form) use ($currentDepartmentId) {
-                    $options = Player::getParentTreeOptions(-1, $currentDepartmentId, false);
-                    $select = $form->select('recommend_id', admin_trans('player.bind_promoter'))->showSearch()->optionFilterProp('search_text');
-
-                    foreach ($options as $option) {
-                        $select->content(
-                            SelectOption::create()
-                                ->value($option['id'])
-                                ->attr('search_text', $option['search_text'])
-                                ->content($option['name'])
-                        );
-                    }
+                $form->column(function (Form $form) {
+                    $form->select('recommend_id', admin_trans('player.bind_promoter'))
+                        ->showSearch()
+                        ->optionFilterProp('search_text')
+                        ->remoteOptions(admin_url([$this, 'getParentOptions']));
                 })->span(12);
             })->gutter(16);
 
@@ -6735,4 +6729,39 @@ class ChannelPlayerController
         }
     }
 
+    /**
+     * 獲取上級會員名單（按門店篩選）
+     * @return Response
+     */
+    public function getParentOptions(): Response
+    {
+        $request = Request::input();
+        $data = $request['data'] ?? [];
+        $storeId = (int) ($request['value'] ?? $data['store_admin_id'] ?? 0);
+
+        if ($storeId <= 0) {
+            return Response::success([]);
+        }
+
+        $players = Player::getParentTreeOptions(-1, $storeId);
+        $options = [];
+
+        foreach ($players as $player) {
+            $options[] = [
+                'value' => $player['id'],
+                'label' => $player['name'],
+                'search_text' => $player['search_text']
+            ];
+        }
+
+        $search = trim((string) ($request['search'] ?? ''));
+
+        if ($search !== '') {
+            $options = array_values(array_filter($options, function (array $option) use ($search) {
+                return stripos($option['search_text'], $search) !== false;
+            }));
+        }
+
+        return Response::success($options);
+    }
 }

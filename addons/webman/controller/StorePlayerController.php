@@ -1133,7 +1133,7 @@ class StorePlayerController
                     ->default(1)
                     ->options($options);
 
-                $options = Player::getParentTreeOptions(-1, Admin::user()->department_id);
+                $options = Player::getParentTreeOptions(-1, Admin::user()->store_admin_id);
                 $select = $form->select('recommend_id', admin_trans('player.bind_promoter'))->showSearch()->optionFilterProp('search_text');
 
                 foreach ($options as $option) {
@@ -1202,7 +1202,7 @@ class StorePlayerController
                     if (! empty($form->input('recommend_id'))) {
                         $parent = Player::query()
                             ->where('id', $form->input('recommend_id'))
-                            ->where('department_id', $departmentId)
+                            ->where('store_admin_id', Admin::user()->store_admin_id)
                             ->first();
 
                         if (empty($parent)) {
@@ -1625,7 +1625,7 @@ class StorePlayerController
 
         return Form::create($player, function (Form $form) use ($player) {
             $form->push(Html::markdown('><font size=1 color="#ff4d4f">' . admin_trans('player.bind_promoter_confirm') . '</font>'));
-            $options = Player::getParentTreeOptions($player->id, $player->department_id, $player->is_test == 1);
+            $options = Player::getParentTreeOptions($player->id, $player->store_admin_id, $player->is_test);
             $select = $form->select('recommend_id')->showSearch()->optionFilterProp('search_text');
 
             foreach ($options as $option) {
@@ -1640,7 +1640,7 @@ class StorePlayerController
             $form->saving(function (Form $form) use ($player) {
                 $parent = Player::query()
                     ->where('id', $form->input('recommend_id'))
-                    ->where('department_id', $player->department_id)
+                    ->where('store_admin_id', $player->store_admin_id)
                     ->first();
 
                 if (empty($parent)) {

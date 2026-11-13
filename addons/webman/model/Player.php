@@ -436,13 +436,13 @@ class Player extends Model
     /**
      * 獲取上級會員選項樹
      * @param $playerId
-     * @param $departmentId
+     * @param $storeId
      * @param bool $isTest
      * @param bool $isTree
      * @param bool $withSearchText
      * @return array
      */
-    public static function getParentTreeOptions(int $playerId, int $departmentId, bool $isTest = false, bool $isTree = false): array
+    public static function getParentTreeOptions(int $playerId, int $storeId, bool $isTest = false, bool $isTree = false): array
     {
         $list = [];
         $players = Player::query()
@@ -453,7 +453,7 @@ class Player extends Model
                 $query->whereNull('recommend_id')->orWhere('recommend_id', '<>', $playerId);
             })
             ->where('status', 1)
-            ->where('department_id', $departmentId)
+            ->where('store_admin_id', $storeId)
             ->where('id', '<>', $playerId)
             ->get();
 
