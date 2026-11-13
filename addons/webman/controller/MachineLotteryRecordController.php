@@ -155,6 +155,38 @@ class MachineLotteryRecordController
                 }
                 return $val;
             })->align('center');
+            $grid->column('draw_bet', admin_trans('machine.fields.draw_bet'))->display(function (
+                $val,
+                MachineLotteryRecord $data
+            ) {
+                return (int)$data->draw_bet;
+            })->align('center');
+            $grid->column('lottery_win', admin_trans('machine.fields.lottery_win'))->display(function (
+                $val,
+                MachineLotteryRecord $data
+            ) {
+                return (int)$data->lottery_win;
+            })->align('center');
+            $grid->column('lottery_bet', admin_trans('machine.fields.lottery_bet'))->display(function (
+                $val,
+                MachineLotteryRecord $data
+            ) {
+                if ($data->machine->type == GameType::TYPE_SLOT) {
+                    return (int)$data->lottery_bet;
+                }
+                return '-';
+            })->align('center');
+            $grid->column('odds_x', admin_trans('machine.fields.odds_ratio_label'))->display(function (
+                $val,
+                MachineLotteryRecord $data
+            ) {
+                $x = (int)$data->odds_x;
+                $y = (int)$data->odds_y;
+                if ($x > 0 && $y > 0) {
+                    return $x . ' / ' . $y;
+                }
+                return '-';
+            })->align('center');
             $grid->column('created_at', admin_trans('player_game_log.fields.create_at'))->align('center');
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('player.phone')->placeholder(admin_trans('player.fields.phone'));
