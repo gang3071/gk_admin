@@ -18,8 +18,8 @@ return [
         'enable_live_baccarat' => 'Enable Live Baccarat',
         'enable_points' => 'Enable Points',
         'machine_crash_amount' => 'Machine Crash Amount',
-        'steel_ball_points_gift' => 'Steel Ball Points Gift Switch',
-        'steel_ball_points_gift_amount' => 'Steel Ball Points Gift Amount',
+        'steel_ball_points_gift' => 'Steel Ball Points Gift',
+        'steel_ball_points_gift_amount' => 'Gift Points Amount',
         'menu_image' => 'Menu Image',
     ],
     'home_notice_max_len' => 'Home notice message max 500 characters',
@@ -33,6 +33,7 @@ return [
     'menu_image_help' => 'Recommended size: 1080x1920, supports jpg/png, max 5MB',
     'enable' => 'Enable',
     'disable' => 'Disable',
+    'points_label' => 'pts',
 
     // Validation messages
     'validation' => [

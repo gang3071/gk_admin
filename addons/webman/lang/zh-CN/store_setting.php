@@ -18,8 +18,8 @@ return [
         'enable_live_baccarat' => '是否开启真人百家',
         'enable_points' => '是否开启积分',
         'machine_crash_amount' => '爆机金额',
-        'steel_ball_points_gift' => '钢珠下珠赠送积分开关',
-        'steel_ball_points_gift_amount' => '钢珠下珠赠送积分数',
+        'steel_ball_points_gift' => '钢珠下珠赠送积分',
+        'steel_ball_points_gift_amount' => '赠送积分数',
         'menu_image' => '点菜菜单图片',
     ],
     'home_notice_max_len' => '首页提醒消息最多500个字符',
@@ -33,6 +33,7 @@ return [
     'menu_image_help' => '建议尺寸：1080x1920，支持jpg/png格式，最大5MB',
     'enable' => '启用',
     'disable' => '禁用',
+    'points_label' => '积分',
 
     // 验证消息
     'validation' => [

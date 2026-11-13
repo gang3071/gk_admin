@@ -18,8 +18,8 @@ return [
         'enable_live_baccarat' => '是否開啟真人百家',
         'enable_points' => '是否開啟積分',
         'machine_crash_amount' => '爆機金額',
-        'steel_ball_points_gift' => '鋼珠下珠贈送積分開關',
-        'steel_ball_points_gift_amount' => '鋼珠下珠贈送積分數',
+        'steel_ball_points_gift' => '鋼珠下珠贈送積分',
+        'steel_ball_points_gift_amount' => '贈送積分數',
         'menu_image' => '點菜菜單圖片',
     ],
     'home_notice_max_len' => '首頁提醒消息最多500個字符',
@@ -33,6 +33,7 @@ return [
     'menu_image_help' => '建議尺寸：1080x1920，支援jpg/png格式，最大5MB',
     'enable' => '啟用',
     'disable' => '禁用',
+    'points_label' => '積分',
 
     // 驗證消息
     'validation' => [

@@ -627,23 +627,14 @@ class StoreMachineController
             $storeSettingPoints->status = 1;
             $storeSettingPoints->save();
 
-            // steel_ball_points_gift（钢珠下珠赠送积分开关，默认关闭）
+            // steel_ball_points_gift（钢珠下珠赠送积分：status=开关，num=赠送积分数）
             $storeSettingSteelBallGift = new StoreSetting();
             $storeSettingSteelBallGift->department_id = $departmentId;
             $storeSettingSteelBallGift->admin_user_id = $adminUser->id;
             $storeSettingSteelBallGift->feature = 'steel_ball_points_gift';
-            $storeSettingSteelBallGift->num = 0;
+            $storeSettingSteelBallGift->num = 100; // 默认赠送100积分
             $storeSettingSteelBallGift->status = 0; // 默认不开启
             $storeSettingSteelBallGift->save();
-
-            // steel_ball_points_gift_amount（钢珠下珠赠送固定积分数，默认100）
-            $storeSettingSteelBallGiftAmount = new StoreSetting();
-            $storeSettingSteelBallGiftAmount->department_id = $departmentId;
-            $storeSettingSteelBallGiftAmount->admin_user_id = $adminUser->id;
-            $storeSettingSteelBallGiftAmount->feature = 'steel_ball_points_gift_amount';
-            $storeSettingSteelBallGiftAmount->num = 100;
-            $storeSettingSteelBallGiftAmount->status = 1;
-            $storeSettingSteelBallGiftAmount->save();
 
             // machine_crash_amount（爆机金额）
             $storeSettingCrashAmount = new StoreSetting();
@@ -1330,28 +1321,15 @@ class StoreMachineController
                         return Tag::create(admin_trans('store_setting.disable'))->color('red');
                     }
                 })->align('center')
-                // 钢珠下珠赠送积分开关
+                // 钢珠下珠赠送积分（点击弹窗编辑开关+积分数）
                 ->if(function ($value, StoreSetting $data) {
                     return $data->feature === 'steel_ball_points_gift';
                 })->display(function ($val, StoreSetting $data) {
                     if ($data->status == 1) {
-                        return Tag::create(admin_trans('store_setting.enable'))->color('green');
-                    } else {
-                        return Tag::create(admin_trans('store_setting.disable'))->color('red');
+                        $label = admin_trans('store_setting.enable') . ' · ' . (int)$data->num . ' ' . admin_trans('store_setting.points_label');
+                        return Tag::create($label)->color('green')->modal([$this, 'editSteelBallPointsGift'], ['data' => $data]);
                     }
-                })->align('center')
-                // 钢珠下珠赠送积分数
-                ->if(function ($value, StoreSetting $data) {
-                    return $data->feature === 'steel_ball_points_gift_amount';
-                })->editable(
-                    (new \ExAdmin\ui\component\grid\grid\Editable)->number('num')
-                        ->rule([
-                            'integer' => admin_trans('store_setting.validation.integer'),
-                            'min:1' => admin_trans('store_setting.validation.min', null, ['{min}' => 1]),
-                        ])
-                        ->precision(0)
-                )->display(function ($val, StoreSetting $data) {
-                    return (int)$data->num;
+                    return Tag::create(admin_trans('store_setting.disable'))->color('red')->modal([$this, 'editSteelBallPointsGift'], ['data' => $data]);
                 })->align('center')
                 // 爆机金额
                 ->if(function ($value, StoreSetting $data) {
@@ -1456,6 +1434,24 @@ class StoreMachineController
             ]);
             return json(['status' => false, 'msg' => '保存失败：' . $e->getMessage()]);
         }
+    }
+
+    /**
+     * 编辑钢珠下珠赠送积分配置（开关 + 积分数）
+     * @auth true
+     * @group channel
+     */
+    public function editSteelBallPointsGift(StoreSetting $data): Form
+    {
+        return Form::create($data, function (Form $form) use ($data) {
+            $form->title(admin_trans('store_setting.fields.steel_ball_points_gift'));
+            $form->switch('status', admin_trans('store_setting.fields.status'))
+                ->checkedValue(1)
+                ->unCheckedValue(0);
+            $form->number('num', admin_trans('store_setting.fields.steel_ball_points_gift_amount'))
+                ->min(1)
+                ->required();
+        });
     }
 
     /**
