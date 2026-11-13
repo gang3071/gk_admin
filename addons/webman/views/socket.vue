@@ -513,6 +513,17 @@ export default {
               that.openNotificationErro(title, router, description, params);
             }
             break;
+          case 'voice_broadcast':
+            // 语音：同渠道所有门店都播
+            if (content.voice_base64) {
+              that.startPlayVoiceBroadcast(content.voice_base64, content.voice_mime);
+            }
+            // 通知弹窗：仅本店（store_admin_id 匹配当前登录管理员 ID）
+            if (content.store_admin_id && String(content.store_admin_id) === String(that.id)) {
+              title = content.title || '🎊 播報通知';
+              that.openNotification(title, '', content.content, '');
+            }
+            break;
         }
       } catch (e) {
       }
@@ -548,6 +559,13 @@ export default {
         this.$refs.lottery_examine_audio.currentTime = 0;
         this.$refs.lottery_examine_audio.play();
       })
+    },
+    startPlayVoiceBroadcast(base64, mime) {
+      try {
+        const src = `data:${mime || 'audio/wav'};base64,${base64}`;
+        const audio = new Audio(src);
+        audio.play().catch(() => {});
+      } catch (e) {}
     },
     showModal() {
       this.visible = true;

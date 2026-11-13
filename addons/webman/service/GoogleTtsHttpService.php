@@ -617,6 +617,94 @@ class GoogleTtsHttpService
     }
 
     /**
+     * 生成广播播报语音（彩金中奖/钢珠高分等），直接返回 base64 音频，不保存文件
+     *
+     * @param string $text 播报文本
+     * @return array ['success' => bool, 'base64' => string|null, 'mime' => string, 'error' => string|null]
+     */
+    public static function generateBroadcastVoice(string $text): array
+    {
+        try {
+            if (empty($text)) {
+                throw new \Exception('播报文本不能为空');
+            }
+
+            $useGemini = config('google.tts.use_gemini', true);
+            $apiKey = self::getApiKey($useGemini);
+
+            if ($useGemini) {
+                $styleInstructions = config(
+                    'google.tts.gemini_style',
+                    'Read aloud in a clear, professional customer service voice, warm and attentive, as if a waitress is politely announcing a customer request.'
+                );
+                $voiceName = config('google.tts.gemini_voice', self::GEMINI_VOICE);
+
+                $requestBody = [
+                    'contents' => [
+                        ['parts' => [['text' => $styleInstructions . ' ' . $text]]]
+                    ],
+                    'generationConfig' => [
+                        'responseModalities' => ['AUDIO'],
+                        'speechConfig' => [
+                            'voiceConfig' => [
+                                'prebuiltVoiceConfig' => ['voiceName' => $voiceName]
+                            ]
+                        ]
+                    ]
+                ];
+
+                $response = Http::timeout(30)
+                    ->withHeaders(['Content-Type' => 'application/json', 'x-goog-api-key' => $apiKey])
+                    ->post(self::GEMINI_TTS_ENDPOINT, $requestBody);
+
+                if (!$response->successful()) {
+                    throw new \Exception('Gemini TTS API 错误: ' . $response->json('error.message', 'Unknown error'));
+                }
+
+                $result = $response->json();
+                $pcmBase64 = $result['candidates'][0]['content']['parts'][0]['inlineData']['data'] ?? null;
+                if (empty($pcmBase64)) {
+                    throw new \Exception('Gemini TTS API 返回空音频内容');
+                }
+
+                // PCM → WAV，再 base64，前端用 data:audio/wav;base64,... 直接播放
+                $wavData = self::convertPcmToWav(base64_decode($pcmBase64), 24000, 1, 16);
+                return ['success' => true, 'base64' => base64_encode($wavData), 'mime' => 'audio/wav', 'error' => null];
+            } else {
+                $requestBody = [
+                    'input' => ['text' => $text],
+                    'voice' => ['languageCode' => self::TW_LANGUAGE_CODE, 'name' => self::TW_VOICE_NAME, 'ssmlGender' => 'FEMALE'],
+                    'audioConfig' => [
+                        'audioEncoding' => 'MP3',
+                        'speakingRate' => (float)config('google.tts.speaking_rate', 1.0),
+                        'pitch' => (float)config('google.tts.pitch', 0.0),
+                        'volumeGainDb' => (float)config('google.tts.volume_gain_db', 0.0),
+                    ]
+                ];
+
+                $response = Http::timeout(30)->post(self::API_ENDPOINT . '?key=' . $apiKey, $requestBody);
+                if (!$response->successful()) {
+                    throw new \Exception('Google TTS API 错误: ' . $response->json('error.message', 'Unknown error'));
+                }
+
+                // Wavenet 直接返回 base64 MP3
+                $mp3Base64 = $response->json('audioContent');
+                if (empty($mp3Base64)) {
+                    throw new \Exception('Google TTS API 返回空音频内容');
+                }
+
+                return ['success' => true, 'base64' => $mp3Base64, 'mime' => 'audio/mpeg', 'error' => null];
+            }
+        } catch (\Exception $e) {
+            Log::error('播报语音生成失败', [
+                'text'  => $text,
+                'error' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'base64' => null, 'mime' => '', 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
      * 批量重新生成语音文件
      */
     public static function batchRegenerateVoices(array $devices): array
