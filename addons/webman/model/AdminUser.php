@@ -270,6 +270,24 @@ class AdminUser extends Model
     }
 
     /**
+     * 子帳號可見店家 ID；非子帳號回傳 null（代表不限制）
+     * 子帳號若沒有指派店家，回傳 [0] 以確保查不到任何資料
+     *
+     * @return array|null
+     */
+    public function subAccountStoreIds(): ?array
+    {
+        if (!$this->isSubAccount()) {
+            return null;
+        }
+        $ids = $this->childStores()
+            ->where('type', self::TYPE_STORE)
+            ->pluck('id')
+            ->all();
+        return $ids ?: [0];
+    }
+
+    /**
      * 代理下的所有玩家（通过agent_admin_id关联）
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany

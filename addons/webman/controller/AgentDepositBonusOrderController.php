@@ -44,9 +44,18 @@ class AgentDepositBonusOrderController
             $grid->bordered(true);
 
             // 只显示当前代理的订单
+            // 子帳號只顯示被指派店家的訂單；上層代理顯示自己的全部訂單
             $currentAdmin = Admin::user();
-            $grid->model()->where('agent_id', $currentAdmin->id)
-                ->with(['activity', 'tier', 'player'])
+            $subStoreIds = $currentAdmin->subAccountStoreIds();
+            if ($subStoreIds !== null) {
+                $grid->model()->where('agent_id', (int) $currentAdmin->parent_admin_id)
+                    ->whereHas('player', function ($q) use ($subStoreIds) {
+                        $q->whereIn('store_admin_id', $subStoreIds);
+                    });
+            } else {
+                $grid->model()->where('agent_id', $currentAdmin->id);
+            }
+            $grid->model()->with(['activity', 'tier', 'player'])
                 ->orderBy('created_at', 'desc');
 
             $exAdminFilter = Request::input('ex_admin_filter', []);
@@ -251,10 +260,17 @@ class AgentDepositBonusOrderController
     public function detail(int $id): Detail
     {
         $currentAdmin = Admin::user();
-        $order = DepositBonusOrder::where('id', $id)
-            ->where('agent_id', $currentAdmin->id)
-            ->with(['activity', 'tier', 'player', 'task'])
-            ->first();
+        $subStoreIds = $currentAdmin->subAccountStoreIds();
+        $query = DepositBonusOrder::where('id', $id);
+        if ($subStoreIds !== null) {
+            $query->where('agent_id', (int) $currentAdmin->parent_admin_id)
+                ->whereHas('player', function ($q) use ($subStoreIds) {
+                    $q->whereIn('store_admin_id', $subStoreIds);
+                });
+        } else {
+            $query->where('agent_id', $currentAdmin->id);
+        }
+        $order = $query->with(['activity', 'tier', 'player', 'task'])->first();
 
         return Detail::create($order, function (Detail $detail) use ($order) {
             $detail->item('order_no', admin_trans('deposit_bonus_order.fields.order_no'));

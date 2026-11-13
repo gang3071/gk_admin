@@ -46,9 +46,17 @@ class AgentLotteryController
 
             // 数据权限过滤：只显示代理下属玩家的彩金记录
             // 使用 agent_admin_id 字段过滤
-            $grid->model()->whereHas('player', function ($query) use ($currentAdmin) {
-                $query->where('agent_admin_id', $currentAdmin->id);
-            });
+            // 資料範圍：子帳號只顯示被指派店家的彩金紀錄；上層代理維持原本邏輯
+            $subStoreIds = $currentAdmin->subAccountStoreIds();
+            if ($subStoreIds !== null) {
+                $grid->model()->whereHas('player', function ($query) use ($subStoreIds) {
+                    $query->whereIn('store_admin_id', $subStoreIds);
+                });
+            } else {
+                $grid->model()->whereHas('player', function ($query) use ($currentAdmin) {
+                    $query->where('agent_admin_id', $currentAdmin->id);
+                });
+            }
 
             $grid->title(admin_trans('player_lottery_record.title'));
             $grid->bordered(true);

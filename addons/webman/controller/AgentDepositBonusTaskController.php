@@ -42,9 +42,18 @@ class AgentDepositBonusTaskController
             $grid->bordered(true);
 
             // 只显示当前代理的任务
+            // 子帳號只顯示被指派店家的任務；上層代理顯示自己的全部任務
             $currentAdmin = Admin::user();
-            $grid->model()->where('agent_id', $currentAdmin->id)
-                ->with(['player', 'order.activity'])
+            $subStoreIds = $currentAdmin->subAccountStoreIds();
+            if ($subStoreIds !== null) {
+                $grid->model()->where('agent_id', (int) $currentAdmin->parent_admin_id)
+                    ->whereHas('player', function ($q) use ($subStoreIds) {
+                        $q->whereIn('store_admin_id', $subStoreIds);
+                    });
+            } else {
+                $grid->model()->where('agent_id', $currentAdmin->id);
+            }
+            $grid->model()->with(['player', 'order.activity'])
                 ->orderBy('created_at', 'desc');
 
             $exAdminFilter = Request::input('ex_admin_filter', []);
@@ -234,10 +243,17 @@ class AgentDepositBonusTaskController
     public function detail(int $id): Detail
     {
         $currentAdmin = Admin::user();
-        $task = PlayerBonusTask::where('id', $id)
-            ->where('agent_id', $currentAdmin->id)
-            ->with(['player', 'order.activity', 'order.tier'])
-            ->first();
+        $subStoreIds = $currentAdmin->subAccountStoreIds();
+        $query = PlayerBonusTask::where('id', $id);
+        if ($subStoreIds !== null) {
+            $query->where('agent_id', (int) $currentAdmin->parent_admin_id)
+                ->whereHas('player', function ($q) use ($subStoreIds) {
+                    $q->whereIn('store_admin_id', $subStoreIds);
+                });
+        } else {
+            $query->where('agent_id', $currentAdmin->id);
+        }
+        $task = $query->with(['player', 'order.activity', 'order.tier'])->first();
 
         return Detail::create($task, function (Detail $detail) use ($task) {
             $detail->item('id', admin_trans('deposit_bonus_task.fields.id'));
