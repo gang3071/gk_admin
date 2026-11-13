@@ -39,6 +39,7 @@ return [
         PlayerPointsRecord::TYPE_POINTS_UNFREEZE => '解凍積分',
         PlayerPointsRecord::TYPE_TRANSFER_OUT => '積分轉贈（送出）',
         PlayerPointsRecord::TYPE_TRANSFER_IN => '積分轉贈（收入）',
+        PlayerPointsRecord::TYPE_STEEL_BALL_JACKPOT => '鋼珠下珠贈送',
     ],
 
     'action' => [

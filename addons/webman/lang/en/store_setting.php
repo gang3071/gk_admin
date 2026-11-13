@@ -18,6 +18,7 @@ return [
         'enable_live_baccarat' => 'Enable Live Baccarat',
         'enable_points' => 'Enable Points',
         'machine_crash_amount' => 'Machine Crash Amount',
+        'steel_ball_points_gift' => 'Steel Ball Jackpot Points Gift',
         'menu_image' => 'Menu Image',
     ],
     'home_notice_max_len' => 'Home notice message max 500 characters',

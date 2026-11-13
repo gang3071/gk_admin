@@ -39,6 +39,7 @@ return [
         PlayerPointsRecord::TYPE_POINTS_UNFREEZE => 'ポイント凍結解除',
         PlayerPointsRecord::TYPE_TRANSFER_OUT => 'ポイント送付（送出）',
         PlayerPointsRecord::TYPE_TRANSFER_IN => 'ポイント送付（受取）',
+        PlayerPointsRecord::TYPE_STEEL_BALL_JACKPOT => 'スティールボール下玉贈呈',
     ],
 
     'action' => [

@@ -18,6 +18,7 @@ return [
         'enable_live_baccarat' => '是否开启真人百家',
         'enable_points' => '是否开启积分',
         'machine_crash_amount' => '爆机金额',
+        'steel_ball_points_gift' => '钢珠下珠赠送积分',
         'menu_image' => '点菜菜单图片',
     ],
     'home_notice_max_len' => '首页提醒消息最多500个字符',

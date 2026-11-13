@@ -18,6 +18,7 @@ return [
         'enable_live_baccarat' => 'ライブバカラを有効にする',
         'enable_points' => 'ポイントを有効にする',
         'machine_crash_amount' => 'クラッシュ金額',
+        'steel_ball_points_gift' => 'スティールボール下玉ポイント贈呈',
         'menu_image' => 'メニュー画像',
     ],
     'home_notice_max_len' => 'ホーム通知メッセージは最大500文字',

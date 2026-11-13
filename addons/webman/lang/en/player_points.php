@@ -39,6 +39,7 @@ return [
         PlayerPointsRecord::TYPE_POINTS_UNFREEZE => 'Unfreeze Points',
         PlayerPointsRecord::TYPE_TRANSFER_OUT => 'Transfer Out',
         PlayerPointsRecord::TYPE_TRANSFER_IN => 'Transfer In',
+        PlayerPointsRecord::TYPE_STEEL_BALL_JACKPOT => 'Steel Ball Jackpot Gift',
     ],
 
     'action' => [

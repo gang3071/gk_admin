@@ -627,6 +627,15 @@ class StoreMachineController
             $storeSettingPoints->status = 1;
             $storeSettingPoints->save();
 
+            // steel_ball_points_gift（钢珠下珠赠送积分开关，默认关闭）
+            $storeSettingSteelBallGift = new StoreSetting();
+            $storeSettingSteelBallGift->department_id = $departmentId;
+            $storeSettingSteelBallGift->admin_user_id = $adminUser->id;
+            $storeSettingSteelBallGift->feature = 'steel_ball_points_gift';
+            $storeSettingSteelBallGift->num = 1; // 每颗球赠送积分比例，默认1:1
+            $storeSettingSteelBallGift->status = 0; // 默认不开启
+            $storeSettingSteelBallGift->save();
+
             // machine_crash_amount（爆机金额）
             $storeSettingCrashAmount = new StoreSetting();
             $storeSettingCrashAmount->department_id = $departmentId;
@@ -1305,6 +1314,16 @@ class StoreMachineController
                 // 积分开关
                 ->if(function ($value, StoreSetting $data) {
                     return $data->feature === 'enable_points';
+                })->display(function ($val, StoreSetting $data) {
+                    if ($data->status == 1) {
+                        return Tag::create(admin_trans('store_setting.enable'))->color('green');
+                    } else {
+                        return Tag::create(admin_trans('store_setting.disable'))->color('red');
+                    }
+                })->align('center')
+                // 钢珠下珠赠送积分开关
+                ->if(function ($value, StoreSetting $data) {
+                    return $data->feature === 'steel_ball_points_gift';
                 })->display(function ($val, StoreSetting $data) {
                     if ($data->status == 1) {
                         return Tag::create(admin_trans('store_setting.enable'))->color('green');
