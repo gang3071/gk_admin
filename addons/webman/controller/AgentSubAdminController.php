@@ -122,6 +122,12 @@ class AgentSubAdminController
     private function save(Form $form, int $agentId)
     {
         $id = (int) ($form->model()->id ?? 0);
+        if (!$id) {
+            $id = (int) ($form->driver()->get('id') ?? 0);
+        }
+        if (!$id) {
+            $id = (int) request()->input('id');
+        }
 
         // 編輯時只能操作自己的子帳號
         if ($id) {
@@ -138,7 +144,7 @@ class AgentSubAdminController
         // 登入帳號（編輯時若被 disabled 未送出，沿用原值）
         $username = trim((string) $form->input('username'));
         if ($username === '' && $id) {
-            $username = (string) ($form->model()->username ?? '');
+            $username = (string) AdminUser::query()->where('id', $id)->value('username');
             $form->input('username', $username);
         }
         if ($username !== '') {
