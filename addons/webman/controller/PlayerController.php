@@ -442,22 +442,22 @@ class PlayerController
                         ->rows(5)
                         ->rule(['max:50' => admin_trans('player.fields.name')])
                 )->fixed(true)->ellipsis(true)->align('center');
-            $grid->column('recommend_promoter_uuid',
-                admin_trans('player.fields.recommend_promoter_name'))->display(function ($value, $data) {
-                if (!empty($data['recommend_id'])) {
-                    return Html::create(Str::of($value)->limit(20, ' (...)'))
-                        ->style(['cursor' => 'pointer', 'color' => 'rgb(24, 144, 255)'])
-                        ->modal([$this, 'playerInfo'],
-                            ['player_id' => $data['recommend_id']])
-                        ->width('60%')->title(admin_trans('player.fields.phone') . ':' . $data['recommend_promoter_phone']);
-                } else {
-                    return Button::create(admin_trans('player.bind_promoter'))->type('dashed')->size('small')->modal([
-                        $this,
-                        'bindPromoter'
-                    ],
-                        ['id' => $data['id']])->width('20%');
-                }
-            })->fixed(true)->align('center')->width(80)->ellipsis(true);
+            $grid->column('recommend_promoter_uuid', admin_trans('player.fields.recommend_promoter_name'))
+                ->display(function ($value, $data) {
+                    if (empty($data['recommend_id'])) {
+                        if ($data['created_at'] < Player::PARENT_ONLINE_TIME) {
+                            return '-';
+                        }
+
+                        return Button::create(admin_trans('player.bind_promoter'))->type('dashed')->size('small')
+                            ->modal([$this, 'bindPromoter'], ['id' => $data['id']])->width('20%');
+                    } else {
+                        return Html::create(Str::of($value)->limit(20, ' (...)'))
+                            ->style(['cursor' => 'pointer', 'color' => 'rgb(24, 144, 255)'])
+                            ->modal([$this, 'playerInfo'], ['player_id' => $data['recommend_id']])
+                            ->width('60%')->title(admin_trans('player.fields.phone') . ':' . $data['recommend_promoter_phone']);
+                    }
+                })->fixed(true)->align('center')->width(80)->ellipsis(true);
             $grid->column('type', admin_trans('player.fields.type'))->display(function ($val, $data) {
                 if ($data['is_test'] == 1) {
                     $tags[] = Tag::create(admin_trans('player.fields.is_test'))->color('red');
