@@ -487,16 +487,23 @@ class LeaderboardService
     private static function buildEntries(int $leaderboardId, array $setting, Carbon $start, Carbon $end): array
     {
         $rows = [];
+        $isSteelBall = str_starts_with((string)($setting['code'] ?? ''), 'steel_ball_');
 
         if ((int)$setting['scope_type'] === Leaderboard::SCOPE_TYPE_STORE) {
             // 店內：每間店各自取前 N
-            foreach (self::queryByStore($start, $end) as $r) {
+            $records = $isSteelBall
+                ? self::queryByStoreSteelBall($start, $end)
+                : self::queryByStore($start, $end);
+            foreach ($records as $r) {
                 $rows[] = self::entryRow($leaderboardId, (int)$r->player_id, (int)$r->rn, (float)$r->score, $setting, (int)$r->store_admin_id);
             }
         } else {
             // 全站：全體取前 N
+            $records = $isSteelBall
+                ? self::queryOverallSteelBall($start, $end)
+                : self::queryOverall($start, $end);
             $rank = 0;
-            foreach (self::queryOverall($start, $end) as $r) {
+            foreach ($records as $r) {
                 $rank++;
                 $rows[] = self::entryRow($leaderboardId, (int)$r->player_id, $rank, (float)$r->score, $setting, (int)$r->store_admin_id);
             }
@@ -602,6 +609,70 @@ class LeaderboardService
         $endAt = $end->format('Y-m-d H:i:s');
 
         return [$startAt, $endAt, $startAt, $endAt];
+    }
+
+    // ========================================
+    // 鋼珠排行榜專用查詢（計分來源：machine_lottery_record.lottery_win）
+    // ========================================
+
+    /**
+     * 鋼珠計分子查詢（machine_lottery_record JOIN machine，過濾 type=2 鋼珠機）
+     */
+    private static function steelBallScoreSubquery(): string
+    {
+        return "SELECT r.player_id, SUM(r.lottery_win) AS score
+                FROM machine_lottery_record r
+                JOIN machine m ON m.id = r.machine_id
+                WHERE r.created_at >= ? AND r.created_at < ?
+                  AND m.type = 2
+                  AND r.lottery_win > 0
+                GROUP BY r.player_id";
+    }
+
+    /**
+     * 鋼珠計分子查詢的綁定參數（start, end 各一次）
+     */
+    private static function steelBallScoreBindings(Carbon $start, Carbon $end): array
+    {
+        return [
+            $start->format('Y-m-d H:i:s'),
+            $end->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    /**
+     * 鋼珠全站排行（取前 N）
+     */
+    private static function queryOverallSteelBall(Carbon $start, Carbon $end): array
+    {
+        $sql = "SELECT t.player_id, p.store_admin_id, SUM(t.score) AS score
+                FROM player p
+                JOIN (" . self::steelBallScoreSubquery() . ") t ON t.player_id = p.id
+                GROUP BY t.player_id, p.store_admin_id
+                HAVING SUM(t.score) > 0
+                ORDER BY score DESC, t.player_id ASC
+                LIMIT " . self::SETTLE_TOP;
+
+        return Db::select($sql, self::steelBallScoreBindings($start, $end));
+    }
+
+    /**
+     * 鋼珠店內排行（每間店各自取前 N）
+     */
+    private static function queryByStoreSteelBall(Carbon $start, Carbon $end): array
+    {
+        $sql = "SELECT * FROM (
+                    SELECT p.store_admin_id, t.player_id, SUM(t.score) AS score,
+                           ROW_NUMBER() OVER (PARTITION BY p.store_admin_id ORDER BY SUM(t.score) DESC, t.player_id ASC) AS rn
+                    FROM player p
+                    JOIN (" . self::steelBallScoreSubquery() . ") t ON t.player_id = p.id
+                    GROUP BY p.id, t.player_id
+                    HAVING SUM(t.score) > 0
+                ) t2
+                WHERE t2.rn <= " . self::SETTLE_TOP . "
+                ORDER BY t2.store_admin_id ASC, t2.rn ASC";
+
+        return Db::select($sql, self::steelBallScoreBindings($start, $end));
     }
 
     /**
