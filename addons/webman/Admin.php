@@ -51,7 +51,8 @@ class Admin
      */
     public static function node()
     {
-        return \ExAdmin\ui\support\Container::getInstance()->node;
+        // 改用會讀取 config/*_node.php 的節點實作，確保功能許可權節點清單不為空
+        return AdminNode::instance();
     }
 
     /**
