@@ -6,6 +6,9 @@ return [
     'title' => 'Player Game Records',
     'replay' => 'replay',
     'replay_not_supported' => 'This platform does not support replay',
+    'sync_unsettled' => 'Sync unsettled orders',
+    'sync_unsettled_confirm' => 'This will call the vendor history API to settle unsettled orders from the last 24 hours (including wallet payout, lottery and bet statistics). ATG vendor only. Continue?',
+    'sync_result' => 'Sync finished: {total} unsettled order(s), {settled} settled (wallet credited: {wallet}), {open} still open at vendor, {not_found} not found at vendor, {failed} failed, {remaining} remaining (vendor API rate limited — click again to continue).',
     'fields' => [
         'id' => 'ID',
         'game_code' => 'Game ID',

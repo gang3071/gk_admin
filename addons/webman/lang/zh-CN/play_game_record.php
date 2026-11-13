@@ -6,6 +6,9 @@ return [
     'title' => '玩家游戏记录',
     'replay' => '回放',
     'replay_not_supported' => '此平台不支持回放功能',
+    'sync_unsettled' => '同步未结算订单',
+    'sync_unsettled_confirm' => '将调用厂商历史记录接口，对最近 24 小时内的未结算订单进行补结算（含玩家钱包入账、彩金与打码量补发），目前仅处理 ATG 厂商，确认执行？',
+    'sync_result' => '同步完成：共 {total} 笔未结算订单，补结算 {settled} 笔（钱包入账 {wallet} 笔），厂商尚未结算 {open} 笔，厂商查无注单 {not_found} 笔，失败 {failed} 笔，剩余 {remaining} 笔未处理（受厂商接口限频，可再次点击继续）。',
     'fields' => [
         'id' => 'ID',
         'game_code' => '游戏编号',

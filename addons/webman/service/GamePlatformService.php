@@ -224,6 +224,19 @@ class GamePlatformService
     }
 
     /**
+     * 同步未结算游戏记录（调用厂商历史记录接口补结算）
+     * 由 gk_work 执行：钱包正常结算入账 + 订单直写 MySQL
+     *
+     * @return array 统计摘要 total/settled/wallet_credited/vendor_not_found/vendor_open/remaining 等
+     * @throws Exception
+     */
+    public function syncUnsettledRecords(): array
+    {
+        // 补结算可能涉及多次厂商接口调用（约 3 秒/次），放宽超时
+        return $this->callApi('/api/admin/game-record/sync-unsettled', [], 120);
+    }
+
+    /**
      * 设置语言
      *
      * @param string $lang 语言代码

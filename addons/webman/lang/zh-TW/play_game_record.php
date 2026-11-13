@@ -6,6 +6,9 @@ return [
     'title' => '玩家遊戲記錄',
     'replay' => '回放',
     'replay_not_supported' => '此平台不支援回放功能',
+    'sync_unsettled' => '同步未結算訂單',
+    'sync_unsettled_confirm' => '將呼叫廠商歷史紀錄介面，對最近 24 小時內的未結算訂單進行補結算（含玩家錢包入帳、彩金與打碼量補發），目前僅處理 ATG 廠商，確認執行？',
+    'sync_result' => '同步完成：共 {total} 筆未結算訂單，補結算 {settled} 筆（錢包入帳 {wallet} 筆），廠商尚未結算 {open} 筆，廠商查無注單 {not_found} 筆，失敗 {failed} 筆，剩餘 {remaining} 筆未處理（受廠商介面限頻，可再次點擊繼續）。',
     'fields' => [
         'id' => 'ID',
         'game_code' => '遊戲編號',

@@ -6,6 +6,9 @@ return [
     'title' => 'プレイヤープレイ履歴',
     'replay' => '再生',
     'replay_not_supported' => 'このプラットフォームはリプレイ機能をサポートしていません',
+    'sync_unsettled' => '未決算注文を同期',
+    'sync_unsettled_confirm' => 'ベンダー履歴APIを呼び出し、直近24時間以内の未決算注文を補精算します（ウォレット入金・賞金・ベット統計を含む）。現時点ではATGベンダーのみ対応。実行しますか？',
+    'sync_result' => '同期完了：未決算注文 {total} 件、補精算 {settled} 件（ウォレット入金 {wallet} 件）、ベンダー未決算 {open} 件、ベンダー未検出 {not_found} 件、失敗 {failed} 件、残り {remaining} 件（ベンダーAPI制限のため、再度クリックして継続してください）。',
     'fields' => [
         'id' => 'ID',
         'game_code' => 'ゲーム番号',

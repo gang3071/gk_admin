@@ -5,6 +5,7 @@ namespace addons\webman\controller;
 use addons\webman\model\PlayGameRecord;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
@@ -106,6 +107,14 @@ class PlayGameRecordController
             $grid->hideDelete();
             $grid->hideDeleteSelection();
             $grid->hideSelection();
+            // 工具栏：同步未结算订单（调用厂商历史记录接口补结算）
+            $grid->tools([
+                Button::create(admin_trans('play_game_record.sync_unsettled'))
+                    ->icon(Icon::create('SyncOutlined'))
+                    ->type('primary')
+                    ->confirm(admin_trans('play_game_record.sync_unsettled_confirm'), [$this, 'syncUnsettled'])
+                    ->gridRefresh(),
+            ]);
             $grid->column('id', admin_trans('play_game_record.fields.id'))->fixed(true)->align('center');
             $grid->column('player.uuid', admin_trans('player.fields.uuid'))->display(function (
                 $val,
@@ -320,6 +329,31 @@ class PlayGameRecordController
             }
             return notification_success(admin_trans('admin.success'),
                 admin_trans('game_platform.action_success'))->redirect($url);
+        } catch (\Exception $e) {
+            return notification_error(admin_trans('admin.error'), $e->getMessage());
+        }
+    }
+
+    /**
+     * 同步未结算订单（调用厂商历史记录接口补结算，含钱包入账）
+     * @auth true
+     * @return Notification
+     */
+    public function syncUnsettled(): Notification
+    {
+        try {
+            $service = new \addons\webman\service\GamePlatformService();
+            $result = $service->syncUnsettledRecords();
+            $message = admin_trans('play_game_record.sync_result', null, [
+                '{total}' => $result['total'] ?? 0,
+                '{settled}' => $result['settled'] ?? 0,
+                '{wallet}' => $result['wallet_credited'] ?? 0,
+                '{not_found}' => $result['vendor_not_found'] ?? 0,
+                '{open}' => $result['vendor_open'] ?? 0,
+                '{failed}' => $result['failed'] ?? 0,
+                '{remaining}' => $result['remaining'] ?? 0,
+            ]);
+            return notification_success(admin_trans('admin.success'), $message)->refresh();
         } catch (\Exception $e) {
             return notification_error(admin_trans('admin.error'), $e->getMessage());
         }
