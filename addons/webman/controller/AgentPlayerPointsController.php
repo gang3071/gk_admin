@@ -187,8 +187,9 @@ class AgentPlayerPointsController
                         PlayerPointsRecord::TYPE_POINTS_DEDUCT => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_POINTS_DEDUCT),
                         PlayerPointsRecord::TYPE_POINTS_FREEZE    => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_POINTS_FREEZE),
                         PlayerPointsRecord::TYPE_POINTS_UNFREEZE  => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_POINTS_UNFREEZE),
-                        PlayerPointsRecord::TYPE_TRANSFER_OUT     => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_TRANSFER_OUT),
-                        PlayerPointsRecord::TYPE_TRANSFER_IN      => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_TRANSFER_IN),
+                        PlayerPointsRecord::TYPE_TRANSFER_OUT        => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_TRANSFER_OUT),
+                        PlayerPointsRecord::TYPE_TRANSFER_IN         => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_TRANSFER_IN),
+                        PlayerPointsRecord::TYPE_STEEL_BALL_JACKPOT  => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_STEEL_BALL_JACKPOT),
                     ]);
             });
             $grid->expandFilter(false);
