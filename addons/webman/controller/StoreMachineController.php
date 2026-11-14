@@ -1465,7 +1465,11 @@ class StoreMachineController
      */
     public function editSteelBallPointsGift(StoreSetting $data): Form
     {
-        return Form::create([], function (Form $form) use ($data) {
+        return Form::create([
+            'setting_id' => $data->id,
+            'status'     => $data->status,
+            'num'        => $data->num,
+        ], function (Form $form) use ($data) {
             $form->title(admin_trans('store_setting.fields.steel_ball_points_gift'));
 
             $form->url(admin_url([
@@ -1473,17 +1477,15 @@ class StoreMachineController
                 'saveSteelBallPointsGift'
             ]));
 
-            $form->hidden('setting_id')->value($data->id);
+            $form->hidden('setting_id');
 
             $form->switch('status', admin_trans('store_setting.fields.status'))
                 ->checkedValue(1)
                 ->unCheckedValue(0)
-                ->value($data->status)
                 ->help(admin_trans('store_setting.help.steel_ball_points_gift_status'));
 
             $form->number('num', admin_trans('store_setting.fields.steel_ball_points_gift_amount'))
                 ->min(1)
-                ->value($data->num)
                 ->required()
                 ->help(admin_trans('store_setting.help.steel_ball_points_gift_amount'));
 
@@ -1500,12 +1502,6 @@ class StoreMachineController
     {
         $postData = request()->post();
         $data = $postData['data'] ?? $postData;
-
-        \support\Log::info('[saveSteelBallPointsGift] raw', [
-            'post'    => $postData,
-            'data'    => $data,
-            'rawBody' => request()->rawBody(),
-        ]);
 
         $id = $data['setting_id'] ?? null;
         if (!$id) {
