@@ -205,9 +205,11 @@ class StoreMachineController
 
                     if ($setting->status == 1) {
                         $label = admin_trans('store_setting.enable') . ' · ' . (int)$setting->num . ' ' . admin_trans('store_setting.points_label');
-                        return Tag::create($label)->color('green')->style(['cursor' => 'pointer'])->modal([$this, 'editSteelBallPointsGift'], ['data' => $setting]);
+                        $inner = Html::create($label)->style(['cursor' => 'pointer']);
+                        return Tag::create($inner)->color('green')->modal([$this, 'editSteelBallPointsGift'], ['data' => $setting]);
                     }
-                    return Tag::create(admin_trans('store_setting.disable'))->color('red')->style(['cursor' => 'pointer'])->modal([$this, 'editSteelBallPointsGift'], ['data' => $setting]);
+                    $inner = Html::create(admin_trans('store_setting.disable'))->style(['cursor' => 'pointer']);
+                    return Tag::create($inner)->color('red')->modal([$this, 'editSteelBallPointsGift'], ['data' => $setting]);
                 })
                 ->width(150)->align('center');
 
