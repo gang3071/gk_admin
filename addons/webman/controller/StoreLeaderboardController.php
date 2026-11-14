@@ -47,7 +47,6 @@ class StoreLeaderboardController
                 ->pane(admin_trans('leaderboard.tab_game_weekly'), self::list(Leaderboard::PERIOD_TYPE_WEEK))
                 ->pane(admin_trans('leaderboard.tab_game_monthly'), self::list(Leaderboard::PERIOD_TYPE_MONTH))
                 ->pane(admin_trans('leaderboard.tab_steel_ball_weekly'), self::list(Leaderboard::PERIOD_TYPE_WEEK, true))
-                ->pane(admin_trans('leaderboard.tab_steel_ball_monthly'), self::list(Leaderboard::PERIOD_TYPE_MONTH, true))
                 ->type('card')
                 ->destroyInactiveTabPane()
         );
