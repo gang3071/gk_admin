@@ -44,7 +44,7 @@ class StoreDeviceController
             $grid->actions(function ($actions) {
                 $actions->hideEdit();
                 $actions->hideDetail();
-                $actions->hideDelete();
+                $actions->hideDel();
             });
 
             $grid->column('id', 'ID')->width(60)->sortable();
