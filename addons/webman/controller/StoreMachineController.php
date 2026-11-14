@@ -1514,11 +1514,13 @@ class StoreMachineController
             $form->hidden('setting_id');
 
             $form->switch('status', admin_trans('store_setting.fields.status'))
+                ->value($data->status)
                 ->checkedValue(1)
                 ->unCheckedValue(0)
                 ->help(admin_trans('store_setting.help.steel_ball_points_gift_status'));
 
             $form->number('num', admin_trans('store_setting.fields.steel_ball_points_gift_amount'))
+                ->value($data->num)
                 ->min(1)
                 ->required()
                 ->help(admin_trans('store_setting.help.steel_ball_points_gift_amount'));
