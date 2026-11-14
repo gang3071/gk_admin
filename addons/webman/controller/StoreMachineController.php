@@ -1501,6 +1501,12 @@ class StoreMachineController
         $postData = request()->post();
         $data = $postData['data'] ?? $postData;
 
+        \support\Log::info('[saveSteelBallPointsGift] raw', [
+            'post'    => $postData,
+            'data'    => $data,
+            'rawBody' => request()->rawBody(),
+        ]);
+
         $id = $data['setting_id'] ?? null;
         if (!$id) {
             return message_error('配置ID不能為空');
