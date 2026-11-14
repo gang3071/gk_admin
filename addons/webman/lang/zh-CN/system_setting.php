@@ -45,7 +45,6 @@ return [
         'leaderboard_steel_ball_global_weekly' => '金樽钢珠周排行',
         'leaderboard_steel_ball_store_weekly' => '各店钢珠周排行',
         'leaderboard_steel_ball_global_monthly' => '金樽钢珠月排行',
-        'leaderboard_steel_ball_store_monthly' => '各店钢珠月排行',
         'leaderboard_switch' => '排行榜开关',
     ],
     'marquee_max_len' => '跑馬燈最多100個字元',

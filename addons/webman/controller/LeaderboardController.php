@@ -44,8 +44,10 @@ class LeaderboardController
     {
         return Card::create(
             Tabs::create()
-                ->pane(admin_trans('leaderboard.period_type.' . Leaderboard::PERIOD_TYPE_WEEK), self::list(Leaderboard::PERIOD_TYPE_WEEK))
-                ->pane(admin_trans('leaderboard.period_type.' . Leaderboard::PERIOD_TYPE_MONTH), self::list(Leaderboard::PERIOD_TYPE_MONTH))
+                ->pane(admin_trans('leaderboard.tab_game_weekly'), self::list(Leaderboard::PERIOD_TYPE_WEEK))
+                ->pane(admin_trans('leaderboard.tab_game_monthly'), self::list(Leaderboard::PERIOD_TYPE_MONTH))
+                ->pane(admin_trans('leaderboard.tab_steel_ball_weekly'), self::list(Leaderboard::PERIOD_TYPE_WEEK, true))
+                ->pane(admin_trans('leaderboard.tab_steel_ball_monthly'), self::list(Leaderboard::PERIOD_TYPE_MONTH, true))
                 ->type('card')
                 ->destroyInactiveTabPane()
         );
@@ -55,14 +57,15 @@ class LeaderboardController
      * 榜單列表
      * @auth true
      * @param int $periodType
+     * @param bool $isSteelBall
      * @return Grid
      */
-    public function list(int $periodType): Grid
+    public function list(int $periodType, bool $isSteelBall = false): Grid
     {
         $stores = self::getStores();
         $storeAdminIds = array_keys($stores);
 
-        return Grid::create(new $this->model, function (Grid $grid) use ($periodType, $storeAdminIds) {
+        return Grid::create(new $this->model, function (Grid $grid) use ($periodType, $isSteelBall, $storeAdminIds) {
             $grid->title(admin_trans('leaderboard.title'));
             $grid->hideDelete();
             $grid->hideSelection();
@@ -75,6 +78,12 @@ class LeaderboardController
 
             if (! empty($exAdminFilter['settle_at_end'])) {
                 $grid->model()->where('settle_at', '<=', $exAdminFilter['settle_at_end']);
+            }
+
+            if ($isSteelBall) {
+                $grid->model()->where('code', 'like', 'steel_ball_%');
+            } else {
+                $grid->model()->where('code', 'not like', 'steel_ball_%');
             }
 
             $grid->model()

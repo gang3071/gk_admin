@@ -23,6 +23,10 @@ return [
         1 => 'Weekly',
         2 => 'Monthly'
     ],
+    'tab_game_weekly' => 'Game Weekly',
+    'tab_game_monthly' => 'Game Monthly',
+    'tab_steel_ball_weekly' => 'Steel Ball Weekly',
+    'tab_steel_ball_monthly' => 'Steel Ball Monthly',
     'scope_type' => [
         1 => 'Global',
         3 => 'Store'

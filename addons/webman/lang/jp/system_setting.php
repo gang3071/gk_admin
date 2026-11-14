@@ -45,7 +45,6 @@ return [
         'leaderboard_steel_ball_global_weekly' => '金樽スティールボール週間ランキング',
         'leaderboard_steel_ball_store_weekly' => '店舗スティールボール週間ランキング',
         'leaderboard_steel_ball_global_monthly' => '金樽スティールボール月間ランキング',
-        'leaderboard_steel_ball_store_monthly' => '店舗スティールボール月間ランキング',
         'leaderboard_switch' => 'ランキングスイッチ',
     ],
     'marquee_max_len' => 'マーキーは最大 100 文字まで可能',

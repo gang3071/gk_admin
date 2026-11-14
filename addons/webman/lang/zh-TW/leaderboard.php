@@ -23,6 +23,10 @@ return [
         1 => '週榜',
         2 => '月榜'
     ],
+    'tab_game_weekly' => '遊戲週榜',
+    'tab_game_monthly' => '遊戲月榜',
+    'tab_steel_ball_weekly' => '鋼珠週榜',
+    'tab_steel_ball_monthly' => '鋼珠月榜',
     'scope_type' => [
         1 => '全站',
         3 => '門店'

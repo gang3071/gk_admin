@@ -23,6 +23,10 @@ return [
         1 => '週刊',
         2 => '月刊'
     ],
+    'tab_game_weekly' => 'ゲーム週間ランキング',
+    'tab_game_monthly' => 'ゲーム月間ランキング',
+    'tab_steel_ball_weekly' => '鋼玉週間ランキング',
+    'tab_steel_ball_monthly' => '鋼玉月間ランキング',
     'scope_type' => [
         1 => 'サイト全体',
         3 => '店舗'
