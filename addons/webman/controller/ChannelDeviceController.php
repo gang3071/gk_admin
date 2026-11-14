@@ -53,7 +53,7 @@ class ChannelDeviceController
 
             // 只显示当前渠道的设备
             $grid->model()
-                ->with(['agent', 'store', 'currentPlayer.machine_wallet'])
+                ->with(['agent', 'store'])
                 ->where('admin_device.department_id', $departmentId)
                 ->orderBy('id', 'desc');
 
@@ -117,12 +117,15 @@ class ChannelDeviceController
             }
 
             // 当前登录玩家
-            $grid->column('current_player_id', admin_trans('device.fields.current_player'))
+            $grid->column('current_player_name', admin_trans('device.fields.current_player'))
                 ->width(160)
                 ->align('center')
                 ->display(function ($val, $row) {
-                    /** @var \addons\webman\model\AdminDevice $row */
-                    $player = $row->currentPlayer;
+                    $playerId = $row['current_player_id'] ?? null;
+                    if (empty($playerId)) {
+                        return Tag::create(admin_trans('device.no_player'))->color('default');
+                    }
+                    $player = \addons\webman\model\Player::find($playerId);
                     if (empty($player)) {
                         return Tag::create(admin_trans('device.no_player'))->color('default');
                     }
@@ -136,12 +139,15 @@ class ChannelDeviceController
                 });
 
             // 钱包余额
-            $grid->column('current_player_id', admin_trans('device.fields.wallet_balance'))
+            $grid->column('current_player_wallet', admin_trans('device.fields.wallet_balance'))
                 ->width(120)
                 ->align('center')
                 ->display(function ($val, $row) {
-                    /** @var \addons\webman\model\AdminDevice $row */
-                    $player = $row->currentPlayer;
+                    $playerId = $row['current_player_id'] ?? null;
+                    if (empty($playerId)) {
+                        return '—';
+                    }
+                    $player = \addons\webman\model\Player::with(['machine_wallet'])->find($playerId);
                     if (empty($player) || empty($player->machine_wallet)) {
                         return '—';
                     }
