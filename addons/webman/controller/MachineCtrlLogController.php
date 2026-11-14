@@ -215,7 +215,7 @@ class MachineCtrlLogController
                         $extra[] = ['key' => $displayKey, 'val' => $v];
                     }
                 }
-                $limit = in_array($action, ['read_bet', 'open']) ? 10 : 6;
+                $limit = in_array($action, ['read_bet', 'open', 'wash', 'wash_zero']) ? 10 : 6;
                 $extra = array_slice($extra, 0, $limit);
             }
 
