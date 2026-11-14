@@ -1460,55 +1460,12 @@ class StoreMachineController
 
     /**
      * 编辑钢珠下珠赠送积分配置（开关 + 积分数）
-     * ExAdmin modal 场景下 $form->url() 不生效，表单始终回调本方法；
-     * 通过检测 ex_admin_form_action=save 在此处统一处理保存。
      * @auth true
      * @group channel
      */
-    public function editSteelBallPointsGift(): mixed
+    public function editSteelBallPointsGift(StoreSetting $data): Form
     {
-        $post = request()->post();
-
-        // ── 保存阶段 ──────────────────────────────────────────────────
-        if (($post['ex_admin_form_action'] ?? '') === 'save') {
-            // StoreSetting ID 由 modal 打开时写入 GET 参数 data
-            $settingId = request()->get('data');
-            if (!$settingId) {
-                return message_error('配置ID不能為空');
-            }
-
-            $setting = \addons\webman\model\StoreSetting::query()->offDataAuth()->find($settingId);
-            if (!$setting || $setting->feature !== 'steel_ball_points_gift') {
-                return message_error('配置不存在');
-            }
-
-            $formData = $post['data'] ?? [];
-            $num = (int)($formData['num'] ?? 0);
-            if ($num < 1) {
-                return message_error('贈送積分數量不能小於 1');
-            }
-
-            $setting->status = isset($formData['status']) ? (int)$formData['status'] : 0;
-            $setting->num    = $num;
-            $setting->save();
-
-            return message_success(admin_trans('form.save_success'));
-        }
-
-        // ── 展示表单阶段 ──────────────────────────────────────────────
-        $settingId = request()->get('data');
-        $data = \addons\webman\model\StoreSetting::query()->offDataAuth()->find($settingId);
-
-        if (!$data) {
-            return Form::create([], function (Form $form) {
-                $form->push(Html::markdown('><font color="#ff4d4f">配置不存在</font>'));
-            });
-        }
-
-        return Form::create([
-            'status' => $data->status,
-            'num'    => $data->num,
-        ], function (Form $form) use ($data) {
+        return Form::create($data, function (Form $form) use ($data) {
             $form->title(admin_trans('store_setting.fields.steel_ball_points_gift'));
 
             $form->switch('status', admin_trans('store_setting.fields.status'))
