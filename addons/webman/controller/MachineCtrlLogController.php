@@ -144,7 +144,11 @@ class MachineCtrlLogController
 
             if ($row['action'] === 'open' && $row['log_direction'] === 'response') {
                 $displayType = 'noise';
-            } elseif (in_array($row['action'], ['heartbeat', 'field_update']) || $row['source_type'] === 'heartbeat') {
+            } elseif ($row['action'] === 'read_bet' && ($row['level'] ?? '') === 'WARNING') {
+                $displayType = 'response'; // BET下降异常，突出显示
+            } elseif ($row['action'] === 'read_bet' && str_contains($row['action_desc'] ?? '', 'BET变动')) {
+                $displayType = 'response'; // 正向BET变动+打码量快照，突出显示
+            } elseif (in_array($row['action'], ['heartbeat', 'field_update', 'read_bet']) || $row['source_type'] === 'heartbeat') {
                 $displayType = 'heartbeat';
             } elseif ($row['log_direction'] === 'command') {
                 $displayType = 'command';
@@ -161,6 +165,7 @@ class MachineCtrlLogController
             elseif (str_contains($desc, '開分結束'))                                                       { $marker = 'open_end';   if ($displayType === 'noise') $displayType = 'response'; }
             elseif (str_contains($desc, '下分開始') || ($action === 'wash' && str_contains($desc, '收到洗分請求')))   { $marker = 'wash_start'; }
             elseif (str_contains($desc, '下分結束') || ($action === 'check_reset' && str_contains($desc, '重置壓分/得分'))) { $marker = 'wash_end'; }
+            elseif ($action === 'read_bet' && str_contains($desc, 'BET值下降异常'))                        { $marker = 'bet_drop'; }
 
             $state = [];
             if (!empty($row['machine_state'])) {
@@ -177,15 +182,37 @@ class MachineCtrlLogController
                 }
             }
 
+            $extraKeyLabels = [
+                'hardware_bet'              => '硬件BET',
+                'redis_bet'                 => 'Redis BET',
+                'player_pressure'           => '基準壓分',
+                'gaming_pressure'           => '本局押分',
+                'gaming_pressure_after'     => '變動後押分',
+                'chip_amount_snapshot'      => '打碼量快照',
+                'chip_amount_if_settle_now' => '結算打碼量',
+                'old_bet'                   => '舊BET',
+                'new_bet'                   => '新BET',
+                'change_amount'             => '變動量',
+                'lost_gaming_pressure'      => '丟失押分',
+                'old_player_pressure'       => '舊基準',
+                'new_player_pressure'       => '新基準',
+                'now_turn'                  => '轉數',
+                'win'                       => '總贏分',
+                'player_score'              => '基準得分',
+                'gaming_score'              => '本局得分',
+                'reward_status'             => '開獎中',
+            ];
             $extra = [];
             if (!empty($row['extra_data'])) {
                 $parsed = json_decode($row['extra_data'], true) ?? [];
                 foreach ($parsed as $k => $v) {
                     if (!is_array($v) && !is_null($v) && $v !== '') {
-                        $extra[] = ['key' => $k, 'val' => $v];
+                        $displayKey = $extraKeyLabels[$k] ?? $k;
+                        $extra[] = ['key' => $displayKey, 'val' => $v];
                     }
                 }
-                $extra = array_slice($extra, 0, 6);
+                $limit = ($action === 'read_bet') ? 10 : 6;
+                $extra = array_slice($extra, 0, $limit);
             }
 
             $result[] = [
