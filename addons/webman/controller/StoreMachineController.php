@@ -205,9 +205,9 @@ class StoreMachineController
 
                     if ($setting->status == 1) {
                         $label = admin_trans('store_setting.enable') . ' · ' . (int)$setting->num . ' ' . admin_trans('store_setting.points_label');
-                        return Tag::create($label)->color('green')->modal([$this, 'editSteelBallPointsGift'], ['data' => $setting]);
+                        return Tag::create($label)->color('green')->style(['cursor' => 'pointer'])->modal([$this, 'editSteelBallPointsGift'], ['data' => $setting]);
                     }
-                    return Tag::create(admin_trans('store_setting.disable'))->color('red')->modal([$this, 'editSteelBallPointsGift'], ['data' => $setting]);
+                    return Tag::create(admin_trans('store_setting.disable'))->color('red')->style(['cursor' => 'pointer'])->modal([$this, 'editSteelBallPointsGift'], ['data' => $setting]);
                 })
                 ->width(150)->align('center');
 
@@ -1465,13 +1465,58 @@ class StoreMachineController
     {
         return Form::create($data, function (Form $form) use ($data) {
             $form->title(admin_trans('store_setting.fields.steel_ball_points_gift'));
+
+            $form->url(admin_url([
+                'addons-webman-controller-StoreMachineController',
+                'saveSteelBallPointsGift'
+            ]));
+
+            $form->hidden('id')->value($data->id);
+
             $form->switch('status', admin_trans('store_setting.fields.status'))
                 ->checkedValue(1)
-                ->unCheckedValue(0);
+                ->unCheckedValue(0)
+                ->help(admin_trans('store_setting.help.steel_ball_points_gift_status'));
+
             $form->number('num', admin_trans('store_setting.fields.steel_ball_points_gift_amount'))
                 ->min(1)
-                ->required();
+                ->required()
+                ->help(admin_trans('store_setting.help.steel_ball_points_gift_amount'));
+
+            $form->layout('vertical');
         });
+    }
+
+    /**
+     * 保存钢珠下珠赠送积分配置
+     * @auth true
+     * @group channel
+     */
+    public function saveSteelBallPointsGift()
+    {
+        $postData = request()->post();
+        $data = $postData['data'] ?? $postData;
+
+        $id = $data['id'] ?? null;
+        if (!$id) {
+            return message_error('配置ID不能為空');
+        }
+
+        $setting = \addons\webman\model\StoreSetting::query()->offDataAuth()->find($id);
+        if (!$setting || $setting->feature !== 'steel_ball_points_gift') {
+            return message_error('配置不存在');
+        }
+
+        $num = (int)($data['num'] ?? 0);
+        if ($num < 1) {
+            return message_error('贈送積分數量不能小於 1');
+        }
+
+        $setting->status = isset($data['status']) ? (int)$data['status'] : 0;
+        $setting->num    = $num;
+        $setting->save();
+
+        return message_success(admin_trans('form.save_success'));
     }
 
     /**

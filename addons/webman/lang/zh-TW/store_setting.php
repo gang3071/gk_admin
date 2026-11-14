@@ -34,6 +34,10 @@ return [
     'enable' => '啟用',
     'disable' => '禁用',
     'points_label' => '積分',
+    'help' => [
+        'steel_ball_points_gift_status' => '開啟後，玩家每次鋼珠下珠達標時將自動獲得指定積分',
+        'steel_ball_points_gift_amount' => '每次鋼珠下珠成功後贈送給玩家的積分數量，最小為 1',
+    ],
 
     // 驗證消息
     'validation' => [

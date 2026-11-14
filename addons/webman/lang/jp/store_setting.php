@@ -34,6 +34,10 @@ return [
     'enable' => '有効',
     'disable' => '無効',
     'points_label' => 'ポイント',
+    'help' => [
+        'steel_ball_points_gift_status' => '有効にすると、スチールボールが条件を達成するたびに自動的にポイントが付与されます',
+        'steel_ball_points_gift_amount' => 'スチールボール成功ごとに付与するポイント数（最小 1）',
+    ],
 
     // 検証メッセージ
     'validation' => [

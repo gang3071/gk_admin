@@ -34,6 +34,10 @@ return [
     'enable' => 'Enable',
     'disable' => 'Disable',
     'points_label' => 'pts',
+    'help' => [
+        'steel_ball_points_gift_status' => 'When enabled, players automatically receive the specified points each time steel ball drops qualify',
+        'steel_ball_points_gift_amount' => 'Points awarded to the player after each successful steel ball drop, minimum 1',
+    ],
 
     // Validation messages
     'validation' => [

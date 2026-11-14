@@ -34,6 +34,10 @@ return [
     'enable' => '启用',
     'disable' => '禁用',
     'points_label' => '积分',
+    'help' => [
+        'steel_ball_points_gift_status' => '开启后，玩家每次钢珠下珠达标时将自动获得指定积分',
+        'steel_ball_points_gift_amount' => '每次钢珠下珠成功后赠送给玩家的积分数量，最小为 1',
+    ],
 
     // 验证消息
     'validation' => [
