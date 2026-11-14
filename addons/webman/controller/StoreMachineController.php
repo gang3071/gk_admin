@@ -1473,7 +1473,7 @@ class StoreMachineController
                 'saveSteelBallPointsGift'
             ]));
 
-            $form->hidden('id')->value($data->id);
+            $form->hidden('setting_id')->value($data->id);
 
             $form->switch('status', admin_trans('store_setting.fields.status'))
                 ->checkedValue(1)
@@ -1499,7 +1499,7 @@ class StoreMachineController
         $postData = request()->post();
         $data = $postData['data'] ?? $postData;
 
-        $id = $data['id'] ?? null;
+        $id = $data['setting_id'] ?? null;
         if (!$id) {
             return message_error('配置ID不能為空');
         }
