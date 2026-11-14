@@ -1465,7 +1465,7 @@ class StoreMachineController
      */
     public function editSteelBallPointsGift(StoreSetting $data): Form
     {
-        return Form::create($data, function (Form $form) use ($data) {
+        return Form::create([], function (Form $form) use ($data) {
             $form->title(admin_trans('store_setting.fields.steel_ball_points_gift'));
 
             $form->url(admin_url([
@@ -1478,10 +1478,12 @@ class StoreMachineController
             $form->switch('status', admin_trans('store_setting.fields.status'))
                 ->checkedValue(1)
                 ->unCheckedValue(0)
+                ->value($data->status)
                 ->help(admin_trans('store_setting.help.steel_ball_points_gift_status'));
 
             $form->number('num', admin_trans('store_setting.fields.steel_ball_points_gift_amount'))
                 ->min(1)
+                ->value($data->num)
                 ->required()
                 ->help(admin_trans('store_setting.help.steel_ball_points_gift_amount'));
 
