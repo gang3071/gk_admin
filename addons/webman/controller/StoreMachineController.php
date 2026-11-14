@@ -1463,10 +1463,55 @@ class StoreMachineController
      * @auth true
      * @group channel
      */
-    public function editSteelBallPointsGift(StoreSetting $data): Form
+    public function editSteelBallPointsGift(): mixed
     {
-        return Form::create($data, function (Form $form) use ($data) {
+        $post = request()->post();
+
+        if (($post['ex_admin_form_action'] ?? '') === 'save') {
+            $formData = $post['data'] ?? [];
+            $settingId = $formData['setting_id'] ?? null;
+
+            if (!$settingId) {
+                return message_error('配置ID不能為空');
+            }
+
+            $setting = \addons\webman\model\StoreSetting::query()->offDataAuth()->find($settingId);
+            if (!$setting || $setting->feature !== 'steel_ball_points_gift') {
+                return message_error('配置不存在');
+            }
+
+            $num = (int)($formData['num'] ?? 0);
+            if ($num < 1) {
+                return message_error('贈送積分數量不能小於 1');
+            }
+
+            $setting->status = isset($formData['status']) ? (int)$formData['status'] : 0;
+            $setting->num    = $num;
+            $setting->save();
+
+            return message_success(admin_trans('form.save_success'));
+        }
+
+        // 展示阶段：modal 参数通过 POST data 传入（整个 StoreSetting 属性数组）
+        $params    = $post['data'] ?? [];
+        $settingId = is_array($params) ? ($params['id'] ?? null) : $params;
+
+        $data = \addons\webman\model\StoreSetting::query()->offDataAuth()->find($settingId);
+
+        if (!$data) {
+            return Form::create([], function (Form $form) {
+                $form->push(Html::markdown('><font color="#ff4d4f">配置不存在</font>'));
+            });
+        }
+
+        return Form::create([
+            'setting_id' => $data->id,
+            'status'     => $data->status,
+            'num'        => $data->num,
+        ], function (Form $form) use ($data) {
             $form->title(admin_trans('store_setting.fields.steel_ball_points_gift'));
+
+            $form->hidden('setting_id');
 
             $form->switch('status', admin_trans('store_setting.fields.status'))
                 ->checkedValue(1)
