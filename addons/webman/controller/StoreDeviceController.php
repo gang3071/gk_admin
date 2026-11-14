@@ -31,7 +31,6 @@ class StoreDeviceController
             $grid->autoHeight();
 
             $grid->model()
-                ->with(['currentPlayer.machine_wallet'])
                 ->where('store_admin_id', $storeAdminId)
                 ->where('status', AdminDevice::STATUS_ENABLED)
                 ->orderBy('id', 'desc');
@@ -69,12 +68,15 @@ class StoreDeviceController
                         ->color($colors[$val] ?? 'default');
                 });
 
-            $grid->column('current_player_id', admin_trans('device.fields.current_player'))
+            $grid->column('current_player_name', admin_trans('device.fields.current_player'))
                 ->width(160)
                 ->align('center')
                 ->display(function ($val, $row) {
-                    /** @var AdminDevice $row */
-                    $player = $row->currentPlayer;
+                    $playerId = $row['current_player_id'] ?? null;
+                    if (empty($playerId)) {
+                        return Tag::create(admin_trans('device.no_player'))->color('default');
+                    }
+                    $player = \addons\webman\model\Player::find($playerId);
                     if (empty($player)) {
                         return Tag::create(admin_trans('device.no_player'))->color('default');
                     }
@@ -87,12 +89,15 @@ class StoreDeviceController
                     );
                 });
 
-            $grid->column('current_player_id', admin_trans('device.fields.wallet_balance'))
+            $grid->column('current_player_wallet', admin_trans('device.fields.wallet_balance'))
                 ->width(130)
                 ->align('center')
                 ->display(function ($val, $row) {
-                    /** @var AdminDevice $row */
-                    $player = $row->currentPlayer;
+                    $playerId = $row['current_player_id'] ?? null;
+                    if (empty($playerId)) {
+                        return '—';
+                    }
+                    $player = \addons\webman\model\Player::with(['machine_wallet'])->find($playerId);
                     if (empty($player) || empty($player->machine_wallet)) {
                         return '—';
                     }

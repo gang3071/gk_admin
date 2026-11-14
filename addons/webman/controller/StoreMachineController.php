@@ -191,6 +191,25 @@ class StoreMachineController
                 })
                 ->width(120)->align('center');
 
+            // 钢珠中奖赠积分配置
+            $grid->column('steel_ball_points_gift', admin_trans('store_setting.fields.steel_ball_points_gift'))
+                ->display(function ($value, $data) {
+                    $setting = \addons\webman\model\StoreSetting::query()
+                        ->where('admin_user_id', $data['id'])
+                        ->where('feature', 'steel_ball_points_gift')
+                        ->first();
+
+                    if (!$setting) {
+                        return Tag::create(admin_trans('store_machine.status.not_set'))->color('default');
+                    }
+
+                    if ($setting->status == 1) {
+                        return Tag::create(admin_trans('store_setting.enable') . ' · ' . (int)$setting->num . ' ' . admin_trans('store_setting.points_label'))->color('green');
+                    }
+                    return Tag::create(admin_trans('store_setting.disable'))->color('red');
+                })
+                ->width(150)->align('center');
+
             // 体验券打码判定开关（可直接点击切换）
             $grid->column('experience_bet_check_enabled', admin_trans('store_machine.fields.experience_bet_check_enabled'))
                 ->switch()
