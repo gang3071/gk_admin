@@ -201,6 +201,10 @@ class MachineCtrlLogController
                 'player_score'              => '基準得分',
                 'gaming_score'              => '本局得分',
                 'reward_status'             => '開獎中',
+                'is_first_open'             => '首次上分',
+                'open_score'                => '本次上分分數',
+                'player_open_point'         => '本局累計上分',
+                'player_wash_point'         => '本局累計洗分',
             ];
             $extra = [];
             if (!empty($row['extra_data'])) {
@@ -211,7 +215,7 @@ class MachineCtrlLogController
                         $extra[] = ['key' => $displayKey, 'val' => $v];
                     }
                 }
-                $limit = ($action === 'read_bet') ? 10 : 6;
+                $limit = in_array($action, ['read_bet', 'open']) ? 10 : 6;
                 $extra = array_slice($extra, 0, $limit);
             }
 
