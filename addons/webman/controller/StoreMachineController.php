@@ -191,7 +191,7 @@ class StoreMachineController
                 })
                 ->width(120)->align('center');
 
-            // 钢珠中奖赠积分配置
+            // 钢珠中奖赠积分配置（点击弹窗编辑）
             $grid->column('steel_ball_points_gift', admin_trans('store_setting.fields.steel_ball_points_gift'))
                 ->display(function ($value, $data) {
                     $setting = \addons\webman\model\StoreSetting::query()
@@ -204,9 +204,10 @@ class StoreMachineController
                     }
 
                     if ($setting->status == 1) {
-                        return Tag::create(admin_trans('store_setting.enable') . ' · ' . (int)$setting->num . ' ' . admin_trans('store_setting.points_label'))->color('green');
+                        $label = admin_trans('store_setting.enable') . ' · ' . (int)$setting->num . ' ' . admin_trans('store_setting.points_label');
+                        return Tag::create($label)->color('green')->modal([$this, 'editSteelBallPointsGift'], ['data' => $setting]);
                     }
-                    return Tag::create(admin_trans('store_setting.disable'))->color('red');
+                    return Tag::create(admin_trans('store_setting.disable'))->color('red')->modal([$this, 'editSteelBallPointsGift'], ['data' => $setting]);
                 })
                 ->width(150)->align('center');
 
