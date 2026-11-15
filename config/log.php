@@ -571,4 +571,20 @@ return [
             ]
         ],
     ],
+    'wallet_ops' => [
+        'handlers' => [
+            [
+                'class' => Monolog\Handler\RotatingFileHandler::class,
+                'constructor' => [
+                    runtime_path() . '/logs/wallet_ops.log',
+                    7,
+                    Monolog\Logger::DEBUG,
+                ],
+                'formatter' => [
+                    'class' => addons\webman\support\FlatJsonFormatter::class,
+                    'constructor' => [],
+                ],
+            ]
+        ],
+    ],
 ];

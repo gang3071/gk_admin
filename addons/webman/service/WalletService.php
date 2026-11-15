@@ -3,6 +3,7 @@
 namespace addons\webman\service;
 
 use addons\webman\model\PlayerPlatformCash;
+use addons\webman\support\WalletLogger;
 use support\Log;
 use support\Redis;
 
@@ -57,7 +58,12 @@ class WalletService
                 }
             }
 
-            // 缓存未命中或强制刷新，从数据库读取
+            // forceRefresh=true：只读 DB 供调试/核查，不回写 Redis
+            if ($forceRefresh) {
+                return self::fixPrecision(self::getBalanceFromDB($playerId, $platformId));
+            }
+
+            // 缓存未命中：从数据库加载并写入 Redis（冷启动/首次访问）
             $balance = self::getBalanceFromDB($playerId, $platformId);
 
             // 🔧 整数化改造：更新缓存时转换为"分"
@@ -331,13 +337,13 @@ class WalletService
      * @return float 新余额
      * @throws \Exception
      */
-    public static function deduct(int $playerId, float $amount, int $platformId = 1): float
+    public static function deduct(int $playerId, float $amount, int $platformId = 1, string $reason = '', array $extra = []): float
     {
         if ($amount <= 0) {
             throw new \InvalidArgumentException('Amount must be positive');
         }
 
-        $result = self::atomicDecrement($playerId, $amount);
+        $result = self::atomicDecrement($playerId, $amount, 0, $reason, $extra);
 
         if (isset($result['ok']) && $result['ok'] === 0) {
             throw new \Exception($result['error'] ?? 'Deduct failed');
@@ -357,13 +363,13 @@ class WalletService
      * @return float 新余额
      * @throws \Exception
      */
-    public static function add(int $playerId, float $amount, int $platformId = 1): float
+    public static function add(int $playerId, float $amount, int $platformId = 1, string $reason = '', array $extra = []): float
     {
         if ($amount <= 0) {
             throw new \InvalidArgumentException('Amount must be positive');
         }
 
-        return self::atomicIncrement($playerId, $amount);
+        return self::atomicIncrement($playerId, $amount, 0, $reason, $extra);
     }
 
     /**
@@ -550,7 +556,7 @@ LUA;
      * @return float 新余额
      * @throws \RuntimeException Redis 执行失败时抛出
      */
-    public static function atomicIncrement(int $playerId, float $amount, int $ttl = 0): float
+    public static function atomicIncrement(int $playerId, float $amount, int $ttl = 0, string $reason = '', array $extra = []): float
     {
         if ($amount < 0) {
             throw new \InvalidArgumentException("增加金额必须大于0，当前值：{$amount}");
@@ -559,7 +565,13 @@ LUA;
         $cacheKey = self::getCacheKey($playerId, 1);
 
         try {
-            // 记录变更前余额（用于爆机检测）
+            // Redis 冷启动保护：key 不存在时先从 DB 加载真实余额
+            if (!Redis::exists($cacheKey)) {
+                $dbBalance = self::getBalanceFromDB($playerId, 1);
+                Redis::set($cacheKey, (int)round($dbBalance * 100));
+            }
+
+            // 记录变更前余额（用于爆机检测和日志）
             $oldBalance = self::getBalance($playerId, 1);
 
             // 🔧 整数化改造：元 × 100 → 分
@@ -606,6 +618,17 @@ LUA;
                 'amount' => $amount,
             ]);
 
+            WalletLogger::log(
+                $playerId,
+                WalletLogger::OP_ATOMIC_INCREMENT,
+                $reason ?: WalletLogger::REASON_ADMIN_ADJUST,
+                $amount,
+                $oldBalance,
+                $newBalance,
+                true,
+                $extra
+            );
+
             return $newBalance;
         } catch (\Throwable $e) {
             Log::error('WalletService: atomicIncrement failed', [
@@ -613,6 +636,16 @@ LUA;
                 'amount' => $amount,
                 'error' => $e->getMessage(),
             ]);
+            WalletLogger::log(
+                $playerId,
+                WalletLogger::OP_ATOMIC_INCREMENT,
+                $reason ?: WalletLogger::REASON_ADMIN_ADJUST,
+                $amount,
+                0,
+                0,
+                false,
+                array_merge($extra, ['error_code' => $e->getMessage()])
+            );
             throw $e;
         }
     }
@@ -626,7 +659,7 @@ LUA;
      * @return array 成功：{ok: 1, balance: 新余额, old: 旧余额} 或 失败：{ok: 0, error: "insufficient_balance", balance: 当前余额}
      * @throws \RuntimeException Redis 执行失败时抛出
      */
-    public static function atomicDecrement(int $playerId, float $amount, int $ttl = 0): array
+    public static function atomicDecrement(int $playerId, float $amount, int $ttl = 0, string $reason = '', array $extra = []): array
     {
         if ($amount < 0) {
             throw new \InvalidArgumentException("减少金额必须大于0，当前值：{$amount}");
@@ -635,6 +668,12 @@ LUA;
         $cacheKey = self::getCacheKey($playerId, 1);
 
         try {
+            // Redis 冷启动保护：key 不存在时先从 DB 加载真实余额
+            if (!Redis::exists($cacheKey)) {
+                $dbBalance = self::getBalanceFromDB($playerId, 1);
+                Redis::set($cacheKey, (int)round($dbBalance * 100));
+            }
+
             // 🔧 整数化改造：元 × 100 → 分
             $amountInCents = (int)round($amount * 100);
 
@@ -683,6 +722,14 @@ LUA;
 
                 // ✅ 触发爆机检测（余额减少后可能解除爆机）
                 self::checkMachineCrash($playerId, $oldBalance, $newBalance);
+
+                WalletLogger::log($playerId, WalletLogger::OP_ATOMIC_DECREMENT,
+                    $reason ?: WalletLogger::REASON_ADMIN_ADJUST, $amount, $oldBalance, $newBalance, true, $extra);
+            } else {
+                WalletLogger::log($playerId, WalletLogger::OP_ATOMIC_DECREMENT,
+                    $reason ?: WalletLogger::REASON_ADMIN_ADJUST, $amount,
+                    $decoded['balance'] ?? 0, $decoded['balance'] ?? 0, false,
+                    array_merge($extra, ['error_code' => $decoded['error'] ?? 'insufficient_balance']));
             }
 
             return $decoded ?? [];
@@ -692,6 +739,9 @@ LUA;
                 'amount' => $amount,
                 'error' => $e->getMessage(),
             ]);
+            WalletLogger::log($playerId, WalletLogger::OP_ATOMIC_DECREMENT,
+                $reason ?: WalletLogger::REASON_ADMIN_ADJUST, $amount, 0, 0, false,
+                array_merge($extra, ['error_code' => $e->getMessage()]));
             throw $e;
         }
     }
@@ -711,6 +761,7 @@ LUA;
         try {
             \support\Db::table('player_platform_cash')
                 ->where('player_id', $playerId)
+                ->where('platform_id', 1)
                 ->update(['money' => $newBalance]);
         } catch (\Throwable $e) {
             // 数据库同步失败不影响 Redis（Redis 是唯一实时标准）
