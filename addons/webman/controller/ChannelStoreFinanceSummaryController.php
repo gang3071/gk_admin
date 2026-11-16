@@ -48,9 +48,10 @@ class ChannelStoreFinanceSummaryController
                     'panel' => [
                         'machine_win_loss'    => $t('panel.machine_win_loss'),
                         'electronic_win_loss' => $t('panel.electronic_win_loss'),
-                        'delivery_detail'     => $t('panel.delivery_detail'),
-                        'income'              => $t('panel.income'),
-                        'expense'             => $t('panel.expense'),
+                        'net_revenue'         => $t('panel.net_revenue'),
+                        'operating_cost'      => $t('panel.operating_cost'),
+                        'cost_detail'         => $t('panel.cost_detail'),
+                        'total'               => $t('panel.total'),
                         'profit'              => $t('panel.profit'),
                         'loss'                => $t('panel.loss'),
                         'even'                => $t('panel.even'),
@@ -61,14 +62,8 @@ class ChannelStoreFinanceSummaryController
                         'retry'         => $t('states.retry'),
                         'no_data'       => $t('states.no_data'),
                     ],
-                    'income_types' => [
-                        // 玩家实际消耗资金（机台积分操作 + 现金投入）
-                        4  => $t('delivery_types.4'),   // 机台上分（玩家余额转机台积分）
-                        23 => $t('delivery_types.23'),  // 投钞（玩家投入现金）
-                    ],
-                    'expense_types' => [
-                        // 平台对玩家的实际支出（积分返还 + 各类奖励发放）
-                        5  => $t('delivery_types.5'),   // 机台下分（机台积分返还玩家）
+                    'cost_types' => [
+                        // 运营成本：平台额外发放给玩家的奖励（机台上下分已计入输赢，不重复列）
                         12 => $t('delivery_types.12'),  // 推广员分润
                         13 => $t('delivery_types.13'),  // 彩金中奖
                         33 => $t('delivery_types.33'),  // 摸奖券奖励

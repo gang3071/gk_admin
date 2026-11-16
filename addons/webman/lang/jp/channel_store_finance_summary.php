@@ -47,9 +47,10 @@ return [
     'panel' => [
         'machine_win_loss'    => '実機損益',
         'electronic_win_loss' => '電子ゲーム損益',
-        'delivery_detail'     => '口座変動明細（タイプをクリックして説明を確認）',
-        'income'              => '収入',
-        'expense'             => '支出',
+        'net_revenue'         => '純収益',
+        'operating_cost'      => '運営コスト',
+        'cost_detail'         => '運営コスト明細（タイプをクリックして説明を確認）',
+        'total'               => '合計',
         'profit'              => '利益',
         'loss'                => '損失',
         'even'                => '均衡',

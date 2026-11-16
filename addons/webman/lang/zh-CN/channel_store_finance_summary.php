@@ -47,9 +47,10 @@ return [
     'panel' => [
         'machine_win_loss'    => '实体机台输赢',
         'electronic_win_loss' => '电子游戏输赢',
-        'delivery_detail'     => '账变明细（点击类型查看说明）',
-        'income'              => '收入',
-        'expense'             => '支出',
+        'net_revenue'         => '净营收',
+        'operating_cost'      => '运营成本',
+        'cost_detail'         => '运营成本明细（点击类型查看说明）',
+        'total'               => '合计',
         'profit'              => '盈利',
         'loss'                => '亏损',
         'even'                => '持平',

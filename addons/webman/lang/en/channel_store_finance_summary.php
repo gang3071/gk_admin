@@ -47,9 +47,10 @@ return [
     'panel' => [
         'machine_win_loss'    => 'Machine Win/Loss',
         'electronic_win_loss' => 'Electronic Game Win/Loss',
-        'delivery_detail'     => 'Account Changes (click type for details)',
-        'income'              => 'Income',
-        'expense'             => 'Expense',
+        'net_revenue'         => 'Net Revenue',
+        'operating_cost'      => 'Operating Cost',
+        'cost_detail'         => 'Operating Cost Details (click type for description)',
+        'total'               => 'Total',
         'profit'              => 'Profit',
         'loss'                => 'Loss',
         'even'                => 'Break Even',

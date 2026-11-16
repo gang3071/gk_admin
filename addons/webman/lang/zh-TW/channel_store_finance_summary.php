@@ -47,9 +47,10 @@ return [
     'panel' => [
         'machine_win_loss'    => '實體機台輸贏',
         'electronic_win_loss' => '電子遊戲輸贏',
-        'delivery_detail'     => '帳變明細（點擊類型查看說明）',
-        'income'              => '收入',
-        'expense'             => '支出',
+        'net_revenue'         => '淨營收',
+        'operating_cost'      => '營運成本',
+        'cost_detail'         => '營運成本明細（點擊類型查看說明）',
+        'total'               => '合計',
         'profit'              => '盈利',
         'loss'                => '虧損',
         'even'                => '持平',
