@@ -115,8 +115,9 @@ class ChannelStoreFinanceSummaryController
                 'store_name'               => $store->nickname ?: $store->username,
                 'store_username'           => $store->username,
                 'agent_name'               => $agent ? ($agent->nickname ?: $agent->username) : '-',
-                'machine_win_loss'         => $machineWinLoss[$sid] ?? '0.00',
-                'electronic_game_win_loss' => bcadd('0', (string)floatval($gameWinLossByStore[$sid] ?? 0), 2),
+                // 取反：delivery/diff 均为玩家视角（玩家赢为正），面板为平台视角（平台盈利为正）
+                'machine_win_loss'         => bcsub('0', $machineWinLoss[$sid] ?? '0.00', 2),
+                'electronic_game_win_loss' => bcsub('0', bcadd('0', (string)floatval($gameWinLossByStore[$sid] ?? 0), 2), 2),
                 'delivery_types'           => $deliveryByStore[$sid] ?? [],
             ];
         }
