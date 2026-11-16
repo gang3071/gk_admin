@@ -62,22 +62,15 @@ class ChannelStoreFinanceSummaryController
                         'no_data'       => $t('states.no_data'),
                     ],
                     'income_types' => [
-                        // 平台实际收入：玩家注入资金或行政操作
-                        1  => $t('delivery_types.1'),   // 管理员加点
-                        4  => $t('delivery_types.4'),   // 机台上分
-                        6  => $t('delivery_types.6'),   // 充值(开分)
-                        23 => $t('delivery_types.23'),  // 投钞
-                        32 => $t('delivery_types.32'),  // 退款（冲销性质）
+                        // 玩家实际消耗资金（机台积分操作 + 现金投入）
+                        4  => $t('delivery_types.4'),   // 机台上分（玩家余额转机台积分）
+                        23 => $t('delivery_types.23'),  // 投钞（玩家投入现金）
                     ],
                     'expense_types' => [
-                        // 平台实际支出：返还玩家资金 + 各类奖励发放
-                        5  => $t('delivery_types.5'),   // 机台下分
-                        7  => $t('delivery_types.7'),   // 提现(洗分)
-                        8  => $t('delivery_types.8'),   // 管理员扣点
+                        // 平台对玩家的实际支出（积分返还 + 各类奖励发放）
+                        5  => $t('delivery_types.5'),   // 机台下分（机台积分返还玩家）
                         12 => $t('delivery_types.12'),  // 推广员分润
                         13 => $t('delivery_types.13'),  // 彩金中奖
-                        22 => $t('delivery_types.22'),  // 特殊类型
-                        31 => $t('delivery_types.31'),  // 预扣
                         33 => $t('delivery_types.33'),  // 摸奖券奖励
                         34 => $t('delivery_types.34'),  // VIP生日礼金
                         35 => $t('delivery_types.35'),  // VIP升级礼金
