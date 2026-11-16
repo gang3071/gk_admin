@@ -23,8 +23,74 @@ class ChannelStoreFinanceSummaryController
      */
     public function finance()
     {
+        $t = fn(string $key) => admin_trans('channel_store_finance_summary.' . $key);
+
         return admin_view(plugin()->webman->getPath() . '/views/store_finance_summary.vue')
-            ->attrs([]);
+            ->attrs([
+                'trans' => [
+                    'filter' => [
+                        'placeholder_agent'  => $t('filter.placeholder_agent'),
+                        'placeholder_stores' => $t('filter.placeholder_stores'),
+                        'placeholder_date'   => $t('filter.placeholder_date'),
+                        'start_time'         => $t('filter.start_time'),
+                        'end_time'           => $t('filter.end_time'),
+                        'query'              => $t('filter.query'),
+                        'reset'              => $t('filter.reset'),
+                    ],
+                    'date_types' => [
+                        ['value' => 1, 'label' => $t('date_types.today')],
+                        ['value' => 2, 'label' => $t('date_types.yesterday')],
+                        ['value' => 3, 'label' => $t('date_types.this_week')],
+                        ['value' => 4, 'label' => $t('date_types.last_week')],
+                        ['value' => 5, 'label' => $t('date_types.this_month')],
+                        ['value' => 6, 'label' => $t('date_types.last_month')],
+                    ],
+                    'panel' => [
+                        'machine_win_loss'    => $t('panel.machine_win_loss'),
+                        'electronic_win_loss' => $t('panel.electronic_win_loss'),
+                        'delivery_detail'     => $t('panel.delivery_detail'),
+                        'income'              => $t('panel.income'),
+                        'expense'             => $t('panel.expense'),
+                        'profit'              => $t('panel.profit'),
+                        'loss'                => $t('panel.loss'),
+                        'even'                => $t('panel.even'),
+                    ],
+                    'states' => [
+                        'hint'          => $t('states.hint'),
+                        'search_failed' => $t('states.search_failed'),
+                        'retry'         => $t('states.retry'),
+                        'no_data'       => $t('states.no_data'),
+                    ],
+                    'income_types' => [
+                        1  => $t('delivery_types.1'),
+                        4  => $t('delivery_types.4'),
+                        6  => $t('delivery_types.6'),
+                        12 => $t('delivery_types.12'),
+                        13 => $t('delivery_types.13'),
+                        16 => $t('delivery_types.16'),
+                        23 => $t('delivery_types.23'),
+                        32 => $t('delivery_types.32'),
+                        33 => $t('delivery_types.33'),
+                        34 => $t('delivery_types.34'),
+                        35 => $t('delivery_types.35'),
+                        36 => $t('delivery_types.36'),
+                        37 => $t('delivery_types.37'),
+                        38 => $t('delivery_types.38'),
+                        39 => $t('delivery_types.39'),
+                    ],
+                    'expense_types' => [
+                        5  => $t('delivery_types.5'),
+                        7  => $t('delivery_types.7'),
+                        8  => $t('delivery_types.8'),
+                        22 => $t('delivery_types.22'),
+                        31 => $t('delivery_types.31'),
+                    ],
+                    'desc_panel' => [
+                        'title'      => $t('desc_panel.title'),
+                        'click_hint' => $t('desc_panel.click_hint'),
+                    ],
+                ],
+            ]);
     }
 
     /**
