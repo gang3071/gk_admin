@@ -1,11 +1,12 @@
 <template>
   <div class="page-wrap">
-    <a-tabs v-model:activeKey="activeTab" type="card" style="flex:1; min-height:0; display:flex; flex-direction:column;">
+    <a-tabs v-model:activeKey="activeTab" type="card">
 
       <!-- ══════════════════════════════════════════════════════════
            Tab 1：多店概覽（原有功能）
       ══════════════════════════════════════════════════════════ -->
-      <a-tab-pane key="overview" tab="多店概覽" style="height:100%; overflow:hidden; display:flex; flex-direction:column;">
+      <a-tab-pane key="overview" tab="多店概覽">
+        <div class="tab1-wrap">
         <!-- 筛选栏 -->
         <a-card class="search-card">
           <div style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap">
@@ -218,14 +219,14 @@
             </div>
           </div>
 
-        </div>
+        </div><!-- /tab1-wrap -->
       </a-tab-pane>
 
       <!-- ══════════════════════════════════════════════════════════
            Tab 2：單店詳細報表（新功能）
       ══════════════════════════════════════════════════════════ -->
       <a-tab-pane key="detail" tab="單店詳細報表">
-        <div class="detail-scroll-wrap">
+        <div class="tab2-wrap">
         <div class="finance-summary">
           <!-- 筛选区域 -->
           <a-card :body-style="{ padding: '16px' }" style="margin-bottom: 16px;">
@@ -768,13 +769,23 @@ export default {
 </script>
 
 <style scoped>
-/* ── 整体布局 ── */
-.page-wrap   { display:flex; flex-direction:column; height:calc(100vh - 112px); padding:16px; box-sizing:border-box; gap:12px; overflow:hidden; }
-.search-card { flex-shrink:0; }
+/* ── 整体布局：只提供外边距，不限高度，让 a-tabs 自然渲染 ── */
+.page-wrap   { padding: 16px; }
+.search-card { margin-bottom: 12px; }
 
-/* ── Tab 2 滚动容器：高度 = 视口 - page-wrap上边距(16) - 标签头(~46px) - padding(32) - gap(12) ── */
-.detail-scroll-wrap {
-  height: calc(100vh - 210px);
+/* ── Tab 1 包裹层：显式高度 + overflow:hidden，内部自己滚 ── */
+/* 100vh - ExAdmin顶栏(72px) - 页面padding(32px) - tabs标签头(42px) - gap(12px) ≈ 160px */
+.tab1-wrap {
+  height: calc(100vh - 160px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+
+/* ── Tab 2 包裹层：与 Tab1 等高，整体可滚动 ── */
+.tab2-wrap {
+  height: calc(100vh - 160px);
   overflow-y: auto;
   overflow-x: hidden;
 }
