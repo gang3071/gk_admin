@@ -57,22 +57,26 @@
           <a-button type="primary" @click="doSearch">重试</a-button>
         </template>
       </a-result>
-      <a-card v-else class="result-card" :body-style="{ padding:'12px', overflow:'auto', flex:1, minHeight:0 }">
+      <a-card v-else class="result-card" :body-style="{ padding:'12px', flex:1, minHeight:0, overflow:'auto' }">
         <a-table
           :columns="columns"
-          :data-source="rows"
+          :data-source="tableRows"
           :pagination="{ pageSize: 50, showTotal: total => '共 ' + total + ' 家店' }"
           :scroll="{ x: 1800 }"
+          :row-class-name="rowClassName"
+          :custom-row="customRow"
           size="small"
           bordered
           row-key="id"
-          :summary="summaryRow"
         >
           <template #bodyCell="{ column, record }">
             <template v-if="amountFields.includes(column.dataIndex)">
-              <span :style="{ color: parseFloat(record[column.dataIndex]) >= 0 ? '#3f8600' : '#cf1322', fontWeight: 500 }">
+              <span :style="{ color: parseFloat(record[column.dataIndex]) >= 0 ? '#3f8600' : '#cf1322', fontWeight: record._summary ? 700 : 400 }">
                 {{ fmt(record[column.dataIndex]) }}
               </span>
+            </template>
+            <template v-else-if="column.dataIndex === 'store_name' && record._summary">
+              <strong>{{ record.store_name }}</strong>
             </template>
           </template>
         </a-table>
@@ -83,8 +87,6 @@
 </template>
 
 <script>
-import { h } from 'vue';
-
 export default {
   name: 'StoreFinanceSummary',
   data() {
@@ -111,19 +113,19 @@ export default {
         { value: 6, label: '上月' },
       ],
       columns: [
-        { title: '店家名称', dataIndex: 'store_name',               width: 140, fixed: 'left' },
-        { title: '登录账号', dataIndex: 'store_username',           width: 120, fixed: 'left' },
-        { title: '所属代理', dataIndex: 'agent_name',               width: 120 },
+        { title: '店家名称',     dataIndex: 'store_name',               width: 140, fixed: 'left' },
+        { title: '登录账号',     dataIndex: 'store_username',           width: 120, fixed: 'left' },
+        { title: '所属代理',     dataIndex: 'agent_name',               width: 120 },
         { title: '电子游戏输赢', dataIndex: 'electronic_game_win_loss', width: 130, align: 'right' },
         { title: '实体机输赢',   dataIndex: 'machine_win_loss',         width: 120, align: 'right' },
         { title: '摸彩劵送出',   dataIndex: 'lottery_ticket_sent',      width: 120, align: 'right' },
-        { title: '电子游戏彩金', dataIndex: 'electronic_jackpot',        width: 130, align: 'right' },
-        { title: '实体机台彩金', dataIndex: 'machine_jackpot',           width: 130, align: 'right' },
-        { title: '钱包增加',     dataIndex: 'wallet_increase',           width: 120, align: 'right' },
-        { title: '钱包扣除',     dataIndex: 'wallet_decrease',           width: 120, align: 'right' },
-        { title: '实体机台返水', dataIndex: 'machine_rebate',            width: 130, align: 'right' },
-        { title: '电子游戏返水', dataIndex: 'electronic_rebate',         width: 130, align: 'right' },
-        { title: '体验/福利劵',  dataIndex: 'coupon_sent',               width: 120, align: 'right' },
+        { title: '电子游戏彩金', dataIndex: 'electronic_jackpot',       width: 130, align: 'right' },
+        { title: '实体机台彩金', dataIndex: 'machine_jackpot',          width: 130, align: 'right' },
+        { title: '钱包增加',     dataIndex: 'wallet_increase',          width: 120, align: 'right' },
+        { title: '钱包扣除',     dataIndex: 'wallet_decrease',          width: 120, align: 'right' },
+        { title: '实体机台返水', dataIndex: 'machine_rebate',           width: 130, align: 'right' },
+        { title: '电子游戏返水', dataIndex: 'electronic_rebate',        width: 130, align: 'right' },
+        { title: '体验/福利劵',  dataIndex: 'coupon_sent',              width: 120, align: 'right' },
       ],
     };
   },
@@ -131,6 +133,11 @@ export default {
     filteredStores() {
       if (!this.form.agentId) return this.stores;
       return this.stores.filter(s => s.agentId === this.form.agentId);
+    },
+    tableRows() {
+      if (!this.rows.length) return [];
+      const summaryRow = Object.assign({ id: '__summary__', store_name: '汇总', store_username: '', agent_name: '', _summary: true }, this.summary);
+      return [...this.rows, summaryRow];
     },
   },
   mounted() {
@@ -160,7 +167,7 @@ export default {
           this.agents = j.data.agents;
           this.stores = j.data.stores;
         }
-      } catch (e) { /* ignore */ }
+      } catch (_) { /* ignore */ }
     },
     onAgentChange() {
       this.form.storeId = null;
@@ -173,7 +180,11 @@ export default {
       this.searched = true;
       this.error    = null;
 
-      const params = { agent_id: this.form.agentId, store_id: this.form.storeId, date_type: this.form.dateType };
+      const params = {
+        agent_id:  this.form.agentId,
+        store_id:  this.form.storeId,
+        date_type: this.form.dateType,
+      };
       if (this.form.dateRange && this.form.dateRange.length === 2) {
         params.start_time = this.form.dateRange[0].format('YYYY-MM-DD HH:mm:ss');
         params.end_time   = this.form.dateRange[1].format('YYYY-MM-DD HH:mm:ss');
@@ -202,20 +213,12 @@ export default {
       this.summary  = {};
       this.error    = null;
     },
-    summaryRow() {
-      if (!this.rows.length || !Object.keys(this.summary).length) return null;
-      const s = this.summary;
-      const amountFields = this.amountFields;
-      const fmt = this.fmt;
-
-      return h('tr', { style: { background: '#fafafa', fontWeight: 700 } }, [
-        h('td', { colspan: 3, style: { textAlign: 'center', padding: '8px' } }, '汇总'),
-        ...amountFields.map(field =>
-          h('td', { style: { textAlign: 'right', padding: '8px 12px', color: parseFloat(s[field]) >= 0 ? '#3f8600' : '#cf1322' } },
-            fmt(s[field])
-          )
-        ),
-      ]);
+    rowClassName(record) {
+      return record._summary ? 'summary-row' : '';
+    },
+    customRow(record) {
+      if (!record._summary) return {};
+      return { style: { background: '#f0f5ff', fontWeight: 700 } };
     },
   },
 };
@@ -227,4 +230,8 @@ export default {
 .result-wrap  { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
 .center-state { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; }
 .result-card  { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+</style>
+
+<style>
+.summary-row td { background: #f0f5ff !important; font-weight: 700; }
 </style>
