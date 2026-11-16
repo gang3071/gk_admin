@@ -78,8 +78,7 @@
             v-for="panel in panels"
             :key="panel.store_id"
             :xs="24"
-            :md="12"
-            :xxl="8"
+            :sm="12"
           >
             <a-card class="store-card" size="small">
               <!-- 卡片标题 -->
