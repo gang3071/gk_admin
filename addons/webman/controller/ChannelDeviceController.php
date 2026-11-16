@@ -130,7 +130,7 @@ class ChannelDeviceController
                         return Tag::create(admin_trans('device.no_player'))->color('default');
                     }
                     $name = $player->name ?: $player->phone;
-                    return Html::create(
+                    return Html::raw(
                         '<div style="line-height:1.6">' .
                         '<span>' . htmlspecialchars($name) . '</span><br>' .
                         '<span style="color:#8c8c8c;font-size:12px">' . htmlspecialchars($player->phone) . '</span>' .
@@ -152,7 +152,7 @@ class ChannelDeviceController
                         return '—';
                     }
                     $balance = number_format($player->machine_wallet->money, 2);
-                    return Html::create('<span style="color:#1890ff;font-weight:600">' . $balance . '</span>');
+                    return Html::raw('<span style="color:#1890ff;font-weight:600">' . $balance . '</span>');
                 });
 
             $grid->column('status', admin_trans('device.fields.status'))
