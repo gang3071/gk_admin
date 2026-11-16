@@ -146,11 +146,15 @@ cbold(str_repeat('─', 68));
 exit($totalErrors > 0 ? 1 : 0);
 
 // ═════════════════════════════════════════════════════════════════════════════
-// [1] 账变记录内部一致性：amount_before + amount ≈ amount_after
+// [1] 账变记录内部一致性：|amount_after - amount_before| ≈ |amount|
+//
+// amount 字段存绝对值，增加类型为正、扣减类型也为正（方向由 type 决定）。
+// 因此不能直接用 amount_before + amount = amount_after，
+// 而应比较变化量绝对值：|amount_after - amount_before| ≈ |amount|
 // ═════════════════════════════════════════════════════════════════════════════
 function checkDeliveryInternal(string $start, string $end, ?string $playerId, float $tolerance): int
 {
-    cbold('[1] 账变记录内部一致性（变更前 + 变更额 ≈ 变更后）');
+    cbold('[1] 账变记录内部一致性（|变更后 - 变更前| ≈ |变更额|）');
 
     $rows    = [];
     $lastId  = 0;
@@ -172,11 +176,14 @@ function checkDeliveryInternal(string $start, string $end, ?string $playerId, fl
         if ($batch->isEmpty()) break;
 
         foreach ($batch as $r) {
-            $expected = round((float) $r->amount_before + (float) $r->amount, 6);
-            $actual   = round((float) $r->amount_after, 6);
-            $diff     = $actual - $expected;
+            // 实际变化量（有方向）
+            $actualChange   = round((float) $r->amount_after - (float) $r->amount_before, 6);
+            // amount 字段存绝对值，用变化量绝对值对比
+            $expectedChange = round(abs((float) $r->amount), 6);
+            $diff           = abs($actualChange) - $expectedChange;
 
             if (abs($diff) > $tolerance) {
+                $direction = $actualChange >= 0 ? '增加' : '扣减';
                 $rows[] = [
                     $r->id,
                     $r->player_id,
@@ -184,6 +191,7 @@ function checkDeliveryInternal(string $start, string $end, ?string $playerId, fl
                     number_format((float) $r->amount_before, 4),
                     number_format((float) $r->amount,        4),
                     number_format((float) $r->amount_after,  4),
+                    $direction,
                     sprintf('%+.6f', $diff),
                     $r->created_at,
                 ];
@@ -201,7 +209,7 @@ function checkDeliveryInternal(string $start, string $end, ?string $playerId, fl
     }
 
     printTable(
-        ['记录ID', '玩家ID', '类型', '变更前', '变更额', '变更后', '差异', '时间'],
+        ['记录ID', '玩家ID', '类型', '变更前', '变更额', '变更后', '方向', '变化量差异', '时间'],
         $rows
     );
     $count = count($rows);
@@ -294,12 +302,23 @@ function checkDeliverySequential(string $start, string $end, ?string $playerId, 
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// [3] 电子游戏账变与游戏记录 diff 交叉比对
-// 游戏账变合计（type 26/27/28/29/30）≈ play_game_record.diff 合计
+// [3] 电子游戏账变与游戏记录 diff 交叉比对（仅限单一钱包玩家）
+//
+// 单一钱包：下注/结算直接写 type=26-30 账变，账变合计 ≈ game_record.diff 合计
+// 双钱包：通过 type=14（转出到平台）/ type=15（转回），不走 type=26-30，跳过此检查
 // ═════════════════════════════════════════════════════════════════════════════
 function checkGameVsDelivery(string $start, string $end, ?string $playerId, float $tolerance): int
 {
-    cbold('[3] 电子游戏账变（下注/结算）与游戏记录 diff 交叉比对');
+    cbold('[3] 电子游戏账变（下注/结算）与游戏记录 diff 交叉比对（单一钱包）');
+
+    // 双钱包玩家（有 type=14/15 转账记录）跳过此检查
+    $dualWalletPids = Capsule::table(TBL_DELIVERY)
+        ->whereBetween('created_at', [$start, $end])
+        ->whereIn('type', [14, 15]) // TYPE_GAME_PLATFORM_OUT / TYPE_GAME_PLATFORM_IN
+        ->when($playerId, fn ($q) => $q->where('player_id', $playerId))
+        ->groupBy('player_id')
+        ->pluck('player_id')
+        ->flip(); // 转为 key 方便 has() 查询
 
     $dQuery = Capsule::table(TBL_DELIVERY)
         ->whereBetween('created_at', [$start, $end])
@@ -329,9 +348,16 @@ function checkGameVsDelivery(string $start, string $end, ?string $playerId, floa
         return 0;
     }
 
-    $rows = [];
+    $rows       = [];
+    $skipped    = 0;
 
     foreach ($allPids as $pid) {
+        // 双钱包玩家跳过
+        if ($dualWalletPids->has($pid)) {
+            $skipped++;
+            continue;
+        }
+
         $deliveryTotal = round((float) ($deliveryStats->get($pid)?->delivery_total ?? 0), 4);
         $gameTotal     = round((float) ($gameStats->get($pid)?->game_total ?? 0), 4);
         $diff          = $deliveryTotal - $gameTotal;
@@ -348,7 +374,8 @@ function checkGameVsDelivery(string $start, string $end, ?string $playerId, floa
         }
     }
 
-    cdim("  共对比 {$allPids->count()} 名玩家");
+    $checked = $allPids->count() - $skipped;
+    cdim("  共对比 {$checked} 名单一钱包玩家（跳过 {$skipped} 名双钱包玩家）");
 
     if (empty($rows)) {
         cok("  ✓ 全部通过，账变与游戏记录一致");
