@@ -468,38 +468,41 @@ class ChannelStoreFinanceSummaryController
     }
 
     /**
-     * 查询机台上分/下分数据，按 game_type 和 machine_source 分组
-     * @return array [game_type][machine_source][type] => float
+     * 查询实体机台上分/下分点数，按 game_type 和 machine_source 分组。
+     * 数据源：PlayerGameLog.open_point / wash_point（比 PlayerDeliveryRecord type=4/5 更可靠，
+     * 因为 PDR 记录的 machine_id 可能为 0 导致 JOIN 丢失数据）。
+     * @return array [game_type][machine_source][TYPE_MACHINE_UP|TYPE_MACHINE_DOWN] => float
      */
     private function queryMachineDeliveryData(array $playerIds, string $start, string $end): array
     {
-        $pdrTable  = plugin()->webman->config('database.player_delivery_record_table');
+        $pglTable  = plugin()->webman->config('database.player_game_log_table');
         $machTable = plugin()->webman->config('database.machine_table');
         $cateTable = plugin()->webman->config('database.machine_category_table');
 
-        $query = Db::table("{$pdrTable} as pdr")
-            ->join("{$machTable} as m", 'pdr.machine_id', '=', 'm.id')
+        $query = Db::table("{$pglTable} as pgl")
+            ->join("{$machTable} as m", 'pgl.machine_id', '=', 'm.id')
             ->join("{$cateTable} as mc", 'm.cate_id', '=', 'mc.id')
-            ->whereIn('pdr.player_id', $playerIds)
-            ->whereIn('pdr.type', [PlayerDeliveryRecord::TYPE_MACHINE_UP, PlayerDeliveryRecord::TYPE_MACHINE_DOWN])
-            ->where('pdr.machine_id', '>', 0)
-            ->selectRaw('mc.game_id, mc.machine_source, pdr.type, SUM(pdr.amount) as total_amount')
-            ->groupBy('mc.game_id', 'mc.machine_source', 'pdr.type');
+            ->whereIn('pgl.player_id', $playerIds)
+            ->whereIn('mc.game_id', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])
+            ->selectRaw('mc.game_id, mc.machine_source,
+                         COALESCE(SUM(pgl.open_point), 0) AS total_open,
+                         COALESCE(SUM(pgl.wash_point), 0) AS total_wash')
+            ->groupBy('mc.game_id', 'mc.machine_source');
 
         if (!empty($start)) {
-            $query->where('pdr.created_at', '>=', $start);
+            $query->where('pgl.created_at', '>=', $start);
         }
         if (!empty($end)) {
-            $query->where('pdr.created_at', '<=', $end);
+            $query->where('pgl.created_at', '<=', $end);
         }
 
         $result = [];
         foreach ($query->get() as $row) {
             $gameType      = (int)$row->game_id;
             $machineSource = (int)$row->machine_source;
-            $type          = (int)$row->type;
 
-            $result[$gameType][$machineSource][$type] = (float)$row->total_amount;
+            $result[$gameType][$machineSource][PlayerDeliveryRecord::TYPE_MACHINE_UP]   = (float)$row->total_open;
+            $result[$gameType][$machineSource][PlayerDeliveryRecord::TYPE_MACHINE_DOWN] = (float)$row->total_wash;
         }
 
         return $result;
