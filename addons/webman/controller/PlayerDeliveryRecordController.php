@@ -84,28 +84,7 @@ class PlayerDeliveryRecordController
                 });
             }
             if (!empty($exAdminFilter['search_source'])) {
-                $searchSource = $exAdminFilter['search_source'];
-                $grid->model()->where(function ($query) use ($searchSource) {
-                    $query->where([
-                        ['code', 'like', '%' . $searchSource . '%', 'or'],
-                        ['machine_name', 'like', '%' . $searchSource . '%', 'or']
-                    ])->orWhere(function ($query) use ($searchSource) {
-                        $query->where([
-                            ['source', 'like', '%' . $searchSource . '%', 'and'],
-                        ])->whereIn('type',
-                            [PlayerDeliveryRecord::TYPE_PRESENT_IN, PlayerDeliveryRecord::TYPE_PRESENT_OUT]);
-                    })->orWhere(function ($query) use ($searchSource) {
-                        $query->whereHas('gamePlatform', function ($query) use ($searchSource) {
-                            $query->where([
-                                ['name', 'like', '%' . $searchSource . '%', 'or'],
-                            ]);
-                        })->whereIn('type',
-                            [
-                                PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT,
-                                PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN
-                            ]);
-                    });
-                });
+                $grid->model()->where('source', $exAdminFilter['search_source']);
             }
             if (!empty($exAdminFilter['activity'])) {
                 $target_id = PlayerMoneyEditLog::query()
@@ -114,8 +93,18 @@ class PlayerDeliveryRecordController
                     ->pluck('player_money_edit_log.id')->toArray();
                 $grid->model()->where('target', 'player_money_edit_log')->whereIn('target_id',$target_id);
             }
+            // 類型篩選（讓上方統計也跟著類型條件）
+            if (!empty($exAdminFilter['type'])) {
+                $grid->model()->whereIn('type', (array) $exAdminFilter['type']);
+            }
+            // 店家篩選
+            if (!empty($exAdminFilter['player']['store_admin_id'])) {
+                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                    $query->where('store_admin_id', $exAdminFilter['player']['store_admin_id']);
+                });
+            }
             $query = clone $grid->model();
-            $totalData = $query->selectRaw('sum(if(`type`=' . PlayerDeliveryRecord::TYPE_PRESENT_IN . ',`amount`,0)) as total_in_amount, sum(if(`type`= ' . PlayerDeliveryRecord::TYPE_PRESENT_OUT . ',`amount`,0)) as total_out_amount, sum(if(`type`= ' . PlayerDeliveryRecord::TYPE_MACHINE . ',`amount`,0)) as total_machine_amount')->first();
+            $totalData = $query->selectRaw('sum(if(`type`=' . PlayerDeliveryRecord::TYPE_RECHARGE . ',`amount`,0)) as total_in_amount, sum(if(`type`= ' . PlayerDeliveryRecord::TYPE_WITHDRAWAL . ',`amount`,0)) as total_out_amount, sum(if(`type`= ' . PlayerDeliveryRecord::TYPE_MACHINE . ',`amount`,0)) as total_machine_amount')->first();
             $layout = Layout::create();
             $layout->row(function (Row $row) use ($totalData) {
                 $row->gutter([10, 0]);
@@ -453,8 +442,65 @@ class PlayerDeliveryRecordController
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
                 $filter->like()->text('player.phone')->placeholder(admin_trans('player.fields.phone'));
+                $filter->eq()->select('player.store_admin_id')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('admin.store'))
+                    ->remoteOptions(admin_url([
+                        'addons-webman-controller-ChannelAgentController',
+                        'getStoreOptions'
+                    ]));
                 $filter->like()->text('player.recommend_player.uuid')->placeholder(admin_trans('promoter_profit_record.player_promoter.uuid'));
-                $filter->like()->text('search_source')->placeholder(admin_trans('player_delivery_record.fields.source'));
+                $filter->eq()->select('search_source')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('player_delivery_record.fields.source'))
+                    ->options([
+                        'modified_amount_add' => admin_trans('message.target.modified_amount_add'),
+                        'modified_amount_deduct' => admin_trans('message.target.modified_amount_deduct'),
+                        'wallet_modify' => admin_trans('message.target.wallet_modify'),
+                        'artificial_recharge' => admin_trans('message.target.artificial_recharge'),
+                        'self_recharge' => admin_trans('message.target.self_recharge'),
+                        'gb_recharge' => admin_trans('message.target.gb_recharge'),
+                        'coin_recharge' => admin_trans('message.target.coin_recharge'),
+                        'talk_recharge' => admin_trans('message.target.talk_recharge'),
+                        'channel_withdrawal' => admin_trans('message.target.channel_withdrawal'),
+                        'artificial_withdrawal' => admin_trans('message.target.artificial_withdrawal'),
+                        'gb_withdrawal' => admin_trans('message.target.gb_withdrawal'),
+                        'talk_withdrawal' => admin_trans('message.target.talk_withdrawal'),
+                        'withdrawal_back' => admin_trans('message.target.withdrawal_back'),
+                        'ticket_open_score' => admin_trans('message.target.ticket_open_score'),
+                        'ticket_redeem' => admin_trans('message.target.ticket_redeem'),
+                        'deposit_qr' => admin_trans('message.target.deposit_qr'),
+                        'lottery_game' => admin_trans('message.target.lottery_game'),
+                        'lottery_random' => admin_trans('message.target.lottery_random'),
+                        'lottery_fixed' => admin_trans('message.target.lottery_fixed'),
+                        'lottery_ticket_reward' => admin_trans('message.target.lottery_ticket_reward'),
+                        'machine_up' => admin_trans('message.target.machine_up'),
+                        'machine_down' => admin_trans('message.target.machine_down'),
+                        'birthday_bonus' => admin_trans('message.target.birthday_bonus'),
+                        'vip_upgrade_bonus' => admin_trans('message.target.vip_upgrade_bonus'),
+                        'vip_daily_login_bonus' => admin_trans('message.target.vip_daily_login_bonus'),
+                        'activity_bonus' => admin_trans('message.target.activity_bonus'),
+                        'register_present' => admin_trans('message.target.register_present'),
+                        'profit' => admin_trans('message.target.profit'),
+                        'national_invite' => admin_trans('message.target.national_invite'),
+                        'national_promoter' => admin_trans('message.target.national_promoter'),
+                        'player_recharge_record' => admin_trans('message.target.player_recharge_record'),
+                        'damage_rebate' => admin_trans('message.target.damage_rebate'),
+                        'reverse_water' => admin_trans('message.target.reverse_water'),
+                        'reverse_water_pool' => admin_trans('message.target.reverse_water_pool'),
+                        'machine_put_coins' => admin_trans('message.target.machine_put_coins'),
+                        'coin_add' => admin_trans('message.target.coin_add'),
+                        'coin_deduct' => admin_trans('message.target.coin_deduct'),
+                        'agent_in' => admin_trans('message.target.agent_in'),
+                        'agent_out' => admin_trans('message.target.agent_out'),
+                        'storage_recharge' => admin_trans('message.target.storage_recharge'),
+                        'retry_refund' => admin_trans('message.target.retry_refund'),
+                        'leaderboard_reward' => admin_trans('message.target.leaderboard_reward'),
+                    ]);
                 $filter->select('search_type')
                     ->showSearch()
                     ->style(['width' => '200px'])

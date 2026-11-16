@@ -29,7 +29,14 @@ return [
     'status' => [
         'normal' => '正常',
         'disabled' => '無効',
+        'hidden' => '撤店済み',
         'not_set' => '未設定',
+    ],
+
+    // 撤店非表示
+    'hide' => [
+        'enabled' => '撤店非表示に設定しました',
+        'disabled' => '撤店非表示を解除しました',
     ],
 
     // フォーム

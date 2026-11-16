@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Store Profit Report',
+    'titleFinance' => 'Store Financial Report',
 
     // Fields
     'fields' => [
@@ -11,7 +12,7 @@ return [
         'store_username' => 'Login Account',
         'recharge_amount' => 'Total Open Score',
         'withdraw_amount' => 'Total Wash Score',
-        'machine_put_point' => 'Cash In',
+        'machine_put_point' => 'Total Cash In',
         'lottery_amount' => 'Lottery',
         'subtotal' => 'Subtotal',
         'agent_commission' => 'Agent Commission %',

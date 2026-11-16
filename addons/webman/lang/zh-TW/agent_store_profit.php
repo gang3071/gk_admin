@@ -2,6 +2,7 @@
 
 return [
     'title' => '店家分潤報表',
+    'titleFinance' => '店家帳務報表',
 
     // 欄位
     'fields' => [
@@ -11,7 +12,7 @@ return [
         'store_username' => '登入帳號',
         'recharge_amount' => '累計開分',
         'withdraw_amount' => '累計洗分',
-        'machine_put_point' => '投鈔',
+        'machine_put_point' => '累計投鈔',
         'lottery_amount' => '彩金',
         'subtotal' => '小計',
         'agent_commission' => '代理抽成比例',

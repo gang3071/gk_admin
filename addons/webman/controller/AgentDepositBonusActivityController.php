@@ -41,8 +41,10 @@ class AgentDepositBonusActivityController
             $grid->bordered(true);
 
             // 只显示当前代理的活动
+            // 子帳號顯示上層代理的活動（避免看到其他代理）；上層代理顯示自己的
             $currentAdmin = Admin::user();
-            $grid->model()->where('agent_id', $currentAdmin->id)
+            $agentId = $currentAdmin->isSubAccount() ? (int) $currentAdmin->parent_admin_id : (int) $currentAdmin->id;
+            $grid->model()->where('agent_id', $agentId)
                 ->with(['tiers'])
                 ->orderBy('created_at', 'desc');
 
@@ -294,8 +296,9 @@ class AgentDepositBonusActivityController
     public function detail(int $id): Detail
     {
         $currentAdmin = Admin::user();
+        $agentId = $currentAdmin->isSubAccount() ? (int) $currentAdmin->parent_admin_id : (int) $currentAdmin->id;
         $data = DepositBonusActivity::where('id', $id)
-            ->where('agent_id', $currentAdmin->id)
+            ->where('agent_id', $agentId)
             ->with(['tiers'])
             ->first();
 

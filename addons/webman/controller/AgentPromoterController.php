@@ -87,6 +87,11 @@ class AgentPromoterController
                 $q->where('player_promoter.name', 'like', '%' . $requestFilter['name'] . '%');
             })
             ->where('channel.is_offline', 1);
+        // 子帳號只顯示被指派店家的推廣員資料
+        $subStoreIds = Admin::user()->subAccountStoreIds();
+        if ($subStoreIds !== null) {
+            $query->whereIn('player.store_admin_id', $subStoreIds);
+        }
         $totalNum = clone $query;
         $total = $totalNum->count();
         $list = $query
@@ -115,8 +120,11 @@ class AgentPromoterController
                     ->whereNull('deleted_at')
                     ->pluck('id')->toArray();
                 $totalData = PlayerDeliveryRecord::query()
-                    ->whereHas('player', function ($query) use ($children) {
+                    ->whereHas('player', function ($query) use ($children, $subStoreIds) {
                         $query->whereIn('recommend_id', $children);
+                        if ($subStoreIds !== null) {
+                            $query->whereIn('store_admin_id', $subStoreIds);
+                        }
                     })
                     ->when(!empty($item['last_settlement_timestamp']), function ($query) use ($item) {
                         $query->where('player_delivery_record.created_at', '>=', $item['last_settlement_timestamp']);
@@ -151,13 +159,19 @@ class AgentPromoterController
                 }
                 $ratio = $item['ratio'] ?? 0;
                 $money = PlayerPlatformCash::query()
-                    ->whereHas('player', function ($query) use ($children) {
+                    ->whereHas('player', function ($query) use ($children, $subStoreIds) {
                         $query->whereIn('recommend_id', $children);
+                        if ($subStoreIds !== null) {
+                            $query->whereIn('store_admin_id', $subStoreIds);
+                        }
                     })->sum('money');
             } else {
                 $totalData = PlayerDeliveryRecord::query()
-                    ->whereHas('player', function ($query) use ($item) {
+                    ->whereHas('player', function ($query) use ($item, $subStoreIds) {
                         $query->where('recommend_id', $item['player_id']);
+                        if ($subStoreIds !== null) {
+                            $query->whereIn('store_admin_id', $subStoreIds);
+                        }
                     })
                     ->when(!empty($item['last_settlement_timestamp']), function ($query) use ($item) {
                         $query->where('created_at', '>=', $item['last_settlement_timestamp']);
@@ -172,8 +186,11 @@ class AgentPromoterController
                 $machinePutPoint = bcadd(0, $totalData['total_point'] ?? 0, 2);
                 $presentOutAmount = bcadd(0, $totalData['total_out'] ?? 0, 2);
                 $money = PlayerPlatformCash::query()
-                    ->whereHas('player', function ($query) use ($item) {
+                    ->whereHas('player', function ($query) use ($item, $subStoreIds) {
                         $query->where('recommend_id', $item['player_id']);
+                        if ($subStoreIds !== null) {
+                            $query->whereIn('store_admin_id', $subStoreIds);
+                        }
                     })->sum('money');
                 $totalPoint = bcsub(bcadd($machinePutPoint, $presentInAmount, 2), $presentOutAmount, 2);
                 $selfProfitAmount = bcmul($totalPoint, (100 - $ratio) / 100, 2);
@@ -437,8 +454,18 @@ class AgentPromoterController
      */
     public function playerInfo($player_id): Detail
     {
+        $subStoreIds = Admin::user()->subAccountStoreIds();
+        $promoterQuery = PlayerPromoter::query()->where('player_id', $player_id);
+        if ($subStoreIds !== null) {
+            $promoterQuery->whereHas('player', function ($q) use ($subStoreIds) {
+                $q->whereIn('store_admin_id', $subStoreIds);
+            });
+        }
         /** @var PlayerPromoter $playerPromoter */
-        $playerPromoter = PlayerPromoter::query()->where('player_id', $player_id)->first();
+        $playerPromoter = $promoterQuery->first();
+        if (!$playerPromoter) {
+            throw new \Exception('無權限查看此推廣員');
+        }
         if ($playerPromoter->recommend_id == 0) {
             $children = Player::query()
                 ->where('recommend_id', $playerPromoter->player_id)
@@ -446,8 +473,11 @@ class AgentPromoterController
                 ->whereNull('deleted_at')
                 ->pluck('id')->toArray();
             $totalData = PlayerDeliveryRecord::query()
-                ->whereHas('player', function ($query) use ($children) {
+                ->whereHas('player', function ($query) use ($children, $subStoreIds) {
                     $query->whereIn('recommend_id', $children);
+                    if ($subStoreIds !== null) {
+                        $query->whereIn('store_admin_id', $subStoreIds);
+                    }
                 })
                 ->selectRaw('
                     sum(IF(type = ' . PlayerDeliveryRecord::TYPE_PRESENT_IN . ', amount, 0)) as total_in,
@@ -456,8 +486,11 @@ class AgentPromoterController
                 ')->first();
         } else {
             $totalData = PlayerDeliveryRecord::query()
-                ->whereHas('player', function ($query) use ($playerPromoter) {
+                ->whereHas('player', function ($query) use ($playerPromoter, $subStoreIds) {
                     $query->where('recommend_id', $playerPromoter->player_id);
+                    if ($subStoreIds !== null) {
+                        $query->whereIn('store_admin_id', $subStoreIds);
+                    }
                 })
                 ->selectRaw('
                     sum(IF(type = ' . PlayerDeliveryRecord::TYPE_PRESENT_IN . ', amount, 0)) as total_in,
@@ -528,6 +561,12 @@ class AgentPromoterController
             $grid->title(admin_trans('agent_promoter.settlement_records_title'));
             $grid->model()->with(['agent_promoter'])
                 ->orderBy('id', 'desc');
+            // 子帳號只顯示被指派店家的分潤結算紀錄
+            $subStoreIds = Admin::user()->subAccountStoreIds();
+            if ($subStoreIds !== null) {
+                $grid->model()->where('type', StoreAgentProfitRecord::TYPE_STORE)
+                    ->whereIn('agent_admin_user_id', $subStoreIds);
+            }
             $grid->autoHeight();
             $grid->bordered(true);
             $grid->column('id', 'ID')->fixed(true)->align('center');
@@ -639,8 +678,14 @@ class AgentPromoterController
         if (!isset($selected)) {
             return message_error(admin_trans('common.please_select_settlement_targets'));
         }
+        $subStoreIds = Admin::user()->subAccountStoreIds();
         $playerPromoter = PlayerPromoter::query()
             ->whereIn('id', $selected)
+            ->when($subStoreIds !== null, function ($query) use ($subStoreIds) {
+                $query->whereHas('player', function ($q) use ($subStoreIds) {
+                    $q->whereIn('store_admin_id', $subStoreIds);
+                });
+            })
             ->get();
         /** @var PlayerPromoter $item */
         foreach ($playerPromoter as $item) {
@@ -674,7 +719,10 @@ class AgentPromoterController
         
         return Form::create([], function (Form $form) use ($id) {
             /** @var PlayerPromoter $playerPromoter */
-            $playerPromoter = PlayerPromoter::query()->where('player_id', $id)->first();
+            $playerPromoter = $this->scopedPromoterQuery($id)->first();
+            if (!$playerPromoter) {
+                throw new \Exception('無權限查看此推廣員');
+            }
             /** @var StoreAgentProfitRecord $storeAgentProfitRecord */
             $storeAgentProfitRecord = StoreAgentProfitRecord::query()->where('player_id', $id)->orderBy('id',
                 'desc')->first();
@@ -741,7 +789,7 @@ class AgentPromoterController
             ])->title(admin_trans('agent_promoter.form.last_settlement_time')));
             $form->saving(function (Form $form) use ($id) {
                 /** @var PlayerPromoter $playerPromoter */
-                $playerPromoter = PlayerPromoter::query()->where('player_id', $id)->first();
+                $playerPromoter = $this->scopedPromoterQuery($id)->first();
                 if (empty($playerPromoter)) {
                     return message_error(admin_trans('player_promoter.not_fount'));
                 }
@@ -778,5 +826,22 @@ class AgentPromoterController
                 return message_success(admin_trans('common.settlement_success'));
             });
         });
+    }
+
+    /**
+     * 依目前登入者的資料範圍取得推廣員查詢（子帳號只查被指派店家）
+     * @param int $playerId 玩家ID
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    private function scopedPromoterQuery($playerId)
+    {
+        $query = PlayerPromoter::query()->where('player_id', $playerId);
+        $subStoreIds = Admin::user()->subAccountStoreIds();
+        if ($subStoreIds !== null) {
+            $query->whereHas('player', function ($q) use ($subStoreIds) {
+                $q->whereIn('store_admin_id', $subStoreIds);
+            });
+        }
+        return $query;
     }
 }

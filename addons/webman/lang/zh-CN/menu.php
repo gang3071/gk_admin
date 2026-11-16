@@ -65,6 +65,7 @@ return [
         'machine_report' => '机台报表',
         'up_and_down_report' => '上下分报表',
         'store_profit_report' => '店家分润报表',
+        'store_finance_report' => '店家帐务报表',
         //客户端管理
         'client_manager' => '客户端管理',
         'rotation_chart_manager' => '轮播图管理',
@@ -272,5 +273,6 @@ return [
         'limit_management' => '限红管理',
         'limit_group_management' => '限红组管理',
         'platform_config' => '平台配置',
+        'agent_sub_account' => '子账号管理',
     ]
 ];

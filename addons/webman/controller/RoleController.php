@@ -5,6 +5,7 @@ namespace addons\webman\controller;
 use addons\webman\Admin;
 use addons\webman\model\AdminDepartment;
 use addons\webman\model\AdminRole;
+use addons\webman\model\AdminRoleUsers;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\Form;
@@ -13,6 +14,7 @@ use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
+use support\Cache;
 
 
 /**
@@ -336,6 +338,8 @@ class RoleController
                         $model::insert($value);
                     }
                 }
+                // 權限變更後清除該角色使用者的權限快取，避免已登入帳號沿用舊權限
+                $this->clearRoleUserPermissionCache($id);
             });
         });
     }
@@ -398,8 +402,24 @@ class RoleController
                         $model::insert($value);
                     }
                 }
+                // 權限變更後清除該角色使用者的權限快取，避免已登入帳號沿用舊權限
+                $this->clearRoleUserPermissionCache($id);
             });
         });
+    }
+
+    /**
+     * 清除指定角色下所有使用者的權限快取
+     * 角色功能權限變更後，已登入的使用者需重新讀取權限，否則會沿用舊快取
+     * @param int|string $roleId 角色ID
+     * @return void
+     */
+    private function clearRoleUserPermissionCache($roleId): void
+    {
+        $userIds = AdminRoleUsers::query()->where('role_id', $roleId)->pluck('user_id');
+        foreach ($userIds as $userId) {
+            Cache::delete('ADMIN_PERMISSIONS_' . $userId);
+        }
     }
 
     public function commonAuthForm($id, $model, $tree, $type, $field, $label): Form

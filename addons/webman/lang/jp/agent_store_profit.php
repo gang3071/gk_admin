@@ -2,6 +2,7 @@
 
 return [
     'title' => '店舗分潤レポート',
+    'titleFinance' => '店舗会計報告書',
 
     // フィールド
     'fields' => [
@@ -11,7 +12,7 @@ return [
         'store_username' => 'ログインアカウント',
         'recharge_amount' => '累計開分',
         'withdraw_amount' => '累計洗分',
-        'machine_put_point' => '投鈔',
+        'machine_put_point' => '累計投鈔',
         'lottery_amount' => '宝くじ',
         'subtotal' => '小計',
         'agent_commission' => '代理手数料率',

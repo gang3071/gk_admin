@@ -65,6 +65,7 @@ return [
         'machine_report' => 'Machine report',
         'up_and_down_report' => 'Up and down report',
         'store_profit_report' => 'Store Profit Report',
+        'store_finance_report' => 'Store Financial Report',
         //Client management
         'client_manager' => 'Client management',
         'rotation_chart_manager' => 'rotation chart management',
@@ -272,5 +273,6 @@ return [
         'limit_management' => 'Limit Management',
         'limit_group_management' => 'Limit Group Management',
         'platform_config' => 'Platform Configuration',
+        'agent_sub_account' => 'Sub-accounts',
     ]
 ];

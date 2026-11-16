@@ -107,8 +107,8 @@ class GamePlatformController
 
             // 默认限红组列
             $grid->column('default_limit_group', '默认限红组')->display(function ($value, GamePlatform $data) {
-                // 只有ATG、RSG和DG平台显示默认限红组
-                if (!in_array($data->code, ['ATG', 'RSG', 'DG'])) {
+                // 只有ATG、RSG、DG 及 T9 電子平台显示默认限红组
+                if (!in_array($data->code, ['ATG', 'RSG', 'DG', 'TNINE_SLOT'])) {
                     return '-';
                 }
 
@@ -224,7 +224,7 @@ class GamePlatformController
             if ($form->isEdit()) {
                 $platformId = $form->driver()->get('id');
                 $platformCode = $form->driver()->get('code');
-                if (in_array($platformCode, ['ATG', 'RSG', 'DG'])) {
+                if (in_array($platformCode, ['ATG', 'RSG', 'DG', 'TNINE_SLOT'])) {
                     $form->select('default_limit_group_id', '默认限红组')
                         ->options($this->getLimitGroupOptionsForPlatform($platformId))
                         ->help('为该平台设置默认限红组，当店家未配置限红时使用');
@@ -277,8 +277,8 @@ class GamePlatformController
                 $platformCacheKey = "game_platform:{$platformCode}";
                 $redis->del($platformCacheKey);
 
-                // 2. 如果是ATG/RSG/DG平台，清理相关限红组缓存
-                if (in_array($platformCode, ['ATG', 'RSG', 'DG'])) {
+                // 2. 如果是ATG/RSG/DG/T9平台，清理相关限红组缓存
+                if (in_array($platformCode, ['ATG', 'RSG', 'DG', 'TNINE_SLOT'])) {
                     // 清理平台限红组配置缓存
                     $platformLimitConfigKey = "platform_limit_configs:{$platformId}";
                     $redis->del($platformLimitConfigKey);

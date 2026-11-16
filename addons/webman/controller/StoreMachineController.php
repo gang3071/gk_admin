@@ -91,9 +91,14 @@ class StoreMachineController
                 $grid->model()->where('admin_users.id', $filterData['store_id_custom']);
             }
 
-            // 状态筛选
+            // 状态筛选（正常/停用/已撤店）
             if (isset($filterData['status_custom']) && $filterData['status_custom'] !== null && $filterData['status_custom'] !== '') {
-                $grid->model()->where('admin_users.status', $filterData['status_custom']);
+                if ($filterData['status_custom'] === 'hidden') {
+                    $grid->model()->where('admin_users.is_hide', 1);
+                } else {
+                    $grid->model()->where('admin_users.status', $filterData['status_custom'])
+                        ->where('admin_users.is_hide', 0);
+                }
             }
 
             // 用户名筛选
@@ -171,13 +176,17 @@ class StoreMachineController
                 )
                 ->width(120)->align('center');
 
-            $grid->column('status', admin_trans('store_machine.fields.status'))->display(function ($value) {
-                return match ($value) {
+            $grid->column('status', admin_trans('store_machine.fields.status'))->display(function ($value, $data) {
+                // 狀態只顯示一類：已撤店優先，否則顯示正常/停用
+                if (!empty($data['is_hide'])) {
+                    return Tag::create(admin_trans('store_machine.status.hidden'))->color('volcano');
+                }
+                return match ((int) $value) {
                     0 => Tag::create(admin_trans('store_machine.status.disabled'))->color('red'),
                     1 => Tag::create(admin_trans('store_machine.status.normal'))->color('green'),
                     default => '',
                 };
-            })->width(80)->align('center');
+            })->width(120)->align('center');
 
             $grid->column('created_at', admin_trans('store_machine.fields.created_at'))->width(160)->align('center');
 
@@ -192,7 +201,8 @@ class StoreMachineController
                     ->placeholder(admin_trans('store_machine.placeholder.status'))
                     ->options([
                         1 => admin_trans('store_machine.status.normal'),
-                        0 => admin_trans('store_machine.status.disabled')
+                        0 => admin_trans('store_machine.status.disabled'),
+                        'hidden' => admin_trans('store_machine.status.hidden'),
                     ])
                     ->style(['width' => '150px']);
 
@@ -248,6 +258,21 @@ class StoreMachineController
                     Button::create('开分配置')
                         ->drawer([$this, 'openScoreSettingList'], ['store_id' => $data['id']])
                         ->type('default')
+                        ->size('small')
+                );
+
+                // 撤店隱藏 / 取消撤店
+                $isHidden = !empty($data['is_hide']);
+                $actions->append(
+                    Button::create($isHidden ? '取消撤店' : '撤店隱藏')
+                        ->confirm(
+                            $isHidden
+                                ? '確定取消此店家的撤店隱藏？'
+                                : '確定將此店家設為撤店隱藏？分潤報表將不再顯示此店家。',
+                            [$this, 'toggleHide?store_id=' . $data['id']]
+                        )
+                        ->gridRefresh()
+                        ->type($isHidden ? 'default' : 'danger')
                         ->size('small')
                 );
             });
@@ -630,6 +655,38 @@ class StoreMachineController
     }
 
     /**
+     * 切換撤店隱藏（撤店後分潤報表不再顯示該店家）
+     * @auth true
+     * @group channel
+     */
+    public function toggleHide()
+    {
+        $storeId = (int)request()->input('store_id');
+        $currentDepartmentId = Admin::user()->department_id;
+
+        $store = AdminUser::query()
+            ->join('admin_users as parent_admin', 'admin_users.parent_admin_id', '=', 'parent_admin.id')
+            ->where('admin_users.id', $storeId)
+            ->where('admin_users.type', AdminUser::TYPE_STORE)
+            ->where('parent_admin.department_id', $currentDepartmentId)
+            ->select('admin_users.*')
+            ->first();
+
+        if (!$store) {
+            return message_error(admin_trans('admin.not_found'));
+        }
+
+        $store->is_hide = $store->is_hide ? 0 : 1;
+        $store->save();
+
+        return message_success(
+            $store->is_hide
+                ? admin_trans('store_machine.hide.enabled')
+                : admin_trans('store_machine.hide.disabled')
+        );
+    }
+
+    /**
      * 限红组配置表单
      * @auth true
      * @group channel
@@ -664,13 +721,14 @@ class StoreMachineController
 
             $form->hidden('store_id')->value($storeId);
 
-            // 获取ATG、RSG和DG平台
+            // 获取ATG、RSG、DG 及 T9 電子平台
             $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
             $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
             $dgPlatform = GamePlatform::query()->where('code', 'DG')->where('status', 1)->first();
+            $t9Platform = GamePlatform::query()->where('code', 'TNINE_SLOT')->where('status', 1)->first();
 
-            if (!$atgPlatform && !$rsgPlatform && !$dgPlatform) {
-                $form->push(Html::markdown('><font size=2 color="#999">暂无可用的游戏平台（ATG/RSG/DG）</font>'));
+            if (!$atgPlatform && !$rsgPlatform && !$dgPlatform && !$t9Platform) {
+                $form->push(Html::markdown('><font size=2 color="#999">暂无可用的游戏平台（ATG/RSG/DG/T9）</font>'));
             } else {
                 // ATG平台配置
                 if ($atgPlatform) {
@@ -710,6 +768,19 @@ class StoreMachineController
                         ->value($dgConfig ? $dgConfig->limit_group_id : null)
                         ->help('选择DG平台的限红组，选择「不配置限红组」将清除该平台的限红配置');
                 }
+
+                // T9 電子平台配置
+                if ($t9Platform) {
+                    $form->divider()->content('T9 電子平台限紅組配置');
+
+                    $t9Config = $existingConfigs->get($t9Platform->id);
+                    $t9Options = ['' => '不配置限紅組'] + $this->getLimitGroupOptionsForPlatform($t9Platform->id);
+
+                    $form->select('t9_limit_group_id', "限紅組 ({$t9Platform->name})")
+                        ->options($t9Options)
+                        ->value($t9Config ? $t9Config->limit_group_id : null)
+                        ->help('選擇T9電子平台的限紅組，選擇「不配置限紅組」將清除該平台的限紅配置');
+                }
             }
         });
     }
@@ -732,10 +803,11 @@ class StoreMachineController
             return message_error('店家ID不能为空');
         }
 
-        // 获取ATG、RSG和DG平台
+        // 获取ATG、RSG、DG 及 T9 電子平台
         $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
         $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
         $dgPlatform = GamePlatform::query()->where('code', 'DG')->where('status', 1)->first();
+        $t9Platform = GamePlatform::query()->where('code', 'TNINE_SLOT')->where('status', 1)->first();
 
         DB::beginTransaction();
         try {
@@ -787,6 +859,22 @@ class StoreMachineController
                     $updatedCount++;
                 } else {
                     $errors[] = "DG: {$result['message']}";
+                }
+            }
+
+            // 处理 T9 電子平台配置
+            if ($t9Platform) {
+                $result = $this->savePlatformLimitGroup(
+                    $storeId,
+                    $t9Platform->id,
+                    $t9Platform->code,
+                    $data['t9_limit_group_id'] ?? null
+                );
+
+                if ($result['success']) {
+                    $updatedCount++;
+                } else {
+                    $errors[] = "T9: {$result['message']}";
                 }
             }
 

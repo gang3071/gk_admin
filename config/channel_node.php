@@ -670,6 +670,15 @@ return [
         'title' => '获取代理选项',
     ],
     [
+        'id' => 'addons\webman\controller\StoreMachineController\toggleHide',
+        'pid' => 'addons\webman\controller\StoreMachineController\index',
+        'action' => 'toggleHide',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-StoreMachineController/toggleHide',
+        'title' => '撤店隱藏',
+    ],
+    [
         'id' => 'addons\webman\controller\StoreMachineController\limitGroupForm',
         'pid' => 'addons\webman\controller\StoreMachineController\index',
         'action' => 'limitGroupForm',
