@@ -92,10 +92,10 @@
                   <a-col :span="8">
                     <div class="highlight-stat">
                       <div class="stat-label">{{ trans.panel.machine_win_loss }}</div>
-                      <div class="stat-value" :class="amountClass(panel.machine_win_loss)">
+                      <div :class="['stat-value', amountClass(panel.machine_win_loss)]">
                         {{ fmt(panel.machine_win_loss) }}
                       </div>
-                      <div class="profit-tag" :class="profitTagClass(panel.machine_win_loss)">
+                      <div :class="['profit-tag', profitTagClass(panel.machine_win_loss)]">
                         {{ profitLabel(panel.machine_win_loss) }}
                       </div>
                     </div>
@@ -103,10 +103,10 @@
                   <a-col :span="8">
                     <div class="highlight-stat">
                       <div class="stat-label">{{ trans.panel.electronic_win_loss }}</div>
-                      <div class="stat-value" :class="amountClass(panel.electronic_game_win_loss)">
+                      <div :class="['stat-value', amountClass(panel.electronic_game_win_loss)]">
                         {{ fmt(panel.electronic_game_win_loss) }}
                       </div>
-                      <div class="profit-tag" :class="profitTagClass(panel.electronic_game_win_loss)">
+                      <div :class="['profit-tag', profitTagClass(panel.electronic_game_win_loss)]">
                         {{ profitLabel(panel.electronic_game_win_loss) }}
                       </div>
                     </div>
@@ -114,10 +114,10 @@
                   <a-col :span="8">
                     <div class="highlight-stat highlight-net">
                       <div class="stat-label">{{ trans.panel.net_revenue }}</div>
-                      <div class="stat-value" :class="amountClass(calcNetRevenue(panel))">
+                      <div :class="['stat-value', amountClass(calcNetRevenue(panel))]">
                         {{ fmt(calcNetRevenue(panel)) }}
                       </div>
-                      <div class="profit-tag" :class="profitTagClass(calcNetRevenue(panel))">
+                      <div :class="['profit-tag', profitTagClass(calcNetRevenue(panel))]">
                         {{ profitLabel(calcNetRevenue(panel)) }}
                       </div>
                     </div>
@@ -133,12 +133,11 @@
                   <div
                     v-for="(label, typeId) in trans.cost_types"
                     :key="typeId"
-                    class="cost-item"
-                    :class="{ 'item-active': activeTypeId == typeId }"
+                    :class="['cost-item', { 'item-active': activeTypeId == typeId }]"
                     @click="selectType(typeId)"
                   >
                     <span class="cost-label">{{ label }}</span>
-                    <span class="cost-amount" :class="parseFloat(panel.delivery_types[typeId] || 0) > 0 ? 'amount-neg' : 'amount-zero'">
+                    <span :class="['cost-amount', parseFloat(panel.delivery_types[typeId] || 0) > 0 ? 'amount-neg' : 'amount-zero']">
                       {{ fmt(panel.delivery_types[typeId] || '0') }}
                     </span>
                   </div>
@@ -157,8 +156,7 @@
                   <div
                     v-for="(label, typeId) in trans.wallet_types"
                     :key="typeId"
-                    class="cost-item wallet-item"
-                    :class="{ 'item-active': activeTypeId == typeId }"
+                    :class="['cost-item', 'wallet-item', { 'item-active': activeTypeId == typeId }]"
                     @click="selectType(typeId)"
                   >
                     <span class="cost-label">{{ label }}</span>

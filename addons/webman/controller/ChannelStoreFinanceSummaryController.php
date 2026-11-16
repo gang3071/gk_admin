@@ -51,6 +51,7 @@ class ChannelStoreFinanceSummaryController
                         'net_revenue'         => $t('panel.net_revenue'),
                         'operating_cost'      => $t('panel.operating_cost'),
                         'cost_detail'         => $t('panel.cost_detail'),
+                        'wallet_detail'       => $t('panel.wallet_detail'),
                         'total'               => $t('panel.total'),
                         'profit'              => $t('panel.profit'),
                         'loss'                => $t('panel.loss'),
