@@ -6,6 +6,7 @@ use addons\webman\Admin;
 use addons\webman\grid\SummaryGrid;
 use addons\webman\model\AdminUser;
 use addons\webman\model\GameType;
+use addons\webman\model\PlayGameRecord;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerLotteryRecord;
@@ -94,27 +95,22 @@ class ChannelStoreFinanceSummaryController
         }
 
         // 批量查询各类财务数据
-        $deliveryByStore = $this->batchQueryDeliveryData($playerIdsByStore, $dateType, $createdAtStart, $createdAtEnd);
-        $lotteryByStore  = $this->batchQueryLotteryData($playerIdsByStore, $dateType, $createdAtStart, $createdAtEnd);
-        $couponByStore   = $this->batchQueryCouponData($storeIds, $dateType, $createdAtStart, $createdAtEnd);
-        $rebateByStore   = $this->batchQueryRebateData($playerIdsByStore, $dateType, $createdAtStart, $createdAtEnd);
+        $deliveryByStore      = $this->batchQueryDeliveryData($playerIdsByStore, $dateType, $createdAtStart, $createdAtEnd);
+        $lotteryByStore       = $this->batchQueryLotteryData($playerIdsByStore, $dateType, $createdAtStart, $createdAtEnd);
+        $couponByStore        = $this->batchQueryCouponData($storeIds, $dateType, $createdAtStart, $createdAtEnd);
+        $gameWinLossByStore   = $this->batchQueryGameWinLoss($playerIdsByStore, $dateType, $createdAtStart, $createdAtEnd);
+        $elecRebateByStore    = $this->batchQueryElecRebate($playerIdsByStore, $dateType, $createdAtStart, $createdAtEnd);
 
         // 组装报表数据
         $reportData = [];
         foreach ($stores as $store) {
             $storeId = $store->id;
             $agent   = $agents->get($store->parent_admin_id);
-            $d = $deliveryByStore[$storeId] ?? null;
-            $l = $lotteryByStore[$storeId] ?? null;
-            $c = $couponByStore[$storeId] ?? null;
-            $r = $rebateByStore[$storeId] ?? null;
-
-            // 电子游戏输赢 = 转出到电子游戏 - 电子游戏转回 (平台视角，正数=平台盈利)
-            $electronicGameWinLoss = bcsub(
-                (string)floatval($d->game_platform_out ?? 0),
-                (string)floatval($d->game_platform_in ?? 0),
-                2
-            );
+            $d  = $deliveryByStore[$storeId] ?? null;
+            $l  = $lotteryByStore[$storeId] ?? null;
+            $c  = $couponByStore[$storeId] ?? null;
+            $g  = $gameWinLossByStore[$storeId] ?? null;
+            $er = $elecRebateByStore[$storeId] ?? null;
 
             // 实体机输赢 = 开分 + 投钞 - 洗分 (平台视角)
             $machineWinLoss = bcsub(
@@ -132,15 +128,15 @@ class ChannelStoreFinanceSummaryController
                 'store_name'               => $store->nickname ?: $store->username,
                 'store_username'           => $store->username,
                 'agent_name'               => $agent ? ($agent->nickname ?: $agent->username) : '-',
-                'electronic_game_win_loss' => floatval($electronicGameWinLoss),
+                'electronic_game_win_loss' => floatval($g->win_loss ?? 0),
                 'machine_win_loss'         => floatval($machineWinLoss),
                 'lottery_ticket_sent'      => floatval($d->lottery_ticket_sent ?? 0),
                 'electronic_jackpot'       => floatval($l->electronic_jackpot ?? 0),
                 'machine_jackpot'          => floatval($l->machine_jackpot ?? 0),
                 'wallet_increase'          => floatval($d->wallet_increase ?? 0),
                 'wallet_decrease'          => floatval($d->wallet_decrease ?? 0),
-                'machine_rebate'           => floatval($r->machine_rebate ?? 0),
-                'electronic_rebate'        => floatval($d->electronic_rebate ?? 0),
+                'machine_rebate'           => 0,
+                'electronic_rebate'        => floatval($er->reverse_water ?? 0),
                 'coupon_sent'              => floatval($c->coupon_sent ?? 0),
             ];
         }
@@ -211,42 +207,33 @@ class ChannelStoreFinanceSummaryController
 
         $rows = $query->selectRaw("
             player_id,
-            SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT . " THEN `amount` ELSE 0 END) AS game_platform_out,
-            SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN . " THEN `amount` ELSE 0 END) AS game_platform_in,
             SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " AND `source` = 'artificial_recharge' THEN `amount` ELSE 0 END) AS open_score,
             SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put,
             SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `source` = 'channel_withdrawal' THEN `amount` ELSE 0 END) AS withdraw,
             SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . " THEN `amount` ELSE 0 END) AS lottery_ticket_sent,
             SUM(CASE WHEN `type` IN ({$increaseTypes}) THEN `amount` ELSE 0 END) AS wallet_increase,
-            SUM(CASE WHEN `type` IN ({$decreaseTypes}) THEN `amount` ELSE 0 END) AS wallet_decrease,
-            SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_REVERSE_WATER . " THEN `amount` ELSE 0 END) AS electronic_rebate
+            SUM(CASE WHEN `type` IN ({$decreaseTypes}) THEN `amount` ELSE 0 END) AS wallet_decrease
         ")->groupBy('player_id')->get()->keyBy('player_id');
 
         $result = [];
         foreach ($playerIdsByStore as $storeId => $playerIds) {
             $agg = (object)[
-                'game_platform_out'   => 0.0,
-                'game_platform_in'    => 0.0,
                 'open_score'          => 0.0,
                 'machine_put'         => 0.0,
                 'withdraw'            => 0.0,
                 'lottery_ticket_sent' => 0.0,
                 'wallet_increase'     => 0.0,
                 'wallet_decrease'     => 0.0,
-                'electronic_rebate'   => 0.0,
             ];
             foreach ($playerIds as $pid) {
                 $row = $rows->get($pid);
                 if ($row) {
-                    $agg->game_platform_out   += floatval($row->game_platform_out);
-                    $agg->game_platform_in    += floatval($row->game_platform_in);
                     $agg->open_score          += floatval($row->open_score);
                     $agg->machine_put         += floatval($row->machine_put);
                     $agg->withdraw            += floatval($row->withdraw);
                     $agg->lottery_ticket_sent += floatval($row->lottery_ticket_sent);
                     $agg->wallet_increase     += floatval($row->wallet_increase);
                     $agg->wallet_decrease     += floatval($row->wallet_decrease);
-                    $agg->electronic_rebate   += floatval($row->electronic_rebate);
                 }
             }
             $result[$storeId] = $agg;
@@ -327,10 +314,52 @@ class ChannelStoreFinanceSummaryController
     }
 
     /**
-     * 批量查询实体机台返水数据（1条SQL）
-     * 数据来源：player_reverse_water_detail 表（按日期字段过滤）
+     * 批量查询电子游戏输赢（来自 play_game_record.diff，1条SQL）
+     * diff > 0 表示玩家输（平台盈利），diff < 0 表示玩家赢（平台亏损）
      */
-    private function batchQueryRebateData(
+    private function batchQueryGameWinLoss(
+        array $playerIdsByStore,
+        ?string $dateType,
+        ?string $start,
+        ?string $end
+    ): array {
+        $allPlayerIds = array_merge(...array_values($playerIdsByStore ?: [[]]));
+
+        if (empty($allPlayerIds)) {
+            return [];
+        }
+
+        $query = PlayGameRecord::query()
+            ->whereIn('player_id', $allPlayerIds)
+            ->where('type', PlayGameRecord::TYPE_BET)
+            ->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED);
+        $this->applyTimeFilter($query, 'created_at', $dateType, $start, $end);
+
+        $rows = $query->selectRaw('player_id, SUM(diff) AS win_loss')
+            ->groupBy('player_id')
+            ->get()
+            ->keyBy('player_id');
+
+        $result = [];
+        foreach ($playerIdsByStore as $storeId => $playerIds) {
+            $total = 0.0;
+            foreach ($playerIds as $pid) {
+                $row = $rows->get($pid);
+                if ($row) {
+                    $total += floatval($row->win_loss);
+                }
+            }
+            $result[$storeId] = (object)['win_loss' => $total];
+        }
+
+        return $result;
+    }
+
+    /**
+     * 批量查询电子游戏返水（来自 player_reverse_water_detail，1条SQL）
+     * 按 date 字段（日期格式）过滤
+     */
+    private function batchQueryElecRebate(
         array $playerIdsByStore,
         ?string $dateType,
         ?string $start,
@@ -344,7 +373,6 @@ class ChannelStoreFinanceSummaryController
 
         $query = PlayerReverseWaterDetail::query()->whereIn('player_id', $allPlayerIds);
 
-        // 返水表按 date 字段（日期格式）过滤
         if (!empty($dateType)) {
             $query->where(getDateWhere($dateType, 'date'));
         } else {
@@ -356,7 +384,7 @@ class ChannelStoreFinanceSummaryController
             }
         }
 
-        $rows = $query->selectRaw('player_id, SUM(reverse_water) AS machine_rebate')
+        $rows = $query->selectRaw('player_id, SUM(reverse_water) AS reverse_water')
             ->groupBy('player_id')
             ->get()
             ->keyBy('player_id');
@@ -367,10 +395,10 @@ class ChannelStoreFinanceSummaryController
             foreach ($playerIds as $pid) {
                 $row = $rows->get($pid);
                 if ($row) {
-                    $total += floatval($row->machine_rebate);
+                    $total += floatval($row->reverse_water);
                 }
             }
-            $result[$storeId] = (object)['machine_rebate' => $total];
+            $result[$storeId] = (object)['reverse_water' => $total];
         }
 
         return $result;
