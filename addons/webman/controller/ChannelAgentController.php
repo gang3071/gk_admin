@@ -101,6 +101,47 @@ class ChannelAgentController
 
             $grid->model()->orderBy('admin_users.id', 'desc');
 
+            $exAdminFilter = Request::input('ex_admin_filter', []);
+
+            if (isset($exAdminFilter['id_custom']) && $exAdminFilter['id_custom'] !== '') {
+                $grid->model()->where('admin_users.id', $exAdminFilter['id_custom']);
+            }
+
+            if (isset($exAdminFilter['status_custom']) && $exAdminFilter['status_custom'] !== null && $exAdminFilter['status_custom'] !== '') {
+                if ($exAdminFilter['status_custom'] === 'hidden') {
+                    $grid->model()->where('admin_users.is_hide', 1);
+                } else {
+                    $grid->model()->where('admin_users.status', $exAdminFilter['status_custom'])
+                        ->where('admin_users.is_hide', 0);
+                }
+            }
+
+            if (isset($exAdminFilter['username_custom']) && $exAdminFilter['username_custom'] !== '') {
+                $grid->model()->where('admin_users.username', 'like', '%' . $exAdminFilter['username_custom'] . '%');
+            }
+
+            if (isset($exAdminFilter['nickname_custom']) && $exAdminFilter['nickname_custom'] !== '') {
+                $grid->model()->where('admin_users.nickname', 'like', '%' . $exAdminFilter['nickname_custom'] . '%');
+            }
+
+            if (isset($exAdminFilter['phone_custom']) && $exAdminFilter['phone_custom'] !== '') {
+                $grid->model()->where('dept.phone', 'like', '%' . $exAdminFilter['phone_custom'] . '%');
+            }
+
+            if (isset($exAdminFilter['parent_admin_id_custom']) && $exAdminFilter['parent_admin_id_custom'] !== '') {
+                $grid->model()->where('admin_users.parent_admin_id', $exAdminFilter['parent_admin_id_custom']);
+            }
+
+            if (!empty($exAdminFilter['created_at_custom']) && is_array($exAdminFilter['created_at_custom'])) {
+                if (!empty($exAdminFilter['created_at_custom'][0])) {
+                    $grid->model()->where('admin_users.created_at', '>=', $exAdminFilter['created_at_custom'][0]);
+                }
+
+                if (!empty($exAdminFilter['created_at_custom'][1])) {
+                    $grid->model()->where('admin_users.created_at', '<=', $exAdminFilter['created_at_custom'][1]);
+                }
+            }
+
             // 获取店家选项列表用于筛选器下拉选择
             $storeOptionsQuery = AdminUser::query()
                 ->where('type', AdminUser::TYPE_STORE)
@@ -161,7 +202,11 @@ class ChannelAgentController
                 return Tag::create($value . '%')->color('blue');
             })->width(100)->align('center');
 
-            $grid->column('status', admin_trans('channel_agent.fields.status'))->display(function ($value) {
+            $grid->column('status', admin_trans('channel_agent.fields.status'))->display(function ($value, $data) {
+                if (!empty($data['is_hide'])) {
+                    return Tag::create(admin_trans('store_machine.status.hidden'))->color('volcano');
+                }
+
                 return match ($value) {
                     0 => Tag::create(admin_trans('channel_agent.tag.disabled'))->color('red'),
                     1 => Tag::create(admin_trans('channel_agent.tag.normal'))->color('green'),
@@ -169,38 +214,31 @@ class ChannelAgentController
                 };
             })->width(80)->align('center');
 
-            $grid->column('is_hide', admin_trans('channel_agent.fields.is_hide'))->display(function ($value) {
-                return match ($value) {
-                    0 => Tag::create(admin_trans('channel_agent.is_hide_options.normal'))->color('green'),
-                    1 => Tag::create(admin_trans('channel_agent.is_hide_options.disabled'))->color('red'),
-                    default => '-',
-                };
-            })->width(80)->align('center');
-
             $grid->column('created_at', admin_trans('channel_agent.fields.created_at'))->width(160)->align('center');
 
             $grid->filter(function (Filter $filter) use ($admin, $storeOptions) {
                 // 店家下拉选择
-                $filter->eq()->select('admin_users.id')
+                $filter->eq()->select('id_custom')
                     ->placeholder(admin_trans('channel_agent.filter.select_store'))
                     ->options(['' => admin_trans('public_msg.all')] + $storeOptions)
                     ->style(['width' => '300px']);
 
-                $filter->eq()->select('admin_users.status')
+                $filter->eq()->select('status_custom')
                     ->placeholder(admin_trans('channel_agent.placeholder.status'))
                     ->options([
                         1 => admin_trans('channel_agent.status_options.normal'),
-                        0 => admin_trans('channel_agent.status_options.disabled')
+                        0 => admin_trans('channel_agent.status_options.disabled'),
+                        'hidden' => admin_trans('store_machine.status.hidden'),
                     ])
                     ->style(['width' => '150px']);
 
-                $filter->like()->text('admin_users.username')->placeholder(admin_trans('channel_agent.placeholder.login_account'));
-                $filter->like()->text('admin_users.nickname')->placeholder(admin_trans('channel_agent.placeholder.store_name'));
-                $filter->like()->text('dept.phone')->placeholder(admin_trans('channel_agent.placeholder.contact_phone'));
+                $filter->like()->text('username_custom')->placeholder(admin_trans('channel_agent.placeholder.login_account'));
+                $filter->like()->text('nickname_custom')->placeholder(admin_trans('channel_agent.placeholder.store_name'));
+                $filter->like()->text('phone_custom')->placeholder(admin_trans('channel_agent.placeholder.contact_phone'));
 
                 // 代理筛选（仅渠道可用）
                 if ($admin->type === AdminUser::TYPE_CHANNEL) {
-                    $filter->eq()->select('admin_users.parent_admin_id')
+                    $filter->eq()->select('admin_users.parent_admin_id_custom')
                         ->showSearch()
                         ->style(['width' => '200px'])
                         ->dropdownMatchSelectWidth()
@@ -211,7 +249,7 @@ class ChannelAgentController
                         ]));
                 }
 
-                $filter->between()->dateTimeRange('admin_users.created_at')
+                $filter->between()->dateTimeRange('created_at_custom')
                     ->placeholder([admin_trans('channel_agent.placeholder.start_time'), admin_trans('channel_agent.placeholder.end_time')]);
             });
 
