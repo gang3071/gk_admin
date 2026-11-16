@@ -241,6 +241,8 @@ return [
         'channel_admin_limit_group' => '店舗制限配分',
         //チャンネルバックエンド店舗利益レポート
         'channel_store_profit_report' => '店舗利益レポート',
+        //チャンネルバックエンド店舗財務サマリー
+        'store_finance_report' => '店舗財務サマリー',
         //新しいメニュー翻訳（2026-05-13）
         'plugin_manage' => 'プラグイン管理',
         'game_list' => 'ゲームリスト',

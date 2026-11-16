@@ -238,6 +238,8 @@ return [
         'channel_admin_limit_group' => '店家限紅分配',
         //渠道後台店家分潤報表
         'channel_store_profit_report' => '店家分潤報表',
+        //渠道後台門店財務匯總
+        'store_finance_report' => '門店財務匯總',
         //新增菜單翻譯（2026-05-13）
         'plugin_manage' => '插件管理',
         'game_list' => '遊戲列表',

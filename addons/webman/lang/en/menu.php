@@ -239,6 +239,8 @@ return [
         'channel_admin_limit_group' => 'Store Limit Allocation',
         //Channel Store Profit Report
         'channel_store_profit_report' => 'Store Profit Report',
+        //Channel Store Finance Summary
+        'store_finance_report' => 'Store Finance Summary',
         /** TODO end translation */
         //New Menu Translations (2026-05-13)
         'plugin_manage' => 'Plugin Management',
