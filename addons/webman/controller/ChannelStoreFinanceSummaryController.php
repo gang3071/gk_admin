@@ -479,14 +479,20 @@ class ChannelStoreFinanceSummaryController
         $machTable = plugin()->webman->config('database.machine_table');
         $cateTable = plugin()->webman->config('database.machine_category_table');
 
+        // open_point / wash_point 由 PlayerGameLog::booted() 累加，2026-07-22 后该链路失效字段全为 0。
+        // 改用 game_amount + action 计算，与 MachineReportAggregator 口径一致：
+        //   上點 = action=ACTION_OPEN(1) 时 ABS(game_amount)
+        //   下點 = action≠ACTION_OPEN 且 game_amount>0 时 game_amount
+        $openAction = PlayerGameLog::ACTION_OPEN;
+
         $query = Db::table("{$pglTable} as pgl")
             ->join("{$machTable} as m", 'pgl.machine_id', '=', 'm.id')
             ->join("{$cateTable} as mc", 'm.cate_id', '=', 'mc.id')
             ->whereIn('pgl.player_id', $playerIds)
             ->whereIn('mc.game_id', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])
-            ->selectRaw('mc.game_id, mc.machine_source,
-                         COALESCE(SUM(pgl.open_point), 0) AS total_open,
-                         COALESCE(SUM(pgl.wash_point), 0) AS total_wash')
+            ->selectRaw("mc.game_id, mc.machine_source,
+                         SUM(CASE WHEN pgl.action = {$openAction} THEN ABS(pgl.game_amount) ELSE 0 END) AS total_open,
+                         SUM(CASE WHEN pgl.action <> {$openAction} AND pgl.game_amount > 0 THEN pgl.game_amount ELSE 0 END) AS total_wash")
             ->groupBy('mc.game_id', 'mc.machine_source');
 
         if (!empty($start)) {
