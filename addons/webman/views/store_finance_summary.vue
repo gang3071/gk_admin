@@ -116,16 +116,26 @@
                 <span style="font-size:12px; color:#8c8c8c">账变明细</span>
               </a-divider>
 
-              <div class="delivery-grid">
-                <div
-                  v-for="(label, typeId) in deliveryTypeLabels"
-                  :key="typeId"
-                  class="delivery-item"
-                >
-                  <span class="delivery-label">{{ label }}</span>
-                  <span class="delivery-amount" :class="amountClass(panel.delivery_types[typeId] || '0')">
-                    {{ fmt(panel.delivery_types[typeId] || '0') }}
-                  </span>
+              <div class="delivery-split">
+                <!-- 左：收入 -->
+                <div class="split-col">
+                  <div class="split-col-header">收入</div>
+                  <div v-for="(label, typeId) in incomeTypeLabels" :key="'i'+typeId" class="delivery-item">
+                    <span class="delivery-label">{{ label }}</span>
+                    <span class="delivery-amount" :class="panel.delivery_types[typeId] > 0 ? 'amount-pos' : 'amount-zero'">
+                      {{ fmt(panel.delivery_types[typeId] || '0') }}
+                    </span>
+                  </div>
+                </div>
+                <!-- 右：支出 -->
+                <div class="split-col">
+                  <div class="split-col-header">支出</div>
+                  <div v-for="(label, typeId) in expenseTypeLabels" :key="'e'+typeId" class="delivery-item">
+                    <span class="delivery-label">{{ label }}</span>
+                    <span class="delivery-amount" :class="panel.delivery_types[typeId] > 0 ? 'amount-neg' : 'amount-zero'">
+                      {{ fmt(panel.delivery_types[typeId] || '0') }}
+                    </span>
+                  </div>
                 </div>
               </div>
             </a-card>
@@ -157,19 +167,14 @@ export default {
         { value: 5, label: '本月' },
         { value: 6, label: '上月' },
       ],
-      deliveryTypeLabels: {
+      incomeTypeLabels: {
         1:  '管理员加点',
         4:  '机台上分',
-        5:  '机台下分',
         6:  '充值(开分)',
-        7:  '提现(洗分)',
-        8:  '管理员扣点',
         12: '推广员分润',
         13: '彩金中奖',
         16: '全民邀请奖励',
-        22: '特殊类型',
         23: '投钞',
-        31: '预扣',
         32: '退款',
         33: '摸奖券奖励',
         34: 'VIP生日礼金',
@@ -178,6 +183,13 @@ export default {
         37: 'VIP每日登录',
         38: '活动外增',
         39: '排行榜奖励',
+      },
+      expenseTypeLabels: {
+        5:  '机台下分',
+        7:  '提现(洗分)',
+        8:  '管理员扣点',
+        22: '特殊类型',
+        31: '预扣',
       },
     };
   },
@@ -287,11 +299,13 @@ export default {
 .stat-label     { font-size:12px; color:#8c8c8c; margin-bottom:4px; }
 .stat-value     { font-size:20px; font-weight:700; }
 
-/* 账变明细网格：每行两项 */
-.delivery-grid  { display:grid; grid-template-columns:1fr 1fr; gap:4px 8px; }
-.delivery-item  { display:flex; justify-content:space-between; align-items:center; padding:3px 6px; border-radius:4px; background:#fafafa; font-size:12px; }
-.delivery-label { color:#595959; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70px; }
-.delivery-amount{ font-weight:600; white-space:nowrap; }
+/* 账变明细：左收入 右支出 */
+.delivery-split   { display:grid; grid-template-columns:1fr 1fr; gap:0 10px; }
+.split-col        { display:flex; flex-direction:column; gap:3px; }
+.split-col-header { font-size:11px; color:#8c8c8c; padding:2px 4px; margin-bottom:2px; border-bottom:1px solid #f0f0f0; }
+.delivery-item    { display:flex; justify-content:space-between; align-items:center; padding:3px 6px; border-radius:4px; background:#fafafa; font-size:12px; }
+.delivery-label   { color:#595959; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:72px; }
+.delivery-amount  { font-weight:600; white-space:nowrap; }
 
 /* 金额颜色 */
 .amount-pos  { color:#3f8600; }
