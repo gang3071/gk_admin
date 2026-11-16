@@ -340,86 +340,166 @@
               </table>
             </a-card>
 
-            <!-- 4. 鋼珠 -->
-            <a-card title="鋼珠" class="section-card">
-              <table class="report-table">
+            <!-- 4. 鋼珠（線下 / 線上） -->
+            <a-card title="鋼珠（線下 / 線上）" class="section-card">
+              <table class="report-table vertical-table">
                 <thead>
                   <tr>
-                    <th></th>
-                    <th>上點</th>
-                    <th>下點</th>
-                    <th>小計</th>
-                    <th>彩金</th>
-                    <th>總盈虧</th>
-                    <th>RTP</th>
+                    <th style="width:80px">類別</th>
+                    <th>項目</th>
+                    <th style="width:160px">數值</th>
                   </tr>
                 </thead>
                 <tbody>
+                  <!-- 線下 -->
                   <tr>
-                    <td class="row-label">線下</td>
+                    <td class="row-label" rowspan="6">線下</td>
+                    <td class="item-label">鋼珠總上點</td>
                     <td>{{ fmtNum(reportData.steel_ball.offline.up_point) }}</td>
-                    <td>{{ fmtNum(reportData.steel_ball.offline.down_point) }}</td>
-                    <td>{{ fmtNum(reportData.steel_ball.offline.subtotal) }}</td>
-                    <td>{{ fmtNum(reportData.steel_ball.offline.lottery) }}</td>
-                    <td :class="profitClass(reportData.steel_ball.offline.total_profit)">{{ fmtNum(reportData.steel_ball.offline.total_profit) }}</td>
-                    <td>{{ fmtPct(reportData.steel_ball.offline.rtp) }}</td>
                   </tr>
                   <tr>
-                    <td class="row-label">線上</td>
+                    <td class="item-label">鋼珠總下點</td>
+                    <td>{{ fmtNum(reportData.steel_ball.offline.down_point) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">上下點小計</td>
+                    <td>{{ fmtNum(reportData.steel_ball.offline.subtotal) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">鋼珠彩金</td>
+                    <td>{{ fmtNum(reportData.steel_ball.offline.lottery) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">鋼珠總盈虧</td>
+                    <td :class="profitClass(reportData.steel_ball.offline.total_profit)">{{ fmtNum(reportData.steel_ball.offline.total_profit) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">RTP</td>
+                    <td>{{ fmtPct(reportData.steel_ball.offline.rtp) }}</td>
+                  </tr>
+                  <!-- 線上 -->
+                  <tr class="section-divider">
+                    <td class="row-label" rowspan="6">線上</td>
+                    <td class="item-label">鋼珠總上點</td>
                     <td>{{ fmtNum(reportData.steel_ball.online.up_point) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">鋼珠總下點</td>
                     <td>{{ fmtNum(reportData.steel_ball.online.down_point) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">上下點小計</td>
                     <td>{{ fmtNum(reportData.steel_ball.online.subtotal) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">鋼珠彩金</td>
                     <td>{{ fmtNum(reportData.steel_ball.online.lottery) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">鋼珠總盈虧</td>
                     <td :class="profitClass(reportData.steel_ball.online.total_profit)">{{ fmtNum(reportData.steel_ball.online.total_profit) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">RTP</td>
                     <td>{{ fmtPct(reportData.steel_ball.online.rtp) }}</td>
                   </tr>
                 </tbody>
               </table>
             </a-card>
 
-            <!-- 5. 斯洛 -->
-            <a-card title="斯洛" class="section-card">
-              <table class="report-table">
+            <!-- 5. 斯洛（線下 / 線上） -->
+            <a-card title="斯洛（線下 / 線上）" class="section-card">
+              <table class="report-table vertical-table">
                 <thead>
                   <tr>
-                    <th></th>
-                    <th>上點</th>
-                    <th>下點</th>
-                    <th>小計</th>
-                    <th>彩金</th>
-                    <th>總盈虧</th>
-                    <th>上下點RTP</th>
-                    <th>押分</th>
-                    <th>得分</th>
-                    <th>押得總盈虧</th>
-                    <th>押得RTP</th>
+                    <th style="width:80px">類別</th>
+                    <th>項目</th>
+                    <th style="width:160px">數值</th>
                   </tr>
                 </thead>
                 <tbody>
+                  <!-- 線下 -->
                   <tr>
-                    <td class="row-label">線下</td>
+                    <td class="row-label" rowspan="10">線下</td>
+                    <td class="item-label">斯洛總上點</td>
                     <td>{{ fmtNum(reportData.slot.offline.up_point) }}</td>
-                    <td>{{ fmtNum(reportData.slot.offline.down_point) }}</td>
-                    <td>{{ fmtNum(reportData.slot.offline.subtotal) }}</td>
-                    <td>{{ fmtNum(reportData.slot.offline.lottery) }}</td>
-                    <td :class="profitClass(reportData.slot.offline.total_profit)">{{ fmtNum(reportData.slot.offline.total_profit) }}</td>
-                    <td>{{ fmtPct(reportData.slot.offline.up_down_rtp) }}</td>
-                    <td>{{ fmtNum(reportData.slot.offline.pressure) }}</td>
-                    <td>{{ fmtNum(reportData.slot.offline.score) }}</td>
-                    <td :class="profitClass(reportData.slot.offline.press_score_profit)">{{ fmtNum(reportData.slot.offline.press_score_profit) }}</td>
-                    <td>{{ fmtPct(reportData.slot.offline.press_score_rtp) }}</td>
                   </tr>
                   <tr>
-                    <td class="row-label">線上</td>
+                    <td class="item-label">斯洛總下點</td>
+                    <td>{{ fmtNum(reportData.slot.offline.down_point) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">上下點小計</td>
+                    <td>{{ fmtNum(reportData.slot.offline.subtotal) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">斯洛彩金</td>
+                    <td>{{ fmtNum(reportData.slot.offline.lottery) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">總盈虧</td>
+                    <td :class="profitClass(reportData.slot.offline.total_profit)">{{ fmtNum(reportData.slot.offline.total_profit) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">上下點RTP</td>
+                    <td>{{ fmtPct(reportData.slot.offline.up_down_rtp) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">斯洛總押分</td>
+                    <td>{{ fmtNum(reportData.slot.offline.pressure) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">斯洛總得分</td>
+                    <td>{{ fmtNum(reportData.slot.offline.score) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">押得總盈虧</td>
+                    <td :class="profitClass(reportData.slot.offline.press_score_profit)">{{ fmtNum(reportData.slot.offline.press_score_profit) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">押得RTP</td>
+                    <td>{{ fmtPct(reportData.slot.offline.press_score_rtp) }}</td>
+                  </tr>
+                  <!-- 線上 -->
+                  <tr class="section-divider">
+                    <td class="row-label" rowspan="10">線上</td>
+                    <td class="item-label">斯洛總上點</td>
                     <td>{{ fmtNum(reportData.slot.online.up_point) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">斯洛總下點</td>
                     <td>{{ fmtNum(reportData.slot.online.down_point) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">上下點小計</td>
                     <td>{{ fmtNum(reportData.slot.online.subtotal) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">斯洛彩金</td>
                     <td>{{ fmtNum(reportData.slot.online.lottery) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">總盈虧</td>
                     <td :class="profitClass(reportData.slot.online.total_profit)">{{ fmtNum(reportData.slot.online.total_profit) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">上下點RTP</td>
                     <td>{{ fmtPct(reportData.slot.online.up_down_rtp) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">斯洛總押分</td>
                     <td>{{ fmtNum(reportData.slot.online.pressure) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">斯洛總得分</td>
                     <td>{{ fmtNum(reportData.slot.online.score) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">押得總盈虧</td>
                     <td :class="profitClass(reportData.slot.online.press_score_profit)">{{ fmtNum(reportData.slot.online.press_score_profit) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label">押得RTP</td>
                     <td>{{ fmtPct(reportData.slot.online.press_score_rtp) }}</td>
                   </tr>
                 </tbody>
@@ -793,4 +873,9 @@ export default {
 /* ── Tab 2 profit colors ── */
 .profit-positive { color: #389e0d; font-weight: 600; }
 .profit-negative { color: #cf1322; font-weight: 600; }
+
+/* ── Tab 2 vertical table (钢珠/斯洛) ── */
+.vertical-table { max-width: 600px; }
+.vertical-table .item-label { text-align: left; color: #595959; padding-left: 16px; }
+.vertical-table .section-divider td { border-top: 2px solid #d9d9d9; }
 </style>
