@@ -48,8 +48,8 @@ class ChannelStoreFinanceSummaryController
         $endTime   = Request::input('end_time');
 
         // 下拉选项（每次都返回，供前端更新选择器）
-        $agents = $this->buildSelectOptions($this->getAgentOptions($admin->department_id));
-        $stores = $this->buildSelectOptions($this->getStoreOptions($admin->department_id));
+        $agents = $this->getAgentOptions($admin->department_id);
+        $stores = $this->getStoreOptions($admin->department_id);
 
         $hasFilter = !empty($dateType) || !empty($startTime) || !empty($endTime)
                      || !empty($storeId) || !empty($agentId);
@@ -335,15 +335,6 @@ class ChannelStoreFinanceSummaryController
         }
     }
 
-    private function buildSelectOptions(array $map): array
-    {
-        $options = [];
-        foreach ($map as $value => $label) {
-            $options[] = ['value' => $value, 'label' => $label];
-        }
-        return $options;
-    }
-
     private function getStoreOptions(int $departmentId): array
     {
         return AdminUser::query()
@@ -351,8 +342,13 @@ class ChannelStoreFinanceSummaryController
             ->where('type', AdminUser::TYPE_STORE)
             ->where('status', 1)
             ->orderBy('id', 'desc')
-            ->get(['id', 'nickname', 'username'])
-            ->mapWithKeys(fn($s) => [$s->id => ($s->nickname ?: $s->username) . " ({$s->username})"])
+            ->get(['id', 'nickname', 'username', 'parent_admin_id'])
+            ->map(fn($s) => [
+                'value'   => $s->id,
+                'label'   => ($s->nickname ?: $s->username) . " ({$s->username})",
+                'agentId' => $s->parent_admin_id,
+            ])
+            ->values()
             ->toArray();
     }
 
@@ -364,7 +360,11 @@ class ChannelStoreFinanceSummaryController
             ->where('status', 1)
             ->orderBy('id', 'desc')
             ->get(['id', 'nickname', 'username'])
-            ->mapWithKeys(fn($a) => [$a->id => ($a->nickname ?: $a->username) . " ({$a->username})"])
+            ->map(fn($a) => [
+                'value' => $a->id,
+                'label' => ($a->nickname ?: $a->username) . " ({$a->username})",
+            ])
+            ->values()
             ->toArray();
     }
 }

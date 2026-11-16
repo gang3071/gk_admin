@@ -59,19 +59,17 @@
       </a-result>
       <a-card v-else class="result-card" :body-style="{ padding:'12px', flex:1, minHeight:0, overflow:'auto' }">
         <a-table
-          :columns="columns"
+          :columns="columnsWithCell"
           :data-source="tableRows"
           :pagination="{ pageSize: 50, showTotal: total => '共 ' + total + ' 家店' }"
           :scroll="{ x: 1800 }"
-          :row-class-name="rowClassName"
-          :custom-row="customRow"
           size="small"
           bordered
           row-key="id"
         >
           <template #bodyCell="{ column, record }">
             <template v-if="amountFields.includes(column.dataIndex)">
-              <span :style="{ color: parseFloat(record[column.dataIndex]) >= 0 ? '#3f8600' : '#cf1322', fontWeight: record._summary ? 700 : 400 }">
+              <span :style="{ color: parseFloat(record[column.dataIndex]) >= 0 ? '#3f8600' : '#cf1322', fontWeight: record._summary ? '700' : '400' }">
                 {{ fmt(record[column.dataIndex]) }}
               </span>
             </template>
@@ -136,8 +134,21 @@ export default {
     },
     tableRows() {
       if (!this.rows.length) return [];
-      const summaryRow = Object.assign({ id: '__summary__', store_name: '汇总', store_username: '', agent_name: '', _summary: true }, this.summary);
+      const summaryRow = Object.assign(
+        { id: '__summary__', store_name: '汇总', store_username: '', agent_name: '', _summary: true },
+        this.summary
+      );
       return [...this.rows, summaryRow];
+    },
+    columnsWithCell() {
+      return this.columns.map(col => Object.assign({}, col, {
+        customCell: function(record) {
+          if (record._summary) {
+            return { style: { background: '#f0f5ff', fontWeight: '700' } };
+          }
+          return {};
+        },
+      }));
     },
   },
   mounted() {
@@ -148,24 +159,28 @@ export default {
       const n = parseFloat(val);
       return isNaN(n) ? '0.00' : n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
-    getToken() {
-      return localStorage.getItem((window['App-Name'] || '') + '_ex-admin-token') || '';
-    },
-    async request(params) {
-      const qs = new URLSearchParams();
-      Object.entries(params).forEach(([k, v]) => { if (v !== null && v !== undefined && v !== '') qs.append(k, v); });
-      const res = await fetch(
-        '/ex-admin/addons-webman-controller-ChannelStoreFinanceSummaryController/search?' + qs.toString(),
-        { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Authorization': this.getToken() } }
-      );
-      return res.json();
+    buildParams() {
+      const p = {
+        agent_id:  this.form.agentId  || '',
+        store_id:  this.form.storeId  || '',
+        date_type: this.form.dateType || '',
+      };
+      if (this.form.dateRange && this.form.dateRange.length === 2) {
+        p.start_time = this.form.dateRange[0].format('YYYY-MM-DD HH:mm:ss');
+        p.end_time   = this.form.dateRange[1].format('YYYY-MM-DD HH:mm:ss');
+      }
+      return p;
     },
     async loadOptions() {
       try {
-        const j = await this.request({});
-        if (j.code === 200) {
-          this.agents = j.data.agents;
-          this.stores = j.data.stores;
+        const res = await this.$request({
+          url:    'ex-admin/addons-webman-controller-ChannelStoreFinanceSummaryController/search',
+          method: 'get',
+          params: {},
+        });
+        if (res.code === 200) {
+          this.agents = res.data.agents;
+          this.stores = res.data.stores;
         }
       } catch (_) { /* ignore */ }
     },
@@ -180,28 +195,22 @@ export default {
       this.searched = true;
       this.error    = null;
 
-      const params = {
-        agent_id:  this.form.agentId,
-        store_id:  this.form.storeId,
-        date_type: this.form.dateType,
-      };
-      if (this.form.dateRange && this.form.dateRange.length === 2) {
-        params.start_time = this.form.dateRange[0].format('YYYY-MM-DD HH:mm:ss');
-        params.end_time   = this.form.dateRange[1].format('YYYY-MM-DD HH:mm:ss');
-      }
-
       try {
-        const j = await this.request(params);
-        if (j.code === 200) {
-          this.agents  = j.data.agents;
-          this.stores  = j.data.stores;
-          this.rows    = j.data.rows;
-          this.summary = j.data.summary;
+        const res = await this.$request({
+          url:    'ex-admin/addons-webman-controller-ChannelStoreFinanceSummaryController/search',
+          method: 'get',
+          params: this.buildParams(),
+        });
+        if (res.code === 200) {
+          this.agents  = res.data.agents;
+          this.stores  = res.data.stores;
+          this.rows    = res.data.rows;
+          this.summary = res.data.summary;
         } else {
-          this.error = j.msg || '查询失败';
+          this.error = res.msg || '查询失败';
         }
       } catch (e) {
-        this.error = e.message;
+        this.error = e.message || '请求失败';
       } finally {
         this.loading = false;
       }
@@ -213,13 +222,6 @@ export default {
       this.summary  = {};
       this.error    = null;
     },
-    rowClassName(record) {
-      return record._summary ? 'summary-row' : '';
-    },
-    customRow(record) {
-      if (!record._summary) return {};
-      return { style: { background: '#f0f5ff', fontWeight: 700 } };
-    },
   },
 };
 </script>
@@ -230,8 +232,4 @@ export default {
 .result-wrap  { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
 .center-state { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; }
 .result-card  { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
-</style>
-
-<style>
-.summary-row td { background: #f0f5ff !important; font-weight: 700; }
 </style>
