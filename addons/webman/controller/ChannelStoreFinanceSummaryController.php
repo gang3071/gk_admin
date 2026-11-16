@@ -440,11 +440,15 @@ class ChannelStoreFinanceSummaryController
             $grid->hideSelection();
             $grid->hideAdd();
             $grid->expandFilter();
+            $this->buildGridColumns($grid);
             $this->buildGridFilter($grid, $storeOptions, $agentOptions);
+            $grid->attr('is_mongo', true);
+            $grid->attr('is_mongo_total', 0);
+            $grid->attr('mongo_model', []);
         });
     }
 
-    private function buildGridColumns(SummaryGrid $grid): void
+    private function buildGridColumns(Grid $grid): void
     {
         $grid->column('id', 'ID')->width(80)->align('center');
         $grid->column('store_name', admin_trans('channel_store_finance_summary.fields.store_name'))->width(150)->align('center');
