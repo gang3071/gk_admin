@@ -62,28 +62,30 @@ class ChannelStoreFinanceSummaryController
                         'no_data'       => $t('states.no_data'),
                     ],
                     'income_types' => [
-                        1  => $t('delivery_types.1'),
-                        4  => $t('delivery_types.4'),
-                        6  => $t('delivery_types.6'),
-                        12 => $t('delivery_types.12'),
-                        13 => $t('delivery_types.13'),
-                        16 => $t('delivery_types.16'),
-                        23 => $t('delivery_types.23'),
-                        32 => $t('delivery_types.32'),
-                        33 => $t('delivery_types.33'),
-                        34 => $t('delivery_types.34'),
-                        35 => $t('delivery_types.35'),
-                        36 => $t('delivery_types.36'),
-                        37 => $t('delivery_types.37'),
-                        38 => $t('delivery_types.38'),
-                        39 => $t('delivery_types.39'),
+                        // 平台实际收入：玩家注入资金或行政操作
+                        1  => $t('delivery_types.1'),   // 管理员加点
+                        4  => $t('delivery_types.4'),   // 机台上分
+                        6  => $t('delivery_types.6'),   // 充值(开分)
+                        16 => $t('delivery_types.16'),  // 全民邀请奖励（邀请行为激励，归收入侧）
+                        23 => $t('delivery_types.23'),  // 投钞
+                        32 => $t('delivery_types.32'),  // 退款（冲销性质）
                     ],
                     'expense_types' => [
-                        5  => $t('delivery_types.5'),
-                        7  => $t('delivery_types.7'),
-                        8  => $t('delivery_types.8'),
-                        22 => $t('delivery_types.22'),
-                        31 => $t('delivery_types.31'),
+                        // 平台实际支出：返还玩家资金 + 各类奖励发放
+                        5  => $t('delivery_types.5'),   // 机台下分
+                        7  => $t('delivery_types.7'),   // 提现(洗分)
+                        8  => $t('delivery_types.8'),   // 管理员扣点
+                        12 => $t('delivery_types.12'),  // 推广员分润
+                        13 => $t('delivery_types.13'),  // 彩金中奖
+                        22 => $t('delivery_types.22'),  // 特殊类型
+                        31 => $t('delivery_types.31'),  // 预扣
+                        33 => $t('delivery_types.33'),  // 摸奖券奖励
+                        34 => $t('delivery_types.34'),  // VIP生日礼金
+                        35 => $t('delivery_types.35'),  // VIP升级礼金
+                        36 => $t('delivery_types.36'),  // 反水池返水
+                        37 => $t('delivery_types.37'),  // VIP每日登录
+                        38 => $t('delivery_types.38'),  // 活动外增
+                        39 => $t('delivery_types.39'),  // 排行榜奖励
                     ],
                     'desc_panel' => [
                         'title'      => $t('desc_panel.title'),
