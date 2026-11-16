@@ -169,6 +169,14 @@ class ChannelAgentController
                 };
             })->width(80)->align('center');
 
+            $grid->column('is_hide', admin_trans('channel_agent.fields.is_hide'))->display(function ($value) {
+                return match ($value) {
+                    0 => Tag::create(admin_trans('channel_agent.is_hide_options.normal'))->color('green'),
+                    1 => Tag::create(admin_trans('channel_agent.is_hide_options.disabled'))->color('red'),
+                    default => '-',
+                };
+            })->width(80)->align('center');
+
             $grid->column('created_at', admin_trans('channel_agent.fields.created_at'))->width(160)->align('center');
 
             $grid->filter(function (Filter $filter) use ($admin, $storeOptions) {

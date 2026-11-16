@@ -31,6 +31,7 @@ return [
         'is_hot' => '熱門',
         'is_new' => '新遊戲',
         'sort' => '排序',
+        'is_hide' => '是否撤店',
     ],
 
     // 舊的字段鍵（保留兼容性）
@@ -90,6 +91,11 @@ return [
     'status_options' => [
         'normal' => '正常',
         'disabled' => '已禁用',
+    ],
+
+    'is_hide_options' => [
+        'normal' => '正常',
+        'disabled' => '已撤店',
     ],
 
     // 標籤
