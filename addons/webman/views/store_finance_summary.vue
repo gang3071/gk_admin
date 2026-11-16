@@ -217,8 +217,8 @@
                 >{{ label }}</div>
               </div>
             </div>
-          </div>
-
+          </div><!-- /global-desc-panel -->
+        </div><!-- /main-area -->
         </div><!-- /tab1-wrap -->
       </a-tab-pane>
 
