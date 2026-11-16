@@ -5,7 +5,7 @@
       <!-- ══════════════════════════════════════════════════════════
            Tab 1：多店概覽（原有功能）
       ══════════════════════════════════════════════════════════ -->
-      <a-tab-pane key="overview" tab="多店概覽" style="flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column;">
+      <a-tab-pane key="overview" tab="多店概覽" class="tab-overview">
         <!-- 筛选栏 -->
         <a-card class="search-card">
           <div style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap">
@@ -769,6 +769,14 @@ export default {
 /* ── 整体布局 ── */
 .page-wrap   { display:flex; flex-direction:column; height:calc(100vh - 112px); padding:16px; box-sizing:border-box; gap:12px; overflow:hidden; }
 .search-card { flex-shrink:0; }
+
+/* ── 让 Ant Design tabs 内容区支持内部滚动 ── */
+:deep(.ant-tabs) { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+:deep(.ant-tabs-content-holder) { flex: 1; min-height: 0; overflow: hidden; }
+:deep(.ant-tabs-content) { height: 100%; }
+/* Tab 1 自己管理内部滚动（.panels-scroll），Tab 2 由外层滚动 */
+:deep(.ant-tabs-tabpane) { height: 100%; overflow-y: auto; }
+:deep(.ant-tabs-tabpane.tab-overview) { overflow: hidden; display: flex; flex-direction: column; }
 
 /* ── Tab 1 主体：左侧面板 + 右侧常驻说明 ── */
 .main-area   { flex:1; min-height:0; display:flex; gap:12px; overflow:hidden; }
