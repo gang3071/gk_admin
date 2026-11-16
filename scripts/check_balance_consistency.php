@@ -266,10 +266,10 @@ function checkDeliverySequential(string $start, string $end, ?string $playerId, 
                 $gap = round((float) $r->amount_before - (float) $prev->amount_after, 6);
 
                 if (abs($gap) > $tolerance) {
-                    // 查该区间内的游戏记录 diff 合计，能解释差额则视为正常游戏扣减
+                    // 查该区间内所有游戏记录 diff 合计（含未结算）
+                    // 未结算记录余额已扣但 diff=0，仍需纳入统计避免误报
                     $gameDiff = (float) Capsule::table(TBL_GAME)
                         ->where('player_id', $pid)
-                        ->where('settlement_status', SETTLEMENT_SETTLED)
                         ->whereBetween('created_at', [$prev->created_at, $r->created_at])
                         ->sum('diff');
 
