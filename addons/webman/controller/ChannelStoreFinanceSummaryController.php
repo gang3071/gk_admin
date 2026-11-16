@@ -115,8 +115,8 @@ class ChannelStoreFinanceSummaryController
                 'store_name'               => $store->nickname ?: $store->username,
                 'store_username'           => $store->username,
                 'agent_name'               => $agent ? ($agent->nickname ?: $agent->username) : '-',
-                // 取反：delivery/diff 均为玩家视角（玩家赢为正），面板为平台视角（平台盈利为正）
-                'machine_win_loss'         => bcsub('0', $machineWinLoss[$sid] ?? '0.00', 2),
+                // machine_win_loss 已是平台视角（正数=盈利），电子游戏取反（diff 为玩家视角）
+                'machine_win_loss'         => $machineWinLoss[$sid] ?? '0.00',
                 'electronic_game_win_loss' => bcsub('0', bcadd('0', (string)floatval($gameWinLossByStore[$sid] ?? 0), 2), 2),
                 'delivery_types'           => $deliveryByStore[$sid] ?? [],
             ];
@@ -177,19 +177,18 @@ class ChannelStoreFinanceSummaryController
     }
 
     /**
-     * 实体机台输赢（玩家视角）= 机台上分(type4) - 机台下分(type5) - 投钞(type23)
-     * 调用方取反后得到平台视角：正数=平台盈利
-     * type4(机台上分)=平台返还玩家, type5(机台下分)=玩家充值机台, type23(投钞)=玩家投现金
+     * 实体机台输赢（平台视角，正数=盈利）
+     * 机台上分(type4)：扣玩家余额 = 玩家充值机台 = 平台收入
+     * 机台下分(type5)：增玩家余额 = 机台返还玩家 = 平台支出
+     * 平台盈利 = type4 - type5
      */
     private function calcMachineWinLoss(array $deliveryByStore): array
     {
         $result = [];
         foreach ($deliveryByStore as $storeId => $types) {
-            $machineUp   = floatval($types[PlayerDeliveryRecord::TYPE_MACHINE_UP]   ?? 0); // 4
-            $machineDown = floatval($types[PlayerDeliveryRecord::TYPE_MACHINE_DOWN] ?? 0); // 5
-            $machinePut  = floatval($types[PlayerDeliveryRecord::TYPE_MACHINE]      ?? 0); // 23
-            $winLoss = bcsub(bcsub((string)$machineUp, (string)$machineDown, 2), (string)$machinePut, 2);
-            $result[$storeId] = $winLoss;
+            $machineUp   = floatval($types[PlayerDeliveryRecord::TYPE_MACHINE_UP]   ?? 0); // 4=平台收入
+            $machineDown = floatval($types[PlayerDeliveryRecord::TYPE_MACHINE_DOWN] ?? 0); // 5=平台支出
+            $result[$storeId] = bcsub((string)$machineUp, (string)$machineDown, 2);
         }
         return $result;
     }
