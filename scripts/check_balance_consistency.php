@@ -43,8 +43,8 @@ function cbold(string $msg): void  { echo C_BOLD   . $msg . C_RESET . PHP_EOL; }
 function cdim(string $msg): void   { echo C_DIM    . $msg . C_RESET . PHP_EOL; }
 
 // ─── 解析命令行参数 ───────────────────────────────────────────────────────────
-$opts      = getopt('', ['date:', 'start:', 'end:', 'player-id:', 'tolerance:', 'limit:', 'skip-game']);
-$playerId  = $opts['player-id']  ?? null;
+$opts      = getopt('', ['date:', 'start:', 'end:', 'player-id:', 'player_id:', 'tolerance:', 'limit:', 'skip-game']);
+$playerId  = $opts['player-id'] ?? $opts['player_id'] ?? null;
 $tolerance = (float)($opts['tolerance'] ?? 0.0001);
 $limit     = (int)($opts['limit']       ?? 500);
 $skipGame  = isset($opts['skip-game']);
