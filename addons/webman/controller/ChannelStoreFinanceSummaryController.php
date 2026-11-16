@@ -177,18 +177,18 @@ class ChannelStoreFinanceSummaryController
     }
 
     /**
-     * 实体机台输赢 = 开分(source=artificial_recharge) + 投钞 - 洗分(source=channel_withdrawal)
+     * 实体机台输赢（玩家视角）= 机台上分(type4) - 机台下分(type5) - 投钞(type23)
+     * 调用方取反后得到平台视角：正数=平台盈利
+     * type4(机台上分)=平台返还玩家, type5(机台下分)=玩家充值机台, type23(投钞)=玩家投现金
      */
     private function calcMachineWinLoss(array $deliveryByStore): array
     {
         $result = [];
         foreach ($deliveryByStore as $storeId => $types) {
-            $openScore  = floatval($types[PlayerDeliveryRecord::TYPE_RECHARGE]       ?? 0);
-            $machinePut = floatval($types[PlayerDeliveryRecord::TYPE_MACHINE]         ?? 0);
-            $withdraw   = floatval($types[PlayerDeliveryRecord::TYPE_WITHDRAWAL]      ?? 0);
-            // 注意：delivery_types 里的充值/提现是所有 source 的合计，
-            // 实体机台输赢只统计渠道相关的，这里简化用全量 type 值
-            $winLoss = bcsub(bcadd((string)$openScore, (string)$machinePut, 2), (string)$withdraw, 2);
+            $machineUp   = floatval($types[PlayerDeliveryRecord::TYPE_MACHINE_UP]   ?? 0); // 4
+            $machineDown = floatval($types[PlayerDeliveryRecord::TYPE_MACHINE_DOWN] ?? 0); // 5
+            $machinePut  = floatval($types[PlayerDeliveryRecord::TYPE_MACHINE]      ?? 0); // 23
+            $winLoss = bcsub(bcsub((string)$machineUp, (string)$machineDown, 2), (string)$machinePut, 2);
             $result[$storeId] = $winLoss;
         }
         return $result;
