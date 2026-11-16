@@ -1,33 +1,35 @@
 <template>
   <div class="page-wrap">
 
-    <!-- 筛选表单 -->
+    <!-- 筛选栏 -->
     <a-card class="search-card">
-      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap">
+      <div style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap">
         <a-select
           v-model:value="form.agentId"
           allow-clear
           show-search
           option-filter-prop="label"
-          placeholder="选择代理（全部）"
-          style="width:220px"
+          placeholder="代理（全部）"
+          style="width:200px"
           :options="agents"
           @change="onAgentChange"
         />
         <a-select
-          v-model:value="form.storeId"
+          v-model:value="form.storeIds"
+          mode="multiple"
           allow-clear
           show-search
           option-filter-prop="label"
-          placeholder="选择店家（全部）"
-          style="width:240px"
+          placeholder="选择门店（可多选）"
+          style="min-width:280px; max-width:600px"
+          :max-tag-count="4"
           :options="filteredStores"
         />
         <a-select
           v-model:value="form.dateType"
           allow-clear
           placeholder="时间类型"
-          style="width:140px"
+          style="width:130px"
           :options="dateTypeOptions"
           @change="onDateTypeChange"
         />
@@ -46,41 +48,93 @@
 
     <!-- 结果区域 -->
     <div class="result-wrap">
+
+      <!-- 未查询 -->
       <div v-if="!searched" class="center-state">
-        <a-empty description="请选择查询条件后点击查询" />
+        <a-empty description="选择门店和时间范围后点击查询" />
       </div>
+
+      <!-- 加载中 -->
       <div v-else-if="loading" class="center-state">
         <a-spin size="large" />
       </div>
+
+      <!-- 查询失败 -->
       <a-result v-else-if="error" status="error" title="查询失败" :sub-title="error">
         <template #extra>
           <a-button type="primary" @click="doSearch">重试</a-button>
         </template>
       </a-result>
-      <a-card v-else class="result-card" :body-style="{ padding:'12px', flex:1, minHeight:0, overflow:'auto' }">
-        <a-table
-          :columns="columnsWithCell"
-          :data-source="tableRows"
-          :pagination="{ pageSize: 50, showTotal: total => '共 ' + total + ' 家店' }"
-          :scroll="{ x: 1800 }"
-          size="small"
-          bordered
-          row-key="id"
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="amountFields.includes(column.dataIndex)">
-              <span :style="{ color: parseFloat(record[column.dataIndex]) >= 0 ? '#3f8600' : '#cf1322', fontWeight: record._summary ? '700' : '400' }">
-                {{ fmt(record[column.dataIndex]) }}
-              </span>
-            </template>
-            <template v-else-if="column.dataIndex === 'store_name' && record._summary">
-              <strong>{{ record.store_name }}</strong>
-            </template>
-          </template>
-        </a-table>
-      </a-card>
-    </div>
 
+      <!-- 无数据 -->
+      <div v-else-if="!panels.length" class="center-state">
+        <a-empty description="该条件下暂无数据" />
+      </div>
+
+      <!-- 面板列表 -->
+      <div v-else class="panels-scroll">
+        <a-row :gutter="[16, 16]">
+          <a-col
+            v-for="panel in panels"
+            :key="panel.store_id"
+            :xs="24"
+            :md="12"
+            :xxl="8"
+          >
+            <a-card class="store-card" size="small">
+              <!-- 卡片标题 -->
+              <template #title>
+                <div class="card-header">
+                  <span class="store-name">{{ panel.store_name }}</span>
+                  <a-tag color="blue" style="margin-left:8px">{{ panel.store_username }}</a-tag>
+                  <span class="agent-name">{{ panel.agent_name }}</span>
+                </div>
+              </template>
+
+              <!-- 实体机台 + 电子游戏 高亮区 -->
+              <a-row :gutter="8" class="highlight-row">
+                <a-col :span="12">
+                  <div class="highlight-stat">
+                    <div class="stat-label">实体机台输赢</div>
+                    <div class="stat-value" :class="amountClass(panel.machine_win_loss)">
+                      {{ fmt(panel.machine_win_loss) }}
+                    </div>
+                  </div>
+                </a-col>
+                <a-col :span="12">
+                  <div class="highlight-stat">
+                    <div class="stat-label">电子游戏输赢</div>
+                    <div class="stat-value" :class="amountClass(panel.electronic_game_win_loss)">
+                      {{ fmt(panel.electronic_game_win_loss) }}
+                    </div>
+                  </div>
+                </a-col>
+              </a-row>
+
+              <!-- 账变明细 -->
+              <a-divider style="margin:10px 0 8px" orientation="left" orientation-margin="0">
+                <span style="font-size:12px; color:#8c8c8c">账变明细</span>
+              </a-divider>
+
+              <div v-if="hasDelivery(panel)" class="delivery-grid">
+                <div
+                  v-for="(amount, typeId) in panel.delivery_types"
+                  :key="typeId"
+                  class="delivery-item"
+                >
+                  <span class="delivery-label">{{ typeLabel(typeId) }}</span>
+                  <span class="delivery-amount" :class="amountClass(amount)">{{ fmt(amount) }}</span>
+                </div>
+              </div>
+              <div v-else style="text-align:center; color:#bfbfbf; font-size:12px; padding:8px 0">
+                暂无账变记录
+              </div>
+            </a-card>
+          </a-col>
+        </a-row>
+      </div>
+
+    </div>
   </div>
 </template>
 
@@ -89,19 +143,13 @@ export default {
   name: 'StoreFinanceSummary',
   data() {
     return {
-      form: { agentId: null, storeId: null, dateType: null, dateRange: null },
+      form: { agentId: null, storeIds: [], dateType: null, dateRange: null },
       loading:  false,
       searched: false,
       error:    null,
       agents:   [],
       stores:   [],
-      rows:     [],
-      summary:  {},
-      amountFields: [
-        'electronic_game_win_loss', 'machine_win_loss', 'lottery_ticket_sent',
-        'electronic_jackpot', 'machine_jackpot', 'wallet_increase', 'wallet_decrease',
-        'machine_rebate', 'electronic_rebate', 'coupon_sent',
-      ],
+      panels:   [],
       dateTypeOptions: [
         { value: 1, label: '今天' },
         { value: 2, label: '昨天' },
@@ -110,45 +158,27 @@ export default {
         { value: 5, label: '本月' },
         { value: 6, label: '上月' },
       ],
-      columns: [
-        { title: '店家名称',     dataIndex: 'store_name',               width: 140, fixed: 'left' },
-        { title: '登录账号',     dataIndex: 'store_username',           width: 120, fixed: 'left' },
-        { title: '所属代理',     dataIndex: 'agent_name',               width: 120 },
-        { title: '电子游戏输赢', dataIndex: 'electronic_game_win_loss', width: 130, align: 'right' },
-        { title: '实体机输赢',   dataIndex: 'machine_win_loss',         width: 120, align: 'right' },
-        { title: '摸彩劵送出',   dataIndex: 'lottery_ticket_sent',      width: 120, align: 'right' },
-        { title: '电子游戏彩金', dataIndex: 'electronic_jackpot',       width: 130, align: 'right' },
-        { title: '实体机台彩金', dataIndex: 'machine_jackpot',          width: 130, align: 'right' },
-        { title: '钱包增加',     dataIndex: 'wallet_increase',          width: 120, align: 'right' },
-        { title: '钱包扣除',     dataIndex: 'wallet_decrease',          width: 120, align: 'right' },
-        { title: '实体机台返水', dataIndex: 'machine_rebate',           width: 130, align: 'right' },
-        { title: '电子游戏返水', dataIndex: 'electronic_rebate',        width: 130, align: 'right' },
-        { title: '体验/福利劵',  dataIndex: 'coupon_sent',              width: 120, align: 'right' },
-      ],
+      deliveryTypeLabels: {
+        1: '管理员加点', 2: '玩家转入', 3: '币商转出',
+        4: '机台上分', 5: '机台下分', 6: '充值(开分)',
+        7: '提现(洗分)', 8: '管理员扣点', 9: '提现返还',
+        10: '活动奖金', 11: '注册赠送', 12: '推广员分润',
+        13: '彩金中奖', 14: '转出电子游戏', 15: '电子游戏转入',
+        16: '全民邀请奖励', 17: '首充奖励', 18: '客损返佣',
+        19: '电子游戏反水', 20: '币商加点', 21: '币商扣点',
+        22: '特殊类型', 23: '投钞', 24: '代理转出',
+        25: '代理转入', 26: '下注', 27: '取消下注',
+        28: '打赏', 29: '注单结算', 30: '重新结算',
+        31: '预扣', 32: '退款', 33: '摸奖券奖励',
+        34: 'VIP生日礼金', 35: 'VIP升级礼金', 36: '反水池反水',
+        37: 'VIP每日登录', 38: '活动外增', 39: '排行榜奖励',
+      },
     };
   },
   computed: {
     filteredStores() {
       if (!this.form.agentId) return this.stores;
       return this.stores.filter(s => s.agentId === this.form.agentId);
-    },
-    tableRows() {
-      if (!this.rows.length) return [];
-      const summaryRow = Object.assign(
-        { id: '__summary__', store_name: '汇总', store_username: '', agent_name: '', _summary: true },
-        this.summary
-      );
-      return [...this.rows, summaryRow];
-    },
-    columnsWithCell() {
-      return this.columns.map(col => Object.assign({}, col, {
-        customCell: function(record) {
-          if (record._summary) {
-            return { style: { background: '#f0f5ff', fontWeight: '700' } };
-          }
-          return {};
-        },
-      }));
     },
   },
   mounted() {
@@ -159,10 +189,21 @@ export default {
       const n = parseFloat(val);
       return isNaN(n) ? '0.00' : n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
+    amountClass(val) {
+      const n = parseFloat(val);
+      if (isNaN(n) || n === 0) return 'amount-zero';
+      return n > 0 ? 'amount-pos' : 'amount-neg';
+    },
+    typeLabel(typeId) {
+      return this.deliveryTypeLabels[typeId] || ('类型' + typeId);
+    },
+    hasDelivery(panel) {
+      return panel.delivery_types && Object.keys(panel.delivery_types).length > 0;
+    },
     buildParams() {
       const p = {
         agent_id:  this.form.agentId  || '',
-        store_id:  this.form.storeId  || '',
+        store_ids: (this.form.storeIds || []).join(','),
         date_type: this.form.dateType || '',
       };
       if (this.form.dateRange && this.form.dateRange.length === 2) {
@@ -185,7 +226,7 @@ export default {
       } catch (_) { /* ignore */ }
     },
     onAgentChange() {
-      this.form.storeId = null;
+      this.form.storeIds = [];
     },
     onDateTypeChange(val) {
       if (val) this.form.dateRange = null;
@@ -202,10 +243,9 @@ export default {
           params: this.buildParams(),
         });
         if (res.code === 200) {
-          this.agents  = res.data.agents;
-          this.stores  = res.data.stores;
-          this.rows    = res.data.rows;
-          this.summary = res.data.summary;
+          this.agents = res.data.agents;
+          this.stores = res.data.stores;
+          this.panels = res.data.panels;
         } else {
           this.error = res.msg || '查询失败';
         }
@@ -216,10 +256,9 @@ export default {
       }
     },
     doReset() {
-      this.form     = { agentId: null, storeId: null, dateType: null, dateRange: null };
+      this.form     = { agentId: null, storeIds: [], dateType: null, dateRange: null };
       this.searched = false;
-      this.rows     = [];
-      this.summary  = {};
+      this.panels   = [];
       this.error    = null;
     },
   },
@@ -231,5 +270,27 @@ export default {
 .search-card  { flex-shrink:0; }
 .result-wrap  { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
 .center-state { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; }
-.result-card  { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+.panels-scroll { flex:1; overflow-y:auto; padding-right:4px; }
+
+/* 卡片标题 */
+.card-header  { display:flex; align-items:center; flex-wrap:wrap; gap:4px; }
+.store-name   { font-weight:700; font-size:14px; }
+.agent-name   { font-size:12px; color:#8c8c8c; margin-left:4px; }
+
+/* 高亮统计区 */
+.highlight-row  { margin-bottom:4px; }
+.highlight-stat { background:#f8f9ff; border-radius:6px; padding:10px 12px; text-align:center; }
+.stat-label     { font-size:12px; color:#8c8c8c; margin-bottom:4px; }
+.stat-value     { font-size:20px; font-weight:700; }
+
+/* 账变明细网格：每行两项 */
+.delivery-grid  { display:grid; grid-template-columns:1fr 1fr; gap:4px 8px; }
+.delivery-item  { display:flex; justify-content:space-between; align-items:center; padding:3px 6px; border-radius:4px; background:#fafafa; font-size:12px; }
+.delivery-label { color:#595959; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70px; }
+.delivery-amount{ font-weight:600; white-space:nowrap; }
+
+/* 金额颜色 */
+.amount-pos  { color:#3f8600; }
+.amount-neg  { color:#cf1322; }
+.amount-zero { color:#8c8c8c; }
 </style>

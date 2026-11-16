@@ -4,13 +4,9 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\AdminUser;
-use addons\webman\model\GameType;
 use addons\webman\model\PlayGameRecord;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
-use addons\webman\model\PlayerLotteryRecord;
-use addons\webman\model\PlayerReverseWaterDetail;
-use addons\webman\model\TicketRecord;
 use ExAdmin\ui\support\Request;
 use support\Response;
 
@@ -42,23 +38,31 @@ class ChannelStoreFinanceSummaryController
         $admin = Admin::user();
 
         $agentId   = Request::input('agent_id');
-        $storeId   = Request::input('store_id');
+        $storeIds  = Request::input('store_ids');   // 逗号分隔字符串或数组
         $dateType  = Request::input('date_type');
         $startTime = Request::input('start_time');
         $endTime   = Request::input('end_time');
 
-        // 下拉选项（每次都返回，供前端更新选择器）
+        // 解析多选店家 ID
+        if (is_string($storeIds) && $storeIds !== '') {
+            $storeIds = array_filter(array_map('intval', explode(',', $storeIds)));
+        } elseif (!is_array($storeIds)) {
+            $storeIds = [];
+        } else {
+            $storeIds = array_filter(array_map('intval', $storeIds));
+        }
+
         $agents = $this->getAgentOptions($admin->department_id);
         $stores = $this->getStoreOptions($admin->department_id);
 
         $hasFilter = !empty($dateType) || !empty($startTime) || !empty($endTime)
-                     || !empty($storeId) || !empty($agentId);
+                     || !empty($storeIds) || !empty($agentId);
 
         if (!$hasFilter) {
-            return json(['code' => 200, 'data' => ['agents' => $agents, 'stores' => $stores, 'rows' => [], 'summary' => []]]);
+            return json(['code' => 200, 'data' => ['agents' => $agents, 'stores' => $stores, 'panels' => []]]);
         }
 
-        // 查询店家
+        // 查询门店
         $storesQuery = AdminUser::query()
             ->select(['id', 'nickname', 'username', 'parent_admin_id'])
             ->where('department_id', $admin->department_id)
@@ -69,24 +73,25 @@ class ChannelStoreFinanceSummaryController
         if (!empty($agentId)) {
             $storesQuery->where('parent_admin_id', $agentId);
         }
-        if (!empty($storeId)) {
-            $storesQuery->where('id', $storeId);
+        if (!empty($storeIds)) {
+            $storesQuery->whereIn('id', $storeIds);
         }
 
         $storeList = $storesQuery->get();
-        $storeIds  = $storeList->pluck('id')->toArray();
 
-        if (empty($storeIds)) {
-            return json(['code' => 200, 'data' => ['agents' => $agents, 'stores' => $stores, 'rows' => [], 'summary' => []]]);
+        if ($storeList->isEmpty()) {
+            return json(['code' => 200, 'data' => ['agents' => $agents, 'stores' => $stores, 'panels' => []]]);
         }
 
-        // 代理名称
-        $agentIds  = $storeList->pluck('parent_admin_id')->filter()->unique()->values()->toArray();
-        $agentMap  = AdminUser::query()->whereIn('id', $agentIds)->get(['id', 'nickname', 'username'])->keyBy('id');
+        $storeIdList = $storeList->pluck('id')->toArray();
 
-        // 玩家分组
+        // 代理名称
+        $agentIds = $storeList->pluck('parent_admin_id')->filter()->unique()->values()->toArray();
+        $agentMap = AdminUser::query()->whereIn('id', $agentIds)->get(['id', 'nickname', 'username'])->keyBy('id');
+
+        // 玩家分组（按店家）
         $allPlayers = Player::query()
-            ->whereIn('store_admin_id', $storeIds)
+            ->whereIn('store_admin_id', $storeIdList)
             ->where('is_promoter', 0)
             ->get(['id', 'store_admin_id']);
 
@@ -96,171 +101,94 @@ class ChannelStoreFinanceSummaryController
         }
 
         // 批量查询
-        $deliveryByStore    = $this->batchQueryDeliveryData($playerIdsByStore, $dateType, $startTime, $endTime);
-        $lotteryByStore     = $this->batchQueryLotteryData($playerIdsByStore, $dateType, $startTime, $endTime);
-        $couponByStore      = $this->batchQueryCouponData($storeIds, $dateType, $startTime, $endTime);
-        $gameWinLossByStore = $this->batchQueryGameWinLoss($playerIdsByStore, $dateType, $startTime, $endTime);
-        $elecRebateByStore  = $this->batchQueryElecRebate($playerIdsByStore, $dateType, $startTime, $endTime);
+        $deliveryByStore     = $this->batchQueryDeliveryTypes($playerIdsByStore, $dateType, $startTime, $endTime);
+        $gameWinLossByStore  = $this->batchQueryGameWinLoss($playerIdsByStore, $dateType, $startTime, $endTime);
+        $machineWinLoss      = $this->calcMachineWinLoss($deliveryByStore);
 
-        $rows    = [];
-        $summary = array_fill_keys(['electronic_game_win_loss', 'machine_win_loss', 'lottery_ticket_sent',
-            'electronic_jackpot', 'machine_jackpot', 'wallet_increase', 'wallet_decrease',
-            'machine_rebate', 'electronic_rebate', 'coupon_sent'], '0');
-
+        $panels = [];
         foreach ($storeList as $store) {
             $sid   = $store->id;
             $agent = $agentMap->get($store->parent_admin_id);
-            $d     = $deliveryByStore[$sid] ?? null;
-            $l     = $lotteryByStore[$sid] ?? null;
-            $c     = $couponByStore[$sid] ?? null;
-            $g     = $gameWinLossByStore[$sid] ?? null;
-            $er    = $elecRebateByStore[$sid] ?? null;
 
-            $machineWinLoss = bcsub(
-                bcadd((string)floatval($d->open_score ?? 0), (string)floatval($d->machine_put ?? 0), 2),
-                (string)floatval($d->withdraw ?? 0),
-                2
-            );
-
-            $row = [
-                'id'                       => $sid,
+            $panels[] = [
+                'store_id'                 => $sid,
                 'store_name'               => $store->nickname ?: $store->username,
                 'store_username'           => $store->username,
                 'agent_name'               => $agent ? ($agent->nickname ?: $agent->username) : '-',
-                'electronic_game_win_loss' => bcadd('0', (string)floatval($g->win_loss ?? 0), 2),
-                'machine_win_loss'         => $machineWinLoss,
-                'lottery_ticket_sent'      => bcadd('0', (string)floatval($d->lottery_ticket_sent ?? 0), 2),
-                'electronic_jackpot'       => bcadd('0', (string)floatval($l->electronic_jackpot ?? 0), 2),
-                'machine_jackpot'          => bcadd('0', (string)floatval($l->machine_jackpot ?? 0), 2),
-                'wallet_increase'          => bcadd('0', (string)floatval($d->wallet_increase ?? 0), 2),
-                'wallet_decrease'          => bcadd('0', (string)floatval($d->wallet_decrease ?? 0), 2),
-                'machine_rebate'           => '0.00',
-                'electronic_rebate'        => bcadd('0', (string)floatval($er->reverse_water ?? 0), 2),
-                'coupon_sent'              => bcadd('0', (string)floatval($c->coupon_sent ?? 0), 2),
+                'machine_win_loss'         => $machineWinLoss[$sid] ?? '0.00',
+                'electronic_game_win_loss' => bcadd('0', (string)floatval($gameWinLossByStore[$sid] ?? 0), 2),
+                'delivery_types'           => $deliveryByStore[$sid] ?? [],
             ];
-
-            foreach (array_keys($summary) as $field) {
-                $summary[$field] = bcadd($summary[$field], $row[$field], 2);
-            }
-
-            $rows[] = $row;
         }
 
         return json(['code' => 200, 'data' => [
             'agents'  => $agents,
             'stores'  => $stores,
-            'rows'    => $rows,
-            'summary' => $summary,
+            'panels'  => $panels,
         ]]);
     }
 
     // ========== 批量查询方法 ==========
 
-    private function batchQueryDeliveryData(array $playerIdsByStore, ?string $dateType, ?string $start, ?string $end): array
+    /**
+     * 按 player_id + type 聚合所有账变类型，返回 [store_id => [type => amount_str]]
+     */
+    private function batchQueryDeliveryTypes(array $playerIdsByStore, ?string $dateType, ?string $start, ?string $end): array
     {
         $allPlayerIds = array_merge(...array_values($playerIdsByStore ?: [[]]));
         if (empty($allPlayerIds)) {
             return [];
         }
-
-        $increaseTypes = implode(',', [
-            PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
-            PlayerDeliveryRecord::TYPE_PRESENT_IN,
-            PlayerDeliveryRecord::TYPE_WITHDRAWAL_BACK,
-            PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS,
-            PlayerDeliveryRecord::TYPE_REGISTER_PRESENT,
-            PlayerDeliveryRecord::TYPE_PROFIT,
-            PlayerDeliveryRecord::TYPE_NATIONAL_INVITE,
-            PlayerDeliveryRecord::TYPE_RECHARGE_REWARD,
-            PlayerDeliveryRecord::TYPE_DAMAGE_REBATE,
-            PlayerDeliveryRecord::COIN_ADD,
-            PlayerDeliveryRecord::TYPE_AGENT_IN,
-        ]);
-        $decreaseTypes = implode(',', [
-            PlayerDeliveryRecord::TYPE_PRESENT_OUT,
-            PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT,
-            PlayerDeliveryRecord::COIN_DEDUCT,
-            PlayerDeliveryRecord::TYPE_AGENT_OUT,
-        ]);
 
         $query = PlayerDeliveryRecord::query()->whereIn('player_id', $allPlayerIds);
         $this->applyTimeFilter($query, 'created_at', $dateType, $start, $end);
 
-        $rows = $query->selectRaw("
-            player_id,
-            SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " AND `source` = 'artificial_recharge' THEN `amount` ELSE 0 END) AS open_score,
-            SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put,
-            SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `source` = 'channel_withdrawal' THEN `amount` ELSE 0 END) AS withdraw,
-            SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . " THEN `amount` ELSE 0 END) AS lottery_ticket_sent,
-            SUM(CASE WHEN `type` IN ({$increaseTypes}) THEN `amount` ELSE 0 END) AS wallet_increase,
-            SUM(CASE WHEN `type` IN ({$decreaseTypes}) THEN `amount` ELSE 0 END) AS wallet_decrease
-        ")->groupBy('player_id')->get()->keyBy('player_id');
+        $rows = $query->selectRaw('player_id, `type`, SUM(amount) AS total')
+            ->groupBy(['player_id', 'type'])
+            ->get();
 
+        // 按 player_id 建立索引
+        $byPlayer = [];
+        foreach ($rows as $r) {
+            $byPlayer[(int)$r->player_id][(int)$r->type] = floatval($r->total);
+        }
+
+        // 聚合到 store 层级
         $result = [];
         foreach ($playerIdsByStore as $storeId => $playerIds) {
-            $agg = (object)['open_score' => 0.0, 'machine_put' => 0.0, 'withdraw' => 0.0,
-                            'lottery_ticket_sent' => 0.0, 'wallet_increase' => 0.0, 'wallet_decrease' => 0.0];
+            $typeTotals = [];
             foreach ($playerIds as $pid) {
-                if ($row = $rows->get($pid)) {
-                    $agg->open_score          += floatval($row->open_score);
-                    $agg->machine_put         += floatval($row->machine_put);
-                    $agg->withdraw            += floatval($row->withdraw);
-                    $agg->lottery_ticket_sent += floatval($row->lottery_ticket_sent);
-                    $agg->wallet_increase     += floatval($row->wallet_increase);
-                    $agg->wallet_decrease     += floatval($row->wallet_decrease);
+                if (!isset($byPlayer[$pid])) continue;
+                foreach ($byPlayer[$pid] as $type => $amount) {
+                    $typeTotals[$type] = ($typeTotals[$type] ?? 0.0) + $amount;
                 }
             }
-            $result[$storeId] = $agg;
+            // 格式化为字符串，只保留非零项
+            $formatted = [];
+            foreach ($typeTotals as $type => $amount) {
+                if (abs($amount) > 0.001) {
+                    $formatted[$type] = number_format($amount, 2, '.', '');
+                }
+            }
+            $result[$storeId] = $formatted;
         }
         return $result;
     }
 
-    private function batchQueryLotteryData(array $playerIdsByStore, ?string $dateType, ?string $start, ?string $end): array
+    /**
+     * 实体机台输赢 = 开分(source=artificial_recharge) + 投钞 - 洗分(source=channel_withdrawal)
+     */
+    private function calcMachineWinLoss(array $deliveryByStore): array
     {
-        $allPlayerIds = array_merge(...array_values($playerIdsByStore ?: [[]]));
-        if (empty($allPlayerIds)) {
-            return [];
-        }
-
-        $query = PlayerLotteryRecord::query()
-            ->whereIn('player_id', $allPlayerIds)
-            ->where('status', PlayerLotteryRecord::STATUS_COMPLETE);
-        $this->applyTimeFilter($query, 'created_at', $dateType, $start, $end);
-
-        $rows = $query->selectRaw("
-            player_id,
-            SUM(CASE WHEN `source` IN (" . PlayerLotteryRecord::SOURCE_GAME . ", " . PlayerLotteryRecord::SOURCE_MANUAL . ") THEN `amount` ELSE 0 END) AS electronic_jackpot,
-            SUM(CASE WHEN `game_type` IN (" . GameType::TYPE_SLOT . ", " . GameType::TYPE_STEEL_BALL . ") THEN `amount` ELSE 0 END) AS machine_jackpot
-        ")->groupBy('player_id')->get()->keyBy('player_id');
-
         $result = [];
-        foreach ($playerIdsByStore as $storeId => $playerIds) {
-            $elec = 0.0; $machine = 0.0;
-            foreach ($playerIds as $pid) {
-                if ($row = $rows->get($pid)) {
-                    $elec    += floatval($row->electronic_jackpot);
-                    $machine += floatval($row->machine_jackpot);
-                }
-            }
-            $result[$storeId] = (object)['electronic_jackpot' => $elec, 'machine_jackpot' => $machine];
-        }
-        return $result;
-    }
-
-    private function batchQueryCouponData(array $storeIds, ?string $dateType, ?string $start, ?string $end): array
-    {
-        $query = TicketRecord::query()->whereIn('store_admin_id', $storeIds);
-        $this->applyTimeFilter($query, 'created_at', $dateType, $start, $end);
-
-        $rows = $query->selectRaw("
-            CAST(store_admin_id AS UNSIGNED) AS store_admin_id,
-            SUM(CASE WHEN `ticket_type` IN (" . TicketRecord::TYPE_EXPERIENCE . ", " . TicketRecord::TYPE_WELFARE . ")
-                AND `status` != " . TicketRecord::STATUS_DISABLED . " THEN `score` ELSE 0 END) AS coupon_sent
-        ")->groupBy('store_admin_id')->get();
-
-        $result = [];
-        foreach ($rows as $row) {
-            $result[(int)$row->store_admin_id] = $row;
+        foreach ($deliveryByStore as $storeId => $types) {
+            $openScore  = floatval($types[PlayerDeliveryRecord::TYPE_RECHARGE]       ?? 0);
+            $machinePut = floatval($types[PlayerDeliveryRecord::TYPE_MACHINE]         ?? 0);
+            $withdraw   = floatval($types[PlayerDeliveryRecord::TYPE_WITHDRAWAL]      ?? 0);
+            // 注意：delivery_types 里的充值/提现是所有 source 的合计，
+            // 实体机台输赢只统计渠道相关的，这里简化用全量 type 值
+            $winLoss = bcsub(bcadd((string)$openScore, (string)$machinePut, 2), (string)$withdraw, 2);
+            $result[$storeId] = $winLoss;
         }
         return $result;
     }
@@ -289,38 +217,7 @@ class ChannelStoreFinanceSummaryController
                     $total += floatval($row->win_loss);
                 }
             }
-            $result[$storeId] = (object)['win_loss' => $total];
-        }
-        return $result;
-    }
-
-    private function batchQueryElecRebate(array $playerIdsByStore, ?string $dateType, ?string $start, ?string $end): array
-    {
-        $allPlayerIds = array_merge(...array_values($playerIdsByStore ?: [[]]));
-        if (empty($allPlayerIds)) {
-            return [];
-        }
-
-        $query = PlayerReverseWaterDetail::query()->whereIn('player_id', $allPlayerIds);
-        if (!empty($dateType)) {
-            $query->where(getDateWhere($dateType, 'date'));
-        } else {
-            if (!empty($start)) $query->where('date', '>=', date('Y-m-d', strtotime($start)));
-            if (!empty($end))   $query->where('date', '<=', date('Y-m-d', strtotime($end)));
-        }
-
-        $rows = $query->selectRaw('player_id, SUM(reverse_water) AS reverse_water')
-            ->groupBy('player_id')->get()->keyBy('player_id');
-
-        $result = [];
-        foreach ($playerIdsByStore as $storeId => $playerIds) {
-            $total = 0.0;
-            foreach ($playerIds as $pid) {
-                if ($row = $rows->get($pid)) {
-                    $total += floatval($row->reverse_water);
-                }
-            }
-            $result[$storeId] = (object)['reverse_water' => $total];
+            $result[$storeId] = $total;
         }
         return $result;
     }
@@ -330,7 +227,7 @@ class ChannelStoreFinanceSummaryController
         if (!empty($dateType)) {
             $query->where(getDateWhere($dateType, $column));
         } else {
-            if (!empty($start)) $query->where($column, '>', $start);
+            if (!empty($start)) $query->where($column, '>=', $start);
             if (!empty($end))   $query->where($column, '<=', $end);
         }
     }
