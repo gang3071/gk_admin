@@ -1265,9 +1265,18 @@ return [
         'url' => 'ex-admin/addons-webman-controller-ChannelStoreProfitReportController/index',
         'title' => '店家分润报表',
     ],
+    //门店财务汇总
+    [
+        'id' => 'addons\webman\controller\ChannelStoreFinanceSummaryController-',
+        'pid' => 0,
+        'url' => '',
+        'group' => 'channel',
+        'title' => '门店财务汇总',
+        'children' => []
+    ],
     [
         'id' => 'addons\webman\controller\ChannelStoreFinanceSummaryController\finance',
-        'pid' => 'addons\webman\controller\ChannelMachineController-',
+        'pid' => 'addons\webman\controller\ChannelStoreFinanceSummaryController-',
         'action' => 'finance',
         'method' => 'get',
         'group' => 'channel',
