@@ -98,6 +98,7 @@ return [
         'vip_max_level' => '最高レベルに達しました',
         'agent_admin_id' => '所属エージェント',
         'store_admin_id' => '所属店舗',
+        'store' => '所属店舗',
         'audit_status' => '審査',
     ],
     'audit' => [

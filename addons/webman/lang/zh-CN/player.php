@@ -99,6 +99,7 @@ return [
         'vip_max_level' => '已达最高等级',
         'agent_admin_id' => '所属代理商',
         'store_admin_id' => '所属店家',
+        'store' => '所属店家',
         'audit_status' => '审核',
     ],
     'audit' => [

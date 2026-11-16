@@ -99,6 +99,7 @@ return [
         'vip_max_level' => 'Max Level Reached',
         'agent_admin_id' => 'Agent',
         'store_admin_id' => 'Store',
+        'store' => 'Store',
         'audit_status' => 'Audit',
     ],
     'audit' => [
