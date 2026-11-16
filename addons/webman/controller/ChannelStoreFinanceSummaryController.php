@@ -66,7 +66,6 @@ class ChannelStoreFinanceSummaryController
                         1  => $t('delivery_types.1'),   // 管理员加点
                         4  => $t('delivery_types.4'),   // 机台上分
                         6  => $t('delivery_types.6'),   // 充值(开分)
-                        16 => $t('delivery_types.16'),  // 全民邀请奖励（邀请行为激励，归收入侧）
                         23 => $t('delivery_types.23'),  // 投钞
                         32 => $t('delivery_types.32'),  // 退款（冲销性质）
                     ],
