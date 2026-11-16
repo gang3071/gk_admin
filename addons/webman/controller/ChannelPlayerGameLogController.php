@@ -42,13 +42,22 @@ class ChannelPlayerGameLogController
             // 修复前：加载5个关联（player, machine, machineLabel, player.channel, machine_recording）
             // 修复后：只加载必要的关联，并严格限制字段
             $grid->model()->with([
-                'player:id,uuid,name,department_id',           // 只加载需要的字段
+                'player:id,uuid,name,department_id,store_admin_id',  // 只加载需要的字段
                 'machine:id,code,label_id,producer_id',       // 只加载需要的字段（name 通过 machineLabel 访问器获取）
                 'machine.machineLabel:id,name',                // 嵌套加载但限制字段
                 'machine.producer:id,name',                    // 嵌套加载但限制字段
             ]);
             $exAdminFilter = Request::input('ex_admin_filter', []);
             $this->applyQueryConditions($grid->model(), $exAdminFilter);
+
+            $storeOptions = \addons\webman\model\AdminUser::query()
+                ->where('department_id', Admin::user()->department_id)
+                ->where('type', \addons\webman\model\AdminUser::TYPE_STORE)
+                ->where('status', 1)
+                ->orderBy('id', 'desc')
+                ->get(['id', 'nickname', 'username'])
+                ->mapWithKeys(fn($s) => [$s->id => ($s->nickname ?: $s->username) . " ({$s->username})"])
+                ->toArray();
 
             $grid->model()->orderBy('id', 'desc');
             $layout = Layout::create();
@@ -104,6 +113,12 @@ class ChannelPlayerGameLogController
                     PlayerGameLog $data
                 ) {
                     return $data->player->phone ?? '';
+                })->align('center');
+                $grid->column('player.store_admin_id', admin_trans('player.fields.store'))->display(function (
+                    $val,
+                    PlayerGameLog $data
+                ) use ($storeOptions) {
+                    return $storeOptions[$data->player->store_admin_id ?? 0] ?? '-';
                 })->align('center');
                 $grid->column('player.channel.name', admin_trans('player.fields.department_id'))->display(function (
                     $val,
@@ -237,7 +252,13 @@ class ChannelPlayerGameLogController
             $grid->column('chip_amount',
                 admin_trans('player_game_log.fields.chip_amount'))->sortable()->align('center');
             $grid->column('created_at', admin_trans('player_game_log.fields.create_at'))->align('center');
-            $grid->filter(function (Filter $filter) {
+            $grid->filter(function (Filter $filter) use ($storeOptions) {
+                $filter->eq()->select('store_id')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('player.fields.store'))
+                    ->options($storeOptions);
                 $filter->like()->text('player.phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('machine.machineLabel.name')->placeholder(admin_trans('machine.fields.name'));
                 $filter->like()->text('machine.code')->placeholder(admin_trans('machine.fields.code'));
@@ -434,6 +455,12 @@ class ChannelPlayerGameLogController
             $query->whereHas('player', function ($query) use ($exAdminFilter) {
                 $query->where('is_test', $exAdminFilter['search_type']);
             });
+        }
+        if (!empty($exAdminFilter['store_id'])) {
+            $storePlayerIds = \addons\webman\model\Player::query()
+                ->where('store_admin_id', $exAdminFilter['store_id'])
+                ->pluck('id');
+            $query->whereIn('player_id', $storePlayerIds);
         }
     }
 

@@ -691,7 +691,10 @@ class Login extends LoginAbstract
                     $query->where('settlement_status', $exAdminFilter['settlement_status']);
                 }
                 // 店家筛选（应用于统计查询）
-                if (!empty($exAdminFilter['player']['store_admin_id'])) {
+                if (!empty($exAdminFilter['store_id'])) {
+                    $storePlayerIds = Player::query()->where('store_admin_id', $exAdminFilter['store_id'])->pluck('id');
+                    $query->whereIn('player_id', $storePlayerIds);
+                } elseif (!empty($exAdminFilter['player']['store_admin_id'])) {
                     $query->whereHas('player', function ($q) use ($exAdminFilter) {
                         $q->where('store_admin_id', $exAdminFilter['player']['store_admin_id']);
                     });

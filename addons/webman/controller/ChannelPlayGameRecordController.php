@@ -3,6 +3,8 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\model\AdminUser;
+use addons\webman\model\Player;
 use addons\webman\model\PlayGameRecord;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
@@ -101,7 +103,22 @@ class ChannelPlayGameRecordController
                     $query->where('player_source', $exAdminFilter['search_type']);
                 });
             }
+            if (!empty($exAdminFilter['store_id'])) {
+                $storePlayerIds = Player::query()->where('store_admin_id', $exAdminFilter['store_id'])->pluck('id');
+                $grid->model()->whereIn('player_id', $storePlayerIds);
+            }
             $grid->model()->orderBy('id', 'desc');
+
+            // 店家选项（供筛选器使用）
+            $storeOptions = AdminUser::query()
+                ->where('department_id', $admin->department_id)
+                ->where('type', AdminUser::TYPE_STORE)
+                ->where('status', 1)
+                ->orderBy('id', 'desc')
+                ->get(['id', 'nickname', 'username'])
+                ->mapWithKeys(fn($s) => [$s->id => ($s->nickname ?: $s->username) . " ({$s->username})"])
+                ->toArray();
+
             $layout = Layout::create();
             $layout->row(function (Row $row) use ($exAdminFilter) {
                 $row->gutter([10, 0]);
@@ -126,6 +143,9 @@ class ChannelPlayGameRecordController
             });
             $grid->column('player.phone', admin_trans('player.fields.phone'))->align('center')->display(function ($val, PlayGameRecord $data) {
                 return $data->player ? $data->player->phone : '';
+            });
+            $grid->column('player.store_admin_id', admin_trans('player.fields.store'))->align('center')->display(function ($val) use ($storeOptions) {
+                return $storeOptions[$val] ?? '-';
             });
             $grid->column('player.player_source', admin_trans('player.fields.player_source'))->display(function ($val, PlayGameRecord $data) {
                 if (!$data->player) {
@@ -228,7 +248,13 @@ class ChannelPlayGameRecordController
                     );
                 }
             });
-            $grid->filter(function (Filter $filter) {
+            $grid->filter(function (Filter $filter) use ($storeOptions) {
+                $filter->eq()->select('store_id')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('player.fields.store'))
+                    ->options($storeOptions);
                 $filter->like()->text('player_uuid')->placeholder(admin_trans('player.fields.uuid'));
                 $filter->like()->text('player_name')->placeholder(admin_trans('player.fields.name'));
                 $filter->like()->text('player_phone')->placeholder(admin_trans('player.fields.phone'));
