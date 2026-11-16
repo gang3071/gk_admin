@@ -50,6 +50,7 @@ return [
         'net_revenue'         => 'Net Revenue',
         'operating_cost'      => 'Operating Cost',
         'cost_detail'         => 'Operating Cost Details (click type for description)',
+        'wallet_detail'       => 'Wallet Flow Reference (excluded from revenue)',
         'total'               => 'Total',
         'profit'              => 'Profit',
         'loss'                => 'Loss',

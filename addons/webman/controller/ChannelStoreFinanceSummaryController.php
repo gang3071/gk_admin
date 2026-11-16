@@ -63,7 +63,7 @@ class ChannelStoreFinanceSummaryController
                         'no_data'       => $t('states.no_data'),
                     ],
                     'cost_types' => [
-                        // 运营成本：平台额外发放给玩家的奖励（机台上下分已计入输赢，不重复列）
+                        // 运营成本：平台额外发放给玩家的奖励（计入净营收扣除项）
                         12 => $t('delivery_types.12'),  // 推广员分润
                         13 => $t('delivery_types.13'),  // 彩金中奖
                         33 => $t('delivery_types.33'),  // 摸奖券奖励
@@ -73,6 +73,19 @@ class ChannelStoreFinanceSummaryController
                         37 => $t('delivery_types.37'),  // VIP每日登录
                         38 => $t('delivery_types.38'),  // 活动外增
                         39 => $t('delivery_types.39'),  // 排行榜奖励
+                    ],
+                    'wallet_types' => [
+                        // 钱包流水参考：余额变动记录，不计入营收计算
+                        1  => $t('delivery_types.1'),   // 管理员加点
+                        4  => $t('delivery_types.4'),   // 机台上分
+                        5  => $t('delivery_types.5'),   // 机台下分
+                        6  => $t('delivery_types.6'),   // 充值(开分)
+                        7  => $t('delivery_types.7'),   // 提现(洗分)
+                        8  => $t('delivery_types.8'),   // 管理员扣点
+                        22 => $t('delivery_types.22'),  // 特殊类型
+                        23 => $t('delivery_types.23'),  // 投钞
+                        31 => $t('delivery_types.31'),  // 预扣
+                        32 => $t('delivery_types.32'),  // 退款
                     ],
                     'desc_panel' => [
                         'title'      => $t('desc_panel.title'),

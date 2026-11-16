@@ -148,6 +148,26 @@
                   </div>
                 </div>
 
+                <!-- 钱包流水参考（不计入营收） -->
+                <a-divider style="margin:10px 0 8px" orientation="left" orientation-margin="0">
+                  <span style="font-size:12px; color:#8c8c8c">{{ trans.panel.wallet_detail }}</span>
+                </a-divider>
+
+                <div class="cost-list wallet-list">
+                  <div
+                    v-for="(label, typeId) in trans.wallet_types"
+                    :key="typeId"
+                    class="cost-item wallet-item"
+                    :class="{ 'item-active': activeTypeId == typeId }"
+                    @click="selectType(typeId)"
+                  >
+                    <span class="cost-label">{{ label }}</span>
+                    <span class="cost-amount amount-muted">
+                      {{ fmt(panel.delivery_types[typeId] || '0') }}
+                    </span>
+                  </div>
+                </div>
+
               </a-card>
             </a-col>
           </a-row>
@@ -160,7 +180,7 @@
         <div class="desc-panel-title">{{ trans.desc_panel.title }}</div>
 
         <div v-if="activeTypeId" class="desc-content">
-          <div class="desc-type-name">{{ (trans.cost_types || {})[activeTypeId] }}</div>
+          <div class="desc-type-name">{{ allTypeLabels[activeTypeId] }}</div>
           <div class="desc-text">{{ typeDescriptions[activeTypeId] }}</div>
         </div>
 
@@ -169,10 +189,18 @@
           <div class="desc-empty-hint" style="white-space:pre-line">{{ trans.desc_panel.click_hint }}</div>
           <a-divider style="margin:12px 0 8px" />
           <div class="desc-index">
+            <div class="desc-index-section">{{ trans.panel.operating_cost }}</div>
             <div
               v-for="(label, typeId) in (trans.cost_types || {})"
-              :key="typeId"
+              :key="'c'+typeId"
               class="desc-index-item"
+              @click="selectType(typeId)"
+            >{{ label }}</div>
+            <div class="desc-index-section" style="margin-top:8px">{{ trans.panel.wallet_detail }}</div>
+            <div
+              v-for="(label, typeId) in (trans.wallet_types || {})"
+              :key="'w'+typeId"
+              class="desc-index-item desc-index-item--muted"
               @click="selectType(typeId)"
             >{{ label }}</div>
           </div>
@@ -195,6 +223,7 @@ export default {
         panel: { machine_win_loss: '', electronic_win_loss: '', net_revenue: '', operating_cost: '', cost_detail: '', total: '', profit: '盈利', loss: '亏损', even: '持平' },
         states: { hint: '', search_failed: '', retry: '', no_data: '' },
         cost_types: {},
+        wallet_types: {},
         desc_panel: { title: '', click_hint: '' },
       }),
     },
@@ -227,6 +256,27 @@ export default {
         38: '【活动外增】\n\n来源：运营人员通过管理后台工具手动批量或单点发放，不经标准活动审批流程。\n\n触发流程：运营在管理后台执行发放操作（可单个或批量选择玩家）→ 填写金额和原因 → 确认后系统写入账变记录（type=38）→ 金额计入玩家账户。\n\n常见场景：\n• 线下推广活动的线上奖励兑现\n• KOL/网红合作的返利发放\n• 特殊节假日礼包（临时决定，未走标准活动流程）\n• 渠道间合作互推奖励',
 
         39: '【排行榜奖励】\n\n来源：排行榜活动结算系统（gk_work Worker 周期性结算任务）。\n\n触发流程：排行榜活动周期结束（日榜/周榜/月榜/赛季榜）→ Worker 触发结算脚本 → 锁定最终排名数据 → 按名次对应配置的奖励金额计算 → 批量写入账变记录（type=39）→ 自动发放至上榜玩家账户。\n\n排名指标：通常按特定指标（如游戏流水、开分次数、在线时长等）排名，具体取决于活动配置。\n\n奖励规模：头部名次奖励金额通常较大，是阶段性的重要支出项。建议在排行榜结算日前关注资金池余额是否充足。',
+
+        // ── 钱包流水参考类型说明 ──
+        1:  '【管理员加点】\n\n来源：渠道后台管理员（代理或店家账号）在「玩家管理」页面手动操作。\n\n触发流程：管理员选择目标玩家 → 填写加分金额及备注 → 确认后系统立即写入账变记录，玩家余额实时增加。\n\n常见场景：\n• 活动积分人工赠送\n• 充值未到账的人工补偿\n• 客服处理投诉赔付\n\n⚠️ 注意：此操作不产生外部资金流水，属于后台单方面授信，建议填写备注留存审计记录。不计入营收，仅作钱包流水参考。',
+
+        4:  '【机台上分】\n\n来源：玩家在门店实体机台（钢珠机或 Slot 机）发起「开分」操作。\n\n触发流程：玩家在机台界面选择开分金额 → gk_work 机台代理服务接收请求 → 从玩家账户扣除余额并写入 PlayerGameLog（上分记录）→ 同步写入账变记录（type=4）→ 机台积分对应增加。\n\n财务意义：玩家账户余额减少，机台游戏积分增加。此数据已计入「实体机台输赢」顶部汇总（机台上分 - 机台下分），此处仅供参考。',
+
+        5:  '【机台下分】\n\n来源：玩家在门店实体机台（钢珠机或 Slot 机）发起「洗分」操作。\n\n触发流程：玩家在机台界面选择洗分金额 → gk_work 机台代理服务接收请求 → 将机台剩余积分换算为账户余额 → 同步写入账变记录（type=5）→ 玩家余额增加。\n\n财务意义：机台积分减少，玩家账户余额增加。此数据已计入「实体机台输赢」顶部汇总（机台上分 - 机台下分），此处仅供参考。',
+
+        6:  '【充值(开分)】\n\n来源：玩家通过渠道 App/H5 在线发起充值（开分）申请，由门店以「开分券」方式完成。\n\n触发流程：\n① 玩家在 App 提交开分申请（填写金额）\n② 系统生成「开分券」（内含二维码）\n③ 门店核验申请并打印/展示开分券\n④ 玩家在实体机台扫描开分券\n⑤ 机台确认后写入账变记录（type=6），玩家余额扣除\n\n⚠️ 注意：此为钱包充值记录，玩家余额尚未在游戏中消耗，不计入营收计算，仅作流水参考。',
+
+        7:  '【提现(洗分)】\n\n来源：玩家在实体机台完成游戏后，通过 App/H5 发起提现（洗分）申请，由门店以「洗分券」方式线下兑现。\n\n触发流程：\n① 玩家在 App 提交洗分申请（填写洗分金额）\n② 系统写入账变记录（type=7），玩家余额扣除，同时生成「洗分券」\n③ 门店核验洗分券（扫码或输入券号）\n④ 门店线下向玩家支付现金\n\n⚠️ 注意：此为钱包提现记录，不计入营收计算，仅作流水参考。',
+
+        8:  '【管理员扣点】\n\n来源：渠道后台管理员（代理或店家账号）在「玩家管理」页面手动操作。\n\n触发流程：管理员选择目标玩家 → 填写扣分金额及原因 → 确认后系统立即写入账变记录，玩家余额实时减少。\n\n常见场景：\n• 充值异常已打款但需部分追回\n• 账户违规处理\n• 账务对账误差调整\n\n⚠️ 注意：此操作不可撤销，务必填写操作原因备注。不计入营收，仅作钱包流水参考。',
+
+        22: '【特殊类型】\n\n来源：系统内部非常规流程或历史数据迁移。\n\n触发条件：不遵循标准业务流程，通常由开发人员直接操作或系统特殊脚本写入。\n\n常见场景：\n• 系统迁移时的历史数据对账补录\n• 技术团队修复数据错误时的调整记录\n\n⚠️ 注意：正常运营状态下此类型账变应极少出现，如大量出现 type22 记录，需立即联系技术团队排查。不计入营收，仅作参考。',
+
+        23: '【投钞】\n\n来源：玩家向门店实体机台硬件投入现金（硬币或纸币）。\n\n触发流程：机台硬件（硬币识别器/纸币接收器）读取现金 → gk_work 机台代理服务接收投钞事件 → 按面值为玩家账户计入对应积分 → 写入账变记录（type=23）。\n\n资金流向：\n• 物理现金：存入机台钱箱（属于门店现金收入）\n• 账户积分：玩家账户余额增加（机台欠玩家的积分）\n\n⚠️ 注意：投钞是门店实体机台的重要现金流来源，需与收银台现金对账核查。此处仅作流水参考，实际现金需线下单独统计。',
+
+        31: '【预扣】\n\n来源：玩家提交提现/洗分申请时系统自动触发。\n\n触发流程：玩家申请提现 → 系统立即检查余额是否充足 → 充足则写入账变记录（type=31）将对应金额冻结（余额逻辑扣除，显示为预扣状态）→ 提现进入审核队列。\n\n后续处理：\n• 审核通过 → 写入 type7（提现）正式扣款，type31 对应冲销\n• 审核拒绝 → 写入 type32（退款）解冻金额，余额恢复\n\n⚠️ 注意：分析账变数据时，type31（预扣）和 type7（提现）需配对分析，不计入营收。',
+
+        32: '【退款】\n\n来源：充值异常处理、提现驳回解冻、或客服纠纷处理。\n\n常见触发场景：\n• 充值审核驳回 → 退还玩家已打款金额\n• 提现审核拒绝 → 解冻预扣（type31）金额\n• 重复充值误操作 → 退还多余金额\n\n⚠️ 注意：退款记录较为敏感，对账时务必与对应的充值记录（type6）或预扣记录（type31）配对核查。此处仅作流水参考，不计入营收。',
       },
     };
   },
@@ -237,6 +287,9 @@ export default {
     },
     dateTypeOptions() {
       return (this.trans.date_types || []).map(item => ({ value: item.value, label: item.label }));
+    },
+    allTypeLabels() {
+      return Object.assign({}, this.trans.cost_types || {}, this.trans.wallet_types || {});
     },
   },
   mounted() {
@@ -374,6 +427,11 @@ export default {
 .cost-amount     { font-weight:600; white-space:nowrap; }
 .cost-total      { display:flex; justify-content:space-between; align-items:center; padding:4px 6px; margin-top:2px; border-top:1px solid #f0f0f0; font-size:12px; font-weight:700; color:#262626; }
 
+/* 钱包流水参考列表 */
+.wallet-list .cost-item { background:#fafafa; opacity:.85; }
+.wallet-list .cost-item:hover { background:#f0f5ff; opacity:1; }
+.wallet-list .item-active { background:#d6e4ff !important; opacity:1; }
+
 /* 右侧常驻说明面板 */
 .global-desc-panel   { width:220px; flex-shrink:0; display:flex; flex-direction:column; background:#fff; border:1px solid #f0f0f0; border-radius:8px; overflow:hidden; }
 .desc-panel-title    { font-size:13px; font-weight:700; color:#1677ff; padding:10px 12px; border-bottom:1px solid #f0f0f0; background:#f0f5ff; flex-shrink:0; }
@@ -386,11 +444,15 @@ export default {
 .desc-index          { width:100%; display:flex; flex-direction:column; gap:4px; }
 .desc-index-item     { font-size:11px; color:#1677ff; cursor:pointer; padding:3px 6px; border-radius:4px; }
 .desc-index-item:hover { background:#fff7e6; }
+.desc-index-section  { font-size:10px; color:#8c8c8c; padding:2px 6px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; }
+.desc-index-item--muted { color:#8c8c8c; }
+.desc-index-item--muted:hover { background:#f5f5f5; }
 
 /* 金额颜色 */
-.amount-pos  { color:#3f8600; }
-.amount-neg  { color:#cf1322; }
-.amount-zero { color:#8c8c8c; }
+.amount-pos   { color:#3f8600; }
+.amount-neg   { color:#cf1322; }
+.amount-zero  { color:#8c8c8c; }
+.amount-muted { color:#adb5bd; }
 
 /* 盈亏标签 */
 .profit-tag  { display:inline-block; margin-top:4px; padding:1px 8px; border-radius:10px; font-size:11px; font-weight:600; }

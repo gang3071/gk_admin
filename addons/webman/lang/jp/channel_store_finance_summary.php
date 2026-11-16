@@ -50,6 +50,7 @@ return [
         'net_revenue'         => '純収益',
         'operating_cost'      => '運営コスト',
         'cost_detail'         => '運営コスト明細（タイプをクリックして説明を確認）',
+        'wallet_detail'       => 'ウォレット流水参考（収益に含まず）',
         'total'               => '合計',
         'profit'              => '利益',
         'loss'                => '損失',

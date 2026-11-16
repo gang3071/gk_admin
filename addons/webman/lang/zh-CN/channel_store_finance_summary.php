@@ -50,6 +50,7 @@ return [
         'net_revenue'         => '净营收',
         'operating_cost'      => '运营成本',
         'cost_detail'         => '运营成本明细（点击类型查看说明）',
+        'wallet_detail'       => '钱包流水参考（不计入营收）',
         'total'               => '合计',
         'profit'              => '盈利',
         'loss'                => '亏损',

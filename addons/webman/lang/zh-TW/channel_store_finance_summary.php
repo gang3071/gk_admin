@@ -50,6 +50,7 @@ return [
         'net_revenue'         => '淨營收',
         'operating_cost'      => '營運成本',
         'cost_detail'         => '營運成本明細（點擊類型查看說明）',
+        'wallet_detail'       => '錢包流水參考（不計入營收）',
         'total'               => '合計',
         'profit'              => '盈利',
         'loss'                => '虧損',
