@@ -46,93 +46,87 @@
       </div>
     </a-card>
 
-    <!-- 结果区域 -->
-    <div class="result-wrap">
+    <!-- 主体区域：左侧面板 + 右侧常驻说明 -->
+    <div class="main-area">
 
-      <!-- 未查询 -->
-      <div v-if="!searched" class="center-state">
-        <a-empty description="选择门店和时间范围后点击查询" />
-      </div>
+      <!-- 左侧：结果区 -->
+      <div class="result-wrap">
 
-      <!-- 加载中 -->
-      <div v-else-if="loading" class="center-state">
-        <a-spin size="large" />
-      </div>
+        <div v-if="!searched" class="center-state">
+          <a-empty description="选择门店和时间范围后点击查询" />
+        </div>
 
-      <!-- 查询失败 -->
-      <a-result v-else-if="error" status="error" title="查询失败" :sub-title="error">
-        <template #extra>
-          <a-button type="primary" @click="doSearch">重试</a-button>
-        </template>
-      </a-result>
+        <div v-else-if="loading" class="center-state">
+          <a-spin size="large" />
+        </div>
 
-      <!-- 无数据 -->
-      <div v-else-if="!panels.length" class="center-state">
-        <a-empty description="该条件下暂无数据" />
-      </div>
+        <a-result v-else-if="error" status="error" title="查询失败" :sub-title="error">
+          <template #extra>
+            <a-button type="primary" @click="doSearch">重试</a-button>
+          </template>
+        </a-result>
 
-      <!-- 面板列表 -->
-      <div v-else class="panels-scroll">
-        <a-row :gutter="[16, 16]">
-          <a-col
-            v-for="panel in panels"
-            :key="panel.store_id"
-            :xs="24"
-            :sm="12"
-          >
-            <a-card class="store-card" size="small">
-              <!-- 卡片标题 -->
-              <template #title>
-                <div class="card-header">
-                  <span class="store-name">{{ panel.store_name }}</span>
-                  <a-tag color="blue" style="margin-left:8px">{{ panel.store_username }}</a-tag>
-                  <span class="agent-name">{{ panel.agent_name }}</span>
-                </div>
-              </template>
+        <div v-else-if="!panels.length" class="center-state">
+          <a-empty description="该条件下暂无数据" />
+        </div>
 
-              <!-- 实体机台 + 电子游戏 高亮区 -->
-              <a-row :gutter="8" class="highlight-row">
-                <a-col :span="12">
-                  <div class="highlight-stat">
-                    <div class="stat-label">实体机台输赢</div>
-                    <div class="stat-value" :class="amountClass(panel.machine_win_loss)">
-                      {{ fmt(panel.machine_win_loss) }}
-                    </div>
-                    <div class="profit-tag" :class="profitTagClass(panel.machine_win_loss)">
-                      {{ profitLabel(panel.machine_win_loss) }}
-                    </div>
+        <div v-else class="panels-scroll">
+          <a-row :gutter="[16, 16]">
+            <a-col
+              v-for="panel in panels"
+              :key="panel.store_id"
+              :xs="24"
+              :sm="12"
+            >
+              <a-card class="store-card" size="small">
+                <template #title>
+                  <div class="card-header">
+                    <span class="store-name">{{ panel.store_name }}</span>
+                    <a-tag color="blue" style="margin-left:8px">{{ panel.store_username }}</a-tag>
+                    <span class="agent-name">{{ panel.agent_name }}</span>
                   </div>
-                </a-col>
-                <a-col :span="12">
-                  <div class="highlight-stat">
-                    <div class="stat-label">电子游戏输赢</div>
-                    <div class="stat-value" :class="amountClass(panel.electronic_game_win_loss)">
-                      {{ fmt(panel.electronic_game_win_loss) }}
-                    </div>
-                    <div class="profit-tag" :class="profitTagClass(panel.electronic_game_win_loss)">
-                      {{ profitLabel(panel.electronic_game_win_loss) }}
-                    </div>
-                  </div>
-                </a-col>
-              </a-row>
+                </template>
 
-              <!-- 账变明细 -->
-              <a-divider style="margin:10px 0 8px" orientation="left" orientation-margin="0">
-                <span style="font-size:12px; color:#8c8c8c">账变明细（点击类型查看说明）</span>
-              </a-divider>
+                <!-- 高亮统计 -->
+                <a-row :gutter="8" class="highlight-row">
+                  <a-col :span="12">
+                    <div class="highlight-stat">
+                      <div class="stat-label">实体机台输赢</div>
+                      <div class="stat-value" :class="amountClass(panel.machine_win_loss)">
+                        {{ fmt(panel.machine_win_loss) }}
+                      </div>
+                      <div class="profit-tag" :class="profitTagClass(panel.machine_win_loss)">
+                        {{ profitLabel(panel.machine_win_loss) }}
+                      </div>
+                    </div>
+                  </a-col>
+                  <a-col :span="12">
+                    <div class="highlight-stat">
+                      <div class="stat-label">电子游戏输赢</div>
+                      <div class="stat-value" :class="amountClass(panel.electronic_game_win_loss)">
+                        {{ fmt(panel.electronic_game_win_loss) }}
+                      </div>
+                      <div class="profit-tag" :class="profitTagClass(panel.electronic_game_win_loss)">
+                        {{ profitLabel(panel.electronic_game_win_loss) }}
+                      </div>
+                    </div>
+                  </a-col>
+                </a-row>
 
-              <div class="delivery-wrap">
-                <!-- 左右：收入 / 支出 -->
+                <!-- 账变明细 -->
+                <a-divider style="margin:10px 0 8px" orientation="left" orientation-margin="0">
+                  <span style="font-size:12px; color:#8c8c8c">账变明细（点击类型查看说明）</span>
+                </a-divider>
+
                 <div class="delivery-split">
-                  <!-- 收入 -->
                   <div class="split-col">
                     <div class="split-col-header">收入</div>
                     <div
                       v-for="(label, typeId) in incomeTypeLabels"
                       :key="'i'+typeId"
                       class="delivery-item"
-                      :class="{ 'item-active': activeType[panel.store_id] == typeId }"
-                      @click="selectType(panel.store_id, typeId)"
+                      :class="{ 'item-active': activeTypeId == typeId }"
+                      @click="selectType(typeId)"
                     >
                       <span class="delivery-label">{{ label }}</span>
                       <span class="delivery-amount" :class="panel.delivery_types[typeId] > 0 ? 'amount-pos' : 'amount-zero'">
@@ -140,15 +134,14 @@
                       </span>
                     </div>
                   </div>
-                  <!-- 支出 -->
                   <div class="split-col">
                     <div class="split-col-header">支出</div>
                     <div
                       v-for="(label, typeId) in expenseTypeLabels"
                       :key="'e'+typeId"
                       class="delivery-item"
-                      :class="{ 'item-active': activeType[panel.store_id] == typeId }"
-                      @click="selectType(panel.store_id, typeId)"
+                      :class="{ 'item-active': activeTypeId == typeId }"
+                      @click="selectType(typeId)"
                     >
                       <span class="delivery-label">{{ label }}</span>
                       <span class="delivery-amount" :class="panel.delivery_types[typeId] > 0 ? 'amount-neg' : 'amount-zero'">
@@ -157,22 +150,35 @@
                     </div>
                   </div>
                 </div>
+              </a-card>
+            </a-col>
+          </a-row>
+        </div>
 
-                <!-- 右侧说明面板 -->
-                <div class="desc-panel" :class="{ 'desc-visible': !!activeType[panel.store_id] }">
-                  <template v-if="activeType[panel.store_id]">
-                    <div class="desc-title">
-                      {{ allTypeLabels[activeType[panel.store_id]] }}
-                      <span class="desc-close" @click="selectType(panel.store_id, activeType[panel.store_id])">×</span>
-                    </div>
-                    <div class="desc-body">{{ typeDescriptions[activeType[panel.store_id]] }}</div>
-                  </template>
-                  <div v-else class="desc-hint">← 点击左侧类型查看说明</div>
-                </div>
-              </div>
-            </a-card>
-          </a-col>
-        </a-row>
+      </div>
+
+      <!-- 右侧：常驻说明面板 -->
+      <div class="global-desc-panel">
+        <div class="desc-panel-title">账变类型说明</div>
+
+        <div v-if="activeTypeId" class="desc-content">
+          <div class="desc-type-name">{{ allTypeLabels[activeTypeId] }}</div>
+          <div class="desc-text">{{ typeDescriptions[activeTypeId] }}</div>
+        </div>
+
+        <div v-else class="desc-empty">
+          <div class="desc-empty-icon">📋</div>
+          <div class="desc-empty-hint">点击左侧账变类型<br>查看详细说明</div>
+          <a-divider style="margin:12px 0 8px" />
+          <div class="desc-index">
+            <div
+              v-for="(label, typeId) in allTypeLabels"
+              :key="typeId"
+              class="desc-index-item"
+              @click="selectType(typeId)"
+            >{{ label }}</div>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -185,13 +191,13 @@ export default {
   data() {
     return {
       form: { agentId: null, storeIds: [], dateType: null, dateRange: null },
-      loading:  false,
-      searched: false,
-      error:    null,
-      agents:   [],
-      stores:   [],
-      panels:   [],
-      activeType: {},   // { store_id: typeId }
+      loading:    false,
+      searched:   false,
+      error:      null,
+      agents:     [],
+      stores:     [],
+      panels:     [],
+      activeTypeId: null,
       dateTypeOptions: [
         { value: 1, label: '今天' },
         { value: 2, label: '昨天' },
@@ -280,11 +286,8 @@ export default {
       if (isNaN(n) || n === 0) return 'tag-even';
       return n > 0 ? 'tag-profit' : 'tag-loss';
     },
-    selectType(storeId, typeId) {
-      const cur = this.activeType[storeId];
-      this.activeType = Object.assign({}, this.activeType, {
-        [storeId]: cur == typeId ? null : typeId,
-      });
+    selectType(typeId) {
+      this.activeTypeId = this.activeTypeId == typeId ? null : typeId;
     },
 
     buildParams() {
@@ -343,27 +346,30 @@ export default {
       }
     },
     doReset() {
-      this.form       = { agentId: null, storeIds: [], dateType: null, dateRange: null };
-      this.searched   = false;
-      this.panels     = [];
-      this.error      = null;
-      this.activeType = {};
+      this.form         = { agentId: null, storeIds: [], dateType: null, dateRange: null };
+      this.searched     = false;
+      this.panels       = [];
+      this.error        = null;
+      this.activeTypeId = null;
     },
   },
 };
 </script>
 
 <style scoped>
-.page-wrap    { display:flex; flex-direction:column; height:calc(100vh - 112px); padding:16px; box-sizing:border-box; gap:12px; overflow:hidden; }
-.search-card  { flex-shrink:0; }
-.result-wrap  { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+.page-wrap   { display:flex; flex-direction:column; height:calc(100vh - 112px); padding:16px; box-sizing:border-box; gap:12px; overflow:hidden; }
+.search-card { flex-shrink:0; }
+
+/* 主体：左侧面板 + 右侧常驻说明 */
+.main-area   { flex:1; min-height:0; display:flex; gap:12px; overflow:hidden; }
+.result-wrap { flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; }
 .center-state { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; }
 .panels-scroll { flex:1; overflow-y:auto; padding-right:4px; }
 
 /* 卡片标题 */
-.card-header  { display:flex; align-items:center; flex-wrap:wrap; gap:4px; }
-.store-name   { font-weight:700; font-size:14px; }
-.agent-name   { font-size:12px; color:#8c8c8c; margin-left:4px; }
+.card-header { display:flex; align-items:center; flex-wrap:wrap; gap:4px; }
+.store-name  { font-weight:700; font-size:14px; }
+.agent-name  { font-size:12px; color:#8c8c8c; margin-left:4px; }
 
 /* 高亮统计区 */
 .highlight-row  { margin-bottom:4px; }
@@ -371,11 +377,8 @@ export default {
 .stat-label     { font-size:12px; color:#8c8c8c; margin-bottom:4px; }
 .stat-value     { font-size:20px; font-weight:700; }
 
-/* 账变明细外层 */
-.delivery-wrap  { display:flex; gap:8px; align-items:flex-start; }
-
-/* 收入/支出列 */
-.delivery-split   { flex:1; min-width:0; display:grid; grid-template-columns:1fr 1fr; gap:0 10px; }
+/* 账变明细：收入 / 支出 */
+.delivery-split   { display:grid; grid-template-columns:1fr 1fr; gap:0 10px; }
 .split-col        { display:flex; flex-direction:column; gap:3px; }
 .split-col-header { font-size:11px; color:#8c8c8c; padding:2px 4px; margin-bottom:2px; border-bottom:1px solid #f0f0f0; }
 .delivery-item    { display:flex; justify-content:space-between; align-items:center; padding:3px 6px; border-radius:4px; background:#fafafa; font-size:12px; cursor:pointer; transition:background .15s; }
@@ -384,14 +387,18 @@ export default {
 .delivery-label   { color:#595959; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:72px; }
 .delivery-amount  { font-weight:600; white-space:nowrap; }
 
-/* 右侧说明面板 */
-.desc-panel   { width:0; overflow:hidden; transition:width .2s ease; flex-shrink:0; }
-.desc-visible { width:168px; }
-.desc-title   { font-size:12px; font-weight:700; color:#1677ff; padding:4px 6px 4px; border-bottom:1px solid #e8e8e8; display:flex; justify-content:space-between; align-items:center; }
-.desc-close   { cursor:pointer; color:#8c8c8c; font-size:14px; line-height:1; padding:0 2px; }
-.desc-close:hover { color:#ff4d4f; }
-.desc-body    { font-size:11px; color:#595959; padding:6px; line-height:1.6; white-space:pre-line; background:#f8f9ff; border-radius:0 0 4px 4px; }
-.desc-hint    { font-size:11px; color:#bfbfbf; padding:8px 6px; text-align:center; writing-mode:vertical-rl; white-space:nowrap; }
+/* 右侧常驻说明面板 */
+.global-desc-panel   { width:220px; flex-shrink:0; display:flex; flex-direction:column; background:#fff; border:1px solid #f0f0f0; border-radius:8px; overflow:hidden; }
+.desc-panel-title    { font-size:13px; font-weight:700; color:#1677ff; padding:10px 12px; border-bottom:1px solid #f0f0f0; background:#f0f5ff; flex-shrink:0; }
+.desc-content        { flex:1; overflow-y:auto; padding:12px; }
+.desc-type-name      { font-size:13px; font-weight:700; color:#262626; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #f0f0f0; }
+.desc-text           { font-size:12px; color:#595959; line-height:1.7; white-space:pre-line; }
+.desc-empty          { flex:1; display:flex; flex-direction:column; align-items:center; padding:16px 12px; overflow-y:auto; }
+.desc-empty-icon     { font-size:28px; margin-bottom:8px; }
+.desc-empty-hint     { font-size:12px; color:#8c8c8c; text-align:center; line-height:1.6; }
+.desc-index          { width:100%; display:flex; flex-direction:column; gap:4px; }
+.desc-index-item     { font-size:11px; color:#1677ff; cursor:pointer; padding:3px 6px; border-radius:4px; }
+.desc-index-item:hover { background:#e6f4ff; }
 
 /* 金额颜色 */
 .amount-pos  { color:#3f8600; }
@@ -399,8 +406,8 @@ export default {
 .amount-zero { color:#8c8c8c; }
 
 /* 盈亏标签 */
-.profit-tag   { display:inline-block; margin-top:4px; padding:1px 8px; border-radius:10px; font-size:11px; font-weight:600; }
-.tag-profit   { background:#f6ffed; border:1px solid #b7eb8f; color:#3f8600; }
-.tag-loss     { background:#fff1f0; border:1px solid #ffa39e; color:#cf1322; }
-.tag-even     { background:#fafafa; border:1px solid #d9d9d9; color:#8c8c8c; }
+.profit-tag  { display:inline-block; margin-top:4px; padding:1px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+.tag-profit  { background:#f6ffed; border:1px solid #b7eb8f; color:#3f8600; }
+.tag-loss    { background:#fff1f0; border:1px solid #ffa39e; color:#cf1322; }
+.tag-even    { background:#fafafa; border:1px solid #d9d9d9; color:#8c8c8c; }
 </style>
