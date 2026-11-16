@@ -229,7 +229,10 @@
       ══════════════════════════════════════════════════════════ -->
       <a-tab-pane key="detail" tab="單店詳細報表">
         <div class="tab2-wrap">
-        <div class="finance-summary">
+        <div class="tab2-main">
+          <!-- 左側：報表內容 -->
+          <div class="tab2-result-wrap">
+          <div class="finance-summary">
           <!-- 筛选区域 -->
           <a-card :body-style="{ padding: '16px' }" style="margin-bottom: 16px;">
             <a-space wrap>
@@ -344,8 +347,10 @@
               </table>
             </a-card>
 
+            <!-- 4+5. 鋼珠 / 斯洛 並排 -->
+            <div class="side-by-side-cards">
             <!-- 4. 鋼珠（線下 / 線上） -->
-            <a-card title="鋼珠（線下 / 線上）" class="section-card">
+            <a-card title="鋼珠（線下 / 線上）" class="section-card side-card">
               <table class="report-table vertical-table">
                 <thead>
                   <tr>
@@ -412,7 +417,7 @@
             </a-card>
 
             <!-- 5. 斯洛（線下 / 線上） -->
-            <a-card title="斯洛（線下 / 線上）" class="section-card">
+            <a-card title="斯洛（線下 / 線上）" class="section-card side-card">
               <table class="report-table vertical-table">
                 <thead>
                   <tr>
@@ -509,12 +514,47 @@
                 </tbody>
               </table>
             </a-card>
-          </div>
+            </div><!-- /side-by-side-cards -->
+          </div><!-- /v-else-if reportData -->
 
           <!-- 空状态 -->
           <a-empty v-else-if="detailSearched" description="暫無數據" />
-        </div>
-        </div>
+          </div><!-- /finance-summary -->
+          </div><!-- /tab2-result-wrap -->
+
+          <!-- 右側：常駐說明面板 -->
+          <div class="tab2-desc-panel">
+            <div class="desc-panel-title">報表說明</div>
+            <div class="tab2-desc-content">
+              <div class="tab2-desc-block">
+                <div class="tab2-desc-block-title">一、總覽</div>
+                <div class="tab2-desc-text">彙總門店查詢期間資金流入與流出。<br><br>• <b>總入</b>：投鈔(type=23) + 充值/開分(type=6)<br>• <b>總出</b>：提現/洗分(type=7)<br>• <b>利潤</b>：總入 - 總出<br>• <b>總彩金</b>：所有機台彩金發放總額<br>• <b>RTP</b>：總出 ÷ 總入 × 100%</div>
+              </div>
+              <a-divider style="margin:8px 0" />
+              <div class="tab2-desc-block">
+                <div class="tab2-desc-block-title">二、贈點與福利明細</div>
+                <div class="tab2-desc-text">統計會員各類福利贈點，均屬門店運營成本支出。<br><br>• <b>VIP生日禮</b>：生日月自動發放（每年一次）<br>• <b>VIP升級禮</b>：首次升至該等級時發放<br>• <b>VIP每日登陸獎</b>：每日登入自動觸發<br>• <b>總外贈點</b>：後台手動發放（type=38）<br>• <b>體驗/福利券</b>：活動券兌換發放<br>• <b>摸彩獎</b>：摸獎券活動中獎發放</div>
+              </div>
+              <a-divider style="margin:8px 0" />
+              <div class="tab2-desc-block">
+                <div class="tab2-desc-block-title">三、電子遊戲</div>
+                <div class="tab2-desc-text">統計線上電子遊戲平台的投注與贏分。<br><br>• <b>電子總押注</b>：玩家投注總額<br>• <b>電子總贏分</b>：玩家贏得總積分<br>• <b>玩家輸贏</b>：總贏分 - 總押注（正值=玩家盈利）<br>• <b>電子彩金</b>：Jackpot 發放金額<br>• <b>RTP</b>：總贏分 ÷ 總押注 × 100%</div>
+              </div>
+              <a-divider style="margin:8px 0" />
+              <div class="tab2-desc-block">
+                <div class="tab2-desc-block-title">四、鋼珠（線下 / 線上）</div>
+                <div class="tab2-desc-text">分線下與線上兩種模式統計鋼珠機台。<br><br>• <b>線下</b>：玩家直接在實體機台操作<br>• <b>線上</b>：玩家透過 App 掃碼開分/洗分<br><br>• <b>總上點</b>：玩家充入機台的總積分<br>• <b>總下點</b>：玩家從機台取出的總積分<br>• <b>上下點小計</b>：總上點 - 總下點<br>• <b>鋼珠彩金</b>：Jackpot 發放金額<br>• <b>總盈虧</b>：上下點小計 - 鋼珠彩金<br>• <b>RTP</b>：總下點 ÷ 總上點 × 100%</div>
+              </div>
+              <a-divider style="margin:8px 0" />
+              <div class="tab2-desc-block">
+                <div class="tab2-desc-block-title">五、斯洛（線下 / 線上）</div>
+                <div class="tab2-desc-text">分線下與線上兩種模式統計斯洛機台。<br><br>• <b>上下點</b>：同鋼珠，玩家充入/取出積分<br>• <b>總盈虧</b>：上下點小計 - 彩金<br>• <b>上下點RTP</b>：總下點 ÷ 總上點 × 100%<br><br>• <b>總押分</b>：玩家在斯洛的押注積分<br>• <b>總得分</b>：玩家從斯洛贏得的積分<br>• <b>押得總盈虧</b>：總得分 - 總押分<br>• <b>押得RTP</b>：總得分 ÷ 總押分 × 100%</div>
+              </div>
+            </div>
+          </div><!-- /tab2-desc-panel -->
+
+        </div><!-- /tab2-main -->
+        </div><!-- /tab2-wrap -->
       </a-tab-pane>
 
     </a-tabs>
@@ -785,12 +825,21 @@ export default {
   overflow: hidden;
 }
 
-/* ── Tab 2 包裹层：与 Tab1 等高，整体可滚动 ── */
-.tab2-wrap {
-  height: calc(100vh - 160px);
-  overflow-y: auto;
-  overflow-x: hidden;
-}
+/* ── Tab 2 包裹层 ── */
+.tab2-wrap         { height: calc(100vh - 160px); overflow: hidden; }
+.tab2-main         { display: flex; gap: 12px; height: 100%; }
+.tab2-result-wrap  { flex: 1; min-width: 0; overflow-y: auto; overflow-x: hidden; }
+
+/* ── Tab 2 並排卡片（鋼珠 / 斯洛） ── */
+.side-by-side-cards { display: flex; gap: 12px; margin-bottom: 16px; align-items: flex-start; }
+.side-card          { flex: 1; min-width: 0; }
+
+/* ── Tab 2 說明面板 ── */
+.tab2-desc-panel     { width: 240px; flex-shrink: 0; display: flex; flex-direction: column; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; overflow: hidden; }
+.tab2-desc-content   { flex: 1; overflow-y: auto; padding: 12px; }
+.tab2-desc-block     { margin-bottom: 4px; }
+.tab2-desc-block-title { font-size: 12px; font-weight: 700; color: #1677ff; margin-bottom: 6px; }
+.tab2-desc-text      { font-size: 11px; color: #595959; line-height: 1.65; }
 
 /* ── Tab 1 主体：左侧面板 + 右侧常驻说明 ── */
 .main-area   { flex:1; min-height:0; display:flex; gap:12px; overflow:hidden; }
@@ -897,7 +946,7 @@ export default {
 .profit-negative { color: #cf1322; font-weight: 600; }
 
 /* ── Tab 2 vertical table (钢珠/斯洛) ── */
-.vertical-table { max-width: 600px; }
+.vertical-table { width: 100%; }
 .vertical-table .item-label { text-align: left; color: #595959; padding-left: 16px; }
 .vertical-table .section-divider td { border-top: 2px solid #d9d9d9; }
 </style>
