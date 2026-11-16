@@ -111,17 +111,12 @@ $capsule->getDatabaseManager()->setDefaultConnection(config('database.default', 
 $capsule->setAsGlobal();
 $capsule->bootEloquent();
 
-use addons\webman\model\PlayerDeliveryRecord;
-use addons\webman\model\PlayGameRecord;
-
-// ─── 游戏相关账变类型（下注/取消/打赏/结算/重结算） ──────────────────────────
-const GAME_DELIVERY_TYPES = [
-    PlayerDeliveryRecord::TYPE_BET,
-    PlayerDeliveryRecord::TYPE_CANCEL_BET,
-    PlayerDeliveryRecord::TYPE_GIFT,
-    PlayerDeliveryRecord::TYPE_SETTLEMENT,
-    PlayerDeliveryRecord::TYPE_RE_SETTLEMENT,
-];
+// ─── 表名与类型常量（直接硬编码，避免实例化带 DataPermissions trait 的 Eloquent 模型）────
+define('TBL_DELIVERY',   'player_delivery_record');
+define('TBL_GAME',       'play_game_record');
+// 游戏相关账变类型：下注/取消下注/打赏/注单结算/重新结算
+define('GAME_DELIVERY_TYPES', [26, 27, 28, 29, 30]);
+define('SETTLEMENT_SETTLED',  1);
 
 // ─── 标题 ────────────────────────────────────────────────────────────────────
 cbold(str_repeat('─', 68));
@@ -157,32 +152,47 @@ function checkDeliveryInternal(string $start, string $end, ?string $playerId, fl
 {
     cbold('[1] 账变记录内部一致性（变更前 + 变更额 ≈ 变更后）');
 
-    $rows = [];
+    $rows    = [];
+    $lastId  = 0;
 
-    PlayerDeliveryRecord::query()
-        ->whereBetween('created_at', [$start, $end])
-        ->when($playerId, fn ($q) => $q->where('player_id', $playerId))
-        ->orderBy('id')
-        ->chunk(2000, function ($records) use (&$rows, $tolerance) {
-            foreach ($records as $r) {
-                $expected = round((float) $r->amount_before + (float) $r->amount, 6);
-                $actual   = round((float) $r->amount_after, 6);
-                $diff     = $actual - $expected;
+    // 用游标分批，避免实例化带 DataPermissions trait 的 Eloquent 模型
+    while (true) {
+        $query = Capsule::table(TBL_DELIVERY)
+            ->select('id', 'player_id', 'type', 'amount_before', 'amount', 'amount_after', 'created_at')
+            ->whereBetween('created_at', [$start, $end])
+            ->where('id', '>', $lastId)
+            ->orderBy('id')
+            ->limit(2000);
 
-                if (abs($diff) > $tolerance) {
-                    $rows[] = [
-                        'id'       => $r->id,
-                        'pid'      => $r->player_id,
-                        'type'     => $r->type,
-                        'before'   => number_format((float) $r->amount_before, 4),
-                        'amount'   => number_format((float) $r->amount,        4),
-                        'after'    => number_format((float) $r->amount_after,  4),
-                        'diff'     => sprintf('%+.6f', $diff),
-                        'time'     => $r->created_at,
-                    ];
-                }
+        if ($playerId !== null) {
+            $query->where('player_id', $playerId);
+        }
+
+        $batch = $query->get();
+        if ($batch->isEmpty()) break;
+
+        foreach ($batch as $r) {
+            $expected = round((float) $r->amount_before + (float) $r->amount, 6);
+            $actual   = round((float) $r->amount_after, 6);
+            $diff     = $actual - $expected;
+
+            if (abs($diff) > $tolerance) {
+                $rows[] = [
+                    $r->id,
+                    $r->player_id,
+                    $r->type,
+                    number_format((float) $r->amount_before, 4),
+                    number_format((float) $r->amount,        4),
+                    number_format((float) $r->amount_after,  4),
+                    sprintf('%+.6f', $diff),
+                    $r->created_at,
+                ];
             }
-        });
+            $lastId = $r->id;
+        }
+
+        if ($batch->count() < 2000) break;
+    }
 
     if (empty($rows)) {
         cok("  ✓ 全部通过");
@@ -192,7 +202,7 @@ function checkDeliveryInternal(string $start, string $end, ?string $playerId, fl
 
     printTable(
         ['记录ID', '玩家ID', '类型', '变更前', '变更额', '变更后', '差异', '时间'],
-        array_map(fn ($r) => array_values($r), $rows)
+        $rows
     );
     $count = count($rows);
     cerr("  ✗ 发现 {$count} 条内部不一致");
@@ -209,14 +219,17 @@ function checkDeliverySequential(string $start, string $end, ?string $playerId, 
 {
     cbold('[2] 账变连续性（相邻记录：前条变更后 ≈ 后条变更前，差值疑为隐性扣减）');
 
-    $pids = PlayerDeliveryRecord::query()
-        ->whereBetween('created_at', [$start, $end])
-        ->when($playerId, fn ($q) => $q->where('player_id', $playerId))
-        ->groupBy('player_id')
-        ->limit($limit)
-        ->pluck('player_id');
+    if ($playerId !== null) {
+        $pidsQuery = collect([$playerId]);
+    } else {
+        $pidsQuery = Capsule::table(TBL_DELIVERY)
+            ->whereBetween('created_at', [$start, $end])
+            ->groupBy('player_id')
+            ->limit($limit)
+            ->pluck('player_id');
+    }
 
-    if ($pids->isEmpty()) {
+    if ($pidsQuery->isEmpty()) {
         cinfo("  该时间段无账变记录");
         echo PHP_EOL;
         return 0;
@@ -225,14 +238,15 @@ function checkDeliverySequential(string $start, string $end, ?string $playerId, 
     $rows    = [];
     $checked = 0;
 
-    foreach ($pids as $pid) {
+    foreach ($pidsQuery as $pid) {
         // 取截止 $end 最近 1000 条，含区间前的最后一条用于跨段检查
-        $records = PlayerDeliveryRecord::query()
+        $records = Capsule::table(TBL_DELIVERY)
+            ->select('id', 'type', 'amount_before', 'amount_after', 'created_at')
             ->where('player_id', $pid)
             ->where('created_at', '<=', $end)
             ->orderBy('id', 'desc')
             ->limit(1000)
-            ->get(['id', 'type', 'amount_before', 'amount_after', 'created_at'])
+            ->get()
             ->reverse()
             ->values();
 
@@ -281,29 +295,31 @@ function checkDeliverySequential(string $start, string $end, ?string $playerId, 
 
 // ═════════════════════════════════════════════════════════════════════════════
 // [3] 电子游戏账变与游戏记录 diff 交叉比对
-// 游戏账变合计（type 26/27/28/29/30）≈ PlayGameRecord.diff 合计
+// 游戏账变合计（type 26/27/28/29/30）≈ play_game_record.diff 合计
 // ═════════════════════════════════════════════════════════════════════════════
 function checkGameVsDelivery(string $start, string $end, ?string $playerId, float $tolerance): int
 {
     cbold('[3] 电子游戏账变（下注/结算）与游戏记录 diff 交叉比对');
 
-    $deliveryStats = PlayerDeliveryRecord::query()
+    $dQuery = Capsule::table(TBL_DELIVERY)
         ->whereBetween('created_at', [$start, $end])
         ->whereIn('type', GAME_DELIVERY_TYPES)
-        ->when($playerId, fn ($q) => $q->where('player_id', $playerId))
         ->selectRaw('player_id, SUM(amount) as delivery_total, COUNT(*) as delivery_count')
-        ->groupBy('player_id')
-        ->get()
-        ->keyBy('player_id');
+        ->groupBy('player_id');
 
-    $gameStats = PlayGameRecord::query()
+    $gQuery = Capsule::table(TBL_GAME)
         ->whereBetween('created_at', [$start, $end])
-        ->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)
-        ->when($playerId, fn ($q) => $q->where('player_id', $playerId))
+        ->where('settlement_status', SETTLEMENT_SETTLED)
         ->selectRaw('player_id, SUM(diff) as game_total, COUNT(*) as game_count')
-        ->groupBy('player_id')
-        ->get()
-        ->keyBy('player_id');
+        ->groupBy('player_id');
+
+    if ($playerId !== null) {
+        $dQuery->where('player_id', $playerId);
+        $gQuery->where('player_id', $playerId);
+    }
+
+    $deliveryStats = $dQuery->get()->keyBy('player_id');
+    $gameStats     = $gQuery->get()->keyBy('player_id');
 
     $allPids = $deliveryStats->keys()->merge($gameStats->keys())->unique();
 
