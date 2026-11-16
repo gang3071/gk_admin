@@ -1283,15 +1283,7 @@ return [
         'url' => 'ex-admin/addons-webman-controller-ChannelStoreFinanceSummaryController/finance',
         'title' => '门店财务汇总',
     ],
-    [
-        'id' => 'addons\webman\controller\ChannelStoreFinanceSummaryController\search',
-        'pid' => 'addons\webman\controller\ChannelStoreFinanceSummaryController-',
-        'action' => 'search',
-        'method' => 'get',
-        'group' => 'channel',
-        'url' => 'ex-admin/addons-webman-controller-ChannelStoreFinanceSummaryController/search',
-        'title' => '门店财务汇总查询',
-    ],
+
     [
         'id' => 'addons\webman\controller\ChannelMachineController\infoList',
         'pid' => 'addons\webman\controller\ChannelMachineController-',
