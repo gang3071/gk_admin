@@ -137,6 +137,10 @@
                     @click="selectType(typeId)"
                   >
                     <span class="cost-label">{{ label }}</span>
+                    <div class="cost-bar-wrap">
+                      <div class="cost-bar" :style="{ width: costPercent(panel, typeId) + '%' }"></div>
+                    </div>
+                    <span class="cost-pct">{{ costPercent(panel, typeId) }}%</span>
                     <span :class="['cost-amount', parseFloat(panel.delivery_types[typeId] || 0) > 0 ? 'amount-neg' : 'amount-zero']">
                       {{ fmt(panel.delivery_types[typeId] || '0') }}
                     </span>
@@ -318,6 +322,12 @@ export default {
         .reduce((sum, typeId) => sum + parseFloat(panel.delivery_types[typeId] || 0), 0)
         .toFixed(2);
     },
+    costPercent(panel, typeId) {
+      const total = parseFloat(this.calcTotalCost(panel));
+      if (total <= 0) return 0;
+      const amount = parseFloat(panel.delivery_types[typeId] || 0);
+      return Math.round(amount / total * 100);
+    },
     calcNetRevenue(panel) {
       const machine    = parseFloat(panel.machine_win_loss || 0);
       const electronic = parseFloat(panel.electronic_game_win_loss || 0);
@@ -421,8 +431,11 @@ export default {
 .cost-item  { display:flex; justify-content:space-between; align-items:center; padding:3px 6px; border-radius:4px; background:#fafafa; font-size:12px; cursor:pointer; transition:background .15s; }
 .cost-item:hover { background:#fff7e6; }
 .item-active     { background:#ffe7ba !important; }
-.cost-label      { color:#595959; }
-.cost-amount     { font-weight:600; white-space:nowrap; }
+.cost-label      { color:#595959; flex-shrink:0; max-width:72px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cost-bar-wrap   { flex:1; margin:0 6px; height:4px; background:#f0f0f0; border-radius:2px; overflow:hidden; min-width:30px; }
+.cost-bar        { height:100%; background:#ff9c6e; border-radius:2px; transition:width .4s ease; }
+.cost-pct        { flex-shrink:0; min-width:30px; text-align:right; font-size:11px; color:#8c8c8c; }
+.cost-amount     { flex-shrink:0; font-weight:600; white-space:nowrap; min-width:60px; text-align:right; }
 .cost-total      { display:flex; justify-content:space-between; align-items:center; padding:4px 6px; margin-top:2px; border-top:1px solid #f0f0f0; font-size:12px; font-weight:700; color:#262626; }
 
 /* 钱包流水参考列表 */
