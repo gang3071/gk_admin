@@ -47,12 +47,22 @@ class ChannelStoreFinanceSummaryController
         /** @var AdminUser $admin */
         $admin = Admin::user();
 
-        $exAdminFilter = Request::input('ex_admin_filter', []);
-        $createdAtStart = $exAdminFilter['created_at_start'] ?? null;
-        $createdAtEnd   = $exAdminFilter['created_at_end'] ?? null;
-        $dateType       = $exAdminFilter['date_type'] ?? null;
+        $exAdminFilter   = Request::input('ex_admin_filter', []);
+        $createdAtStart  = $exAdminFilter['created_at_start'] ?? null;
+        $createdAtEnd    = $exAdminFilter['created_at_end'] ?? null;
+        $dateType        = $exAdminFilter['date_type'] ?? null;
         $selectedStoreId = $exAdminFilter['store_id'] ?? null;
         $selectedAgentId = $exAdminFilter['agent_id'] ?? null;
+
+        $storeOptions = $this->getStoreOptions($admin->department_id);
+        $agentOptions = $this->getAgentOptions($admin->department_id);
+
+        // 未提交任何筛选条件时只展示筛选器，不查询数据
+        $hasFilter = !empty($dateType) || !empty($createdAtStart) || !empty($createdAtEnd)
+                     || !empty($selectedStoreId) || !empty($selectedAgentId);
+        if (!$hasFilter) {
+            return $this->buildFilterOnlyGrid($storeOptions, $agentOptions);
+        }
 
         // 查询店家（1条SQL）
         $storesQuery = AdminUser::query()
@@ -73,7 +83,7 @@ class ChannelStoreFinanceSummaryController
         $storeIds = $stores->pluck('id')->toArray();
 
         if (empty($storeIds)) {
-            return $this->buildEmptyGrid();
+            return $this->buildFilterOnlyGrid($storeOptions, $agentOptions);
         }
 
         // 批量查询代理名称（1条SQL）
@@ -140,9 +150,6 @@ class ChannelStoreFinanceSummaryController
                 'coupon_sent'              => floatval($c->coupon_sent ?? 0),
             ];
         }
-
-        $storeOptions = $this->getStoreOptions($admin->department_id);
-        $agentOptions = $this->getAgentOptions($admin->department_id);
 
         return SummaryGrid::create($reportData, function (SummaryGrid $grid) use ($reportData, $storeOptions, $agentOptions) {
             $grid->title(admin_trans('channel_store_finance_summary.title'));
@@ -422,9 +429,9 @@ class ChannelStoreFinanceSummaryController
 
     // ========== UI 构建方法 ==========
 
-    private function buildEmptyGrid(): Grid
+    private function buildFilterOnlyGrid(array $storeOptions, array $agentOptions): Grid
     {
-        return Grid::create([], function (Grid $grid) {
+        return Grid::create([], function (Grid $grid) use ($storeOptions, $agentOptions) {
             $grid->title(admin_trans('channel_store_finance_summary.title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -432,6 +439,8 @@ class ChannelStoreFinanceSummaryController
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideAdd();
+            $grid->expandFilter();
+            $this->buildGridFilter($grid, $storeOptions, $agentOptions);
         });
     }
 
@@ -484,7 +493,7 @@ class ChannelStoreFinanceSummaryController
         $grid->summaryRow($summaryRow, []);
     }
 
-    private function buildGridFilter(SummaryGrid $grid, array $storeOptions, array $agentOptions): void
+    private function buildGridFilter(Grid $grid, array $storeOptions, array $agentOptions): void
     {
         $grid->filter(function (Filter $filter) use ($storeOptions, $agentOptions) {
             $filter->eq()->select('agent_id')
