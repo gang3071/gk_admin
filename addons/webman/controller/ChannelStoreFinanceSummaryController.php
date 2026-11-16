@@ -469,43 +469,42 @@ class ChannelStoreFinanceSummaryController
 
     /**
      * 查询实体机台上分/下分点数，按 game_type 和 machine_source 分组。
-     * 数据源：PlayerGameLog.open_point / wash_point（比 PlayerDeliveryRecord type=4/5 更可靠，
-     * 因为 PDR 记录的 machine_id 可能为 0 导致 JOIN 丢失数据）。
+     *
+     * 不 JOIN machine/machine_category，直接用 player_game_log 自身的
+     * game_id（1=斯洛/2=钢珠）和 source_type（1=线上/2=线下）字段，
+     * 避免 machine_id=0 或 JOIN 路径断裂导致数据丢失。
+     *
+     * game_amount 符号因写入方不同而不统一（gk_work 上分写正、gk_api 写负、
+     * 投钞写 0），统一用 ABS 处理。
+     *
      * @return array [game_type][machine_source][TYPE_MACHINE_UP|TYPE_MACHINE_DOWN] => float
      */
     private function queryMachineDeliveryData(array $playerIds, string $start, string $end): array
     {
-        $pglTable  = plugin()->webman->config('database.player_game_log_table');
-        $machTable = plugin()->webman->config('database.machine_table');
-        $cateTable = plugin()->webman->config('database.machine_category_table');
+        $pglTable   = plugin()->webman->config('database.player_game_log_table');
+        $openAction = PlayerGameLog::ACTION_OPEN; // 1
 
-        // open_point / wash_point 由 PlayerGameLog::booted() 累加，2026-07-22 后该链路失效字段全为 0。
-        // 改用 game_amount + action 计算，与 MachineReportAggregator 口径一致：
-        //   上點 = action=ACTION_OPEN(1) 时 ABS(game_amount)
-        //   下點 = action≠ACTION_OPEN 且 game_amount>0 时 game_amount
-        $openAction = PlayerGameLog::ACTION_OPEN;
-
-        $query = Db::table("{$pglTable} as pgl")
-            ->join("{$machTable} as m", 'pgl.machine_id', '=', 'm.id')
-            ->join("{$cateTable} as mc", 'm.cate_id', '=', 'mc.id')
-            ->whereIn('pgl.player_id', $playerIds)
-            ->whereIn('mc.game_id', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])
-            ->selectRaw("mc.game_id, mc.machine_source,
-                         SUM(CASE WHEN pgl.action = {$openAction} THEN ABS(pgl.game_amount) ELSE 0 END) AS total_open,
-                         SUM(CASE WHEN pgl.action <> {$openAction} AND pgl.game_amount > 0 THEN pgl.game_amount ELSE 0 END) AS total_wash")
-            ->groupBy('mc.game_id', 'mc.machine_source');
+        $query = Db::table($pglTable)
+            ->whereIn('player_id', $playerIds)
+            ->where('machine_id', '>', 0)
+            ->whereIn('game_id', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])
+            ->selectRaw("game_id, source_type,
+                         SUM(CASE WHEN action = {$openAction} THEN ABS(game_amount) ELSE 0 END) AS total_open,
+                         SUM(CASE WHEN action <> {$openAction} THEN ABS(game_amount) ELSE 0 END) AS total_wash")
+            ->groupBy('game_id', 'source_type');
 
         if (!empty($start)) {
-            $query->where('pgl.created_at', '>=', $start);
+            $query->where('created_at', '>=', $start);
         }
         if (!empty($end)) {
-            $query->where('pgl.created_at', '<=', $end);
+            $query->where('created_at', '<=', $end);
         }
 
+        // source_type 1=线上 / 2=线下，与 MachineCategory::MACHINE_SOURCE_* 值相同
         $result = [];
         foreach ($query->get() as $row) {
             $gameType      = (int)$row->game_id;
-            $machineSource = (int)$row->machine_source;
+            $machineSource = (int)$row->source_type;
 
             $result[$gameType][$machineSource][PlayerDeliveryRecord::TYPE_MACHINE_UP]   = (float)$row->total_open;
             $result[$gameType][$machineSource][PlayerDeliveryRecord::TYPE_MACHINE_DOWN] = (float)$row->total_wash;
@@ -584,33 +583,32 @@ class ChannelStoreFinanceSummaryController
     }
 
     /**
-     * 查询斯洛机台壓分/得分数据，按 machine_source 分组
+     * 查询斯洛机台壓分/得分数据，按 machine_source 分组。
+     * 直接用 player_game_log.game_id 和 source_type，不 JOIN machine/machine_category。
      * @return array [machine_source] => ['pressure' => float, 'score' => float]
      */
     private function querySlotPressureScoreData(array $playerIds, string $start, string $end): array
     {
-        $pglTable  = plugin()->webman->config('database.player_game_log_table');
-        $machTable = plugin()->webman->config('database.machine_table');
-        $cateTable = plugin()->webman->config('database.machine_category_table');
+        $pglTable = plugin()->webman->config('database.player_game_log_table');
 
-        $query = Db::table("{$pglTable} as pgl")
-            ->join("{$machTable} as m", 'pgl.machine_id', '=', 'm.id')
-            ->join("{$cateTable} as mc", 'm.cate_id', '=', 'mc.id')
-            ->whereIn('pgl.player_id', $playerIds)
-            ->where('mc.game_id', GameType::TYPE_SLOT)
-            ->selectRaw('mc.machine_source, COALESCE(SUM(pgl.pressure), 0) as total_pressure, COALESCE(SUM(pgl.score), 0) as total_score')
-            ->groupBy('mc.machine_source');
+        $query = Db::table($pglTable)
+            ->whereIn('player_id', $playerIds)
+            ->where('machine_id', '>', 0)
+            ->where('game_id', GameType::TYPE_SLOT)
+            ->selectRaw('source_type, COALESCE(SUM(pressure), 0) as total_pressure, COALESCE(SUM(score), 0) as total_score')
+            ->groupBy('source_type');
 
         if (!empty($start)) {
-            $query->where('pgl.created_at', '>=', $start);
+            $query->where('created_at', '>=', $start);
         }
         if (!empty($end)) {
-            $query->where('pgl.created_at', '<=', $end);
+            $query->where('created_at', '<=', $end);
         }
 
+        // source_type 1=线上 / 2=线下，与 MachineCategory::MACHINE_SOURCE_* 值相同
         $result = [];
         foreach ($query->get() as $row) {
-            $machineSource = (int)$row->machine_source;
+            $machineSource = (int)$row->source_type;
 
             $result[$machineSource] = [
                 'pressure' => (float)$row->total_pressure,
