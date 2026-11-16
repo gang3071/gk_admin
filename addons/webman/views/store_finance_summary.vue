@@ -116,18 +116,17 @@
                 <span style="font-size:12px; color:#8c8c8c">账变明细</span>
               </a-divider>
 
-              <div v-if="hasDelivery(panel)" class="delivery-grid">
+              <div class="delivery-grid">
                 <div
-                  v-for="(amount, typeId) in panel.delivery_types"
+                  v-for="(label, typeId) in deliveryTypeLabels"
                   :key="typeId"
                   class="delivery-item"
                 >
-                  <span class="delivery-label">{{ typeLabel(typeId) }}</span>
-                  <span class="delivery-amount" :class="amountClass(amount)">{{ fmt(amount) }}</span>
+                  <span class="delivery-label">{{ label }}</span>
+                  <span class="delivery-amount" :class="amountClass(panel.delivery_types[typeId] || '0')">
+                    {{ fmt(panel.delivery_types[typeId] || '0') }}
+                  </span>
                 </div>
-              </div>
-              <div v-else style="text-align:center; color:#bfbfbf; font-size:12px; padding:8px 0">
-                暂无账变记录
               </div>
             </a-card>
           </a-col>
@@ -197,9 +196,7 @@ export default {
     typeLabel(typeId) {
       return this.deliveryTypeLabels[typeId] || ('类型' + typeId);
     },
-    hasDelivery(panel) {
-      return panel.delivery_types && Object.keys(panel.delivery_types).length > 0;
-    },
+
     buildParams() {
       const p = {
         agent_id:  this.form.agentId  || '',
