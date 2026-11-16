@@ -84,7 +84,7 @@ class ChannelPlayerGameLogController
             $grid->autoHeight();
             $grid->title(admin_trans('player_game_log.point_title'));
             $grid->column('id', admin_trans('player_game_log.fields.id'))->align('center');
-            $grid->column(function (Grid $grid) {
+            $grid->column(function (Grid $grid) use ($storeOptions) {
                 $grid->column('player.uuid', admin_trans('player.fields.uuid'))->display(function (
                     $val,
                     PlayerGameLog $data
