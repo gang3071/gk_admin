@@ -5,7 +5,7 @@
       <!-- ══════════════════════════════════════════════════════════
            Tab 1：多店概覽（原有功能）
       ══════════════════════════════════════════════════════════ -->
-      <a-tab-pane key="overview" tab="多店概覽" class="tab-overview">
+      <a-tab-pane key="overview" tab="多店概覽" style="height:100%; overflow:hidden; display:flex; flex-direction:column;">
         <!-- 筛选栏 -->
         <a-card class="search-card">
           <div style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap">
@@ -225,6 +225,7 @@
            Tab 2：單店詳細報表（新功能）
       ══════════════════════════════════════════════════════════ -->
       <a-tab-pane key="detail" tab="單店詳細報表">
+        <div class="detail-scroll-wrap">
         <div class="finance-summary">
           <!-- 筛选区域 -->
           <a-card :body-style="{ padding: '16px' }" style="margin-bottom: 16px;">
@@ -510,6 +511,7 @@
           <!-- 空状态 -->
           <a-empty v-else-if="detailSearched" description="暫無數據" />
         </div>
+        </div>
       </a-tab-pane>
 
     </a-tabs>
@@ -770,13 +772,12 @@ export default {
 .page-wrap   { display:flex; flex-direction:column; height:calc(100vh - 112px); padding:16px; box-sizing:border-box; gap:12px; overflow:hidden; }
 .search-card { flex-shrink:0; }
 
-/* ── 让 Ant Design tabs 内容区支持内部滚动 ── */
-:deep(.ant-tabs) { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-:deep(.ant-tabs-content-holder) { flex: 1; min-height: 0; overflow: hidden; }
-:deep(.ant-tabs-content) { height: 100%; }
-/* Tab 1 自己管理内部滚动（.panels-scroll），Tab 2 由外层滚动 */
-:deep(.ant-tabs-tabpane) { height: 100%; overflow-y: auto; }
-:deep(.ant-tabs-tabpane.tab-overview) { overflow: hidden; display: flex; flex-direction: column; }
+/* ── Tab 2 滚动容器：高度 = 视口 - page-wrap上边距(16) - 标签头(~46px) - padding(32) - gap(12) ── */
+.detail-scroll-wrap {
+  height: calc(100vh - 210px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 
 /* ── Tab 1 主体：左侧面板 + 右侧常驻说明 ── */
 .main-area   { flex:1; min-height:0; display:flex; gap:12px; overflow:hidden; }
