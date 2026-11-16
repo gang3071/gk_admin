@@ -31,6 +31,7 @@ return [
         'is_hot' => 'Hot',
         'is_new' => 'New Game',
         'sort' => 'Sort',
+        'is_hide' => 'Store closure',
     ],
 
     // Old field keys (for compatibility)
@@ -90,6 +91,11 @@ return [
     'status_options' => [
         'normal' => 'Normal',
         'disabled' => 'Disabled',
+    ],
+
+    'is_hide_options' => [
+        'normal' => 'Normal',
+        'disabled' => 'Store closed',
     ],
 
     // Tags

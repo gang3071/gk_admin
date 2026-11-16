@@ -31,6 +31,7 @@ return [
         'is_hot' => '人気',
         'is_new' => '新しいゲーム',
         'sort' => 'ソート',
+        'is_hide' => '店舗撤退',
     ],
 
     // 古いフィールドキー（互換性のため保持）
@@ -90,6 +91,11 @@ return [
     'status_options' => [
         'normal' => '正常',
         'disabled' => '無効',
+    ],
+
+    'is_hide_options' => [
+        'normal' => '正常',
+        'disabled' => '閉店済み',
     ],
 
     // タグ

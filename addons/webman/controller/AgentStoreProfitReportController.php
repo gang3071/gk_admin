@@ -634,8 +634,14 @@ class AgentStoreProfitReportController
         // ---------------------------------------- 代理底下的門店 ----------------------------------------
         $stores = AdminUser::query()
             ->where('type', 4)
-            ->where('is_hide', 0)
-            ->where('parent_admin_id', Admin::user()->id);
+            ->where('is_hide', 0);
+
+        if (empty(Admin::user()->parent_admin_id)) {
+            $stores->where('parent_admin_id', Admin::user()->id);
+        } else {
+            $visibleStoreIds = Admin::user()->visible_store_ids ?? [];
+            $stores->whereIn('id', array_map('intval', $visibleStoreIds));
+        }
 
         if (! empty($exAdminFilter['id'])) {
             $stores->where('id', $exAdminFilter['id']);
@@ -744,10 +750,16 @@ class AgentStoreProfitReportController
     {
         $stores = AdminUser::query()
             ->where('type', 4)
-            ->where('is_hide', 0)
-            ->where('parent_admin_id', Admin::user()->id)
-            ->pluck('nickname','id')
-            ->toArray();
+            ->where('is_hide', 0);
+
+        if (empty(Admin::user()->parent_admin_id)) {
+            $stores->where('parent_admin_id', Admin::user()->id);
+        } else {
+            $visibleStoreIds = Admin::user()->visible_store_ids ?? [];
+            $stores->whereIn('id', array_map('intval', $visibleStoreIds));
+        }
+
+        $stores = $stores->pluck('nickname','id')->toArray();
 
         return $stores;
     }
