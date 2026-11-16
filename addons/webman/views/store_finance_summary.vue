@@ -98,6 +98,9 @@
                     <div class="stat-value" :class="amountClass(panel.machine_win_loss)">
                       {{ fmt(panel.machine_win_loss) }}
                     </div>
+                    <div class="profit-tag" :class="profitTagClass(panel.machine_win_loss)">
+                      {{ profitLabel(panel.machine_win_loss) }}
+                    </div>
                   </div>
                 </a-col>
                 <a-col :span="12">
@@ -105,6 +108,9 @@
                     <div class="stat-label">电子游戏输赢</div>
                     <div class="stat-value" :class="amountClass(panel.electronic_game_win_loss)">
                       {{ fmt(panel.electronic_game_win_loss) }}
+                    </div>
+                    <div class="profit-tag" :class="profitTagClass(panel.electronic_game_win_loss)">
+                      {{ profitLabel(panel.electronic_game_win_loss) }}
                     </div>
                   </div>
                 </a-col>
@@ -211,6 +217,16 @@ export default {
       if (isNaN(n) || n === 0) return 'amount-zero';
       return n > 0 ? 'amount-pos' : 'amount-neg';
     },
+    profitLabel(val) {
+      const n = parseFloat(val);
+      if (isNaN(n) || n === 0) return '持平';
+      return n > 0 ? '盈利' : '亏损';
+    },
+    profitTagClass(val) {
+      const n = parseFloat(val);
+      if (isNaN(n) || n === 0) return 'tag-even';
+      return n > 0 ? 'tag-profit' : 'tag-loss';
+    },
     typeLabel(typeId) {
       return this.deliveryTypeLabels[typeId] || ('类型' + typeId);
     },
@@ -310,4 +326,10 @@ export default {
 .amount-pos  { color:#3f8600; }
 .amount-neg  { color:#cf1322; }
 .amount-zero { color:#8c8c8c; }
+
+/* 盈亏标签 */
+.profit-tag   { display:inline-block; margin-top:4px; padding:1px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+.tag-profit   { background:#f6ffed; border:1px solid #b7eb8f; color:#3f8600; }
+.tag-loss     { background:#fff1f0; border:1px solid #ffa39e; color:#cf1322; }
+.tag-even     { background:#fafafa; border:1px solid #d9d9d9; color:#8c8c8c; }
 </style>
