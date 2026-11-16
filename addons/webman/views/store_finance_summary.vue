@@ -66,11 +66,13 @@
               <a-spin size="large" />
             </div>
 
-            <a-result v-else-if="error" status="error" :title="trans.states.search_failed" :sub-title="error">
-              <template #extra>
-                <a-button type="primary" @click="doSearch">{{ trans.states.retry }}</a-button>
-              </template>
-            </a-result>
+            <div v-else-if="error" class="center-state">
+              <a-result status="error" :title="trans.states.search_failed" :sub-title="error">
+                <template #extra>
+                  <a-button type="primary" @click="doSearch">{{ trans.states.retry }}</a-button>
+                </template>
+              </a-result>
+            </div>
 
             <div v-else-if="!panels.length" class="center-state">
               <a-empty :description="trans.states.no_data" />
@@ -263,7 +265,7 @@
           </div>
 
           <!-- 报表内容 -->
-          <template v-else-if="reportData">
+          <div v-else-if="reportData">
             <!-- 1. 總覽 -->
             <a-card title="總覽" class="section-card">
               <table class="report-table">
@@ -507,7 +509,7 @@
                 </tbody>
               </table>
             </a-card>
-          </template>
+          </div>
 
           <!-- 空状态 -->
           <a-empty v-else-if="detailSearched" description="暫無數據" />
