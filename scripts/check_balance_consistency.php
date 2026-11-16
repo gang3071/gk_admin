@@ -266,17 +266,30 @@ function checkDeliverySequential(string $start, string $end, ?string $playerId, 
                 $gap = round((float) $r->amount_before - (float) $prev->amount_after, 6);
 
                 if (abs($gap) > $tolerance) {
-                    $rows[] = [
-                        "#{$prev->id}→#{$r->id}",
-                        $pid,
-                        "type={$prev->type}",
-                        "type={$r->type}",
-                        number_format((float) $prev->amount_after, 4),
-                        number_format((float) $r->amount_before,  4),
-                        sprintf('%+.4f', $gap),
-                        $prev->created_at,
-                        $r->created_at,
-                    ];
+                    // 查该区间内的游戏记录 diff 合计，能解释差额则视为正常游戏扣减
+                    $gameDiff = (float) Capsule::table(TBL_GAME)
+                        ->where('player_id', $pid)
+                        ->where('settlement_status', SETTLEMENT_SETTLED)
+                        ->whereBetween('created_at', [$prev->created_at, $r->created_at])
+                        ->sum('diff');
+
+                    $unexplained = round($gap - $gameDiff, 6);
+
+                    if (abs($unexplained) > $tolerance) {
+                        $rows[] = [
+                            "#{$prev->id}→#{$r->id}",
+                            $pid,
+                            "type={$prev->type}",
+                            "type={$r->type}",
+                            number_format((float) $prev->amount_after, 4),
+                            number_format((float) $r->amount_before,  4),
+                            sprintf('%+.4f', $gap),
+                            sprintf('%+.4f', $gameDiff),
+                            sprintf('%+.4f', $unexplained),
+                            $prev->created_at,
+                            $r->created_at,
+                        ];
+                    }
                 }
             }
             $prev = $r;
@@ -292,7 +305,7 @@ function checkDeliverySequential(string $start, string $end, ?string $playerId, 
     }
 
     printTable(
-        ['记录区间', '玩家ID', '前条类型', '后条类型', '前条变更后', '后条变更前', '差额（疑似扣减）', '前条时间', '后条时间'],
+        ['记录区间', '玩家ID', '前条类型', '后条类型', '前条变更后', '后条变更前', '总差额', '游戏diff', '不明差额', '前条时间', '后条时间'],
         $rows
     );
     $count = count($rows);
@@ -348,13 +361,23 @@ function checkGameVsDelivery(string $start, string $end, ?string $playerId, floa
         return 0;
     }
 
-    $rows       = [];
-    $skipped    = 0;
+    $rows            = [];
+    $skippedDual     = 0; // 双钱包（type=14/15）
+    $skippedDirect   = 0; // 游戏直接管理余额（有游戏记录但无 type=26-30 账变）
 
     foreach ($allPids as $pid) {
         // 双钱包玩家跳过
         if ($dualWalletPids->has($pid)) {
-            $skipped++;
+            $skippedDual++;
+            continue;
+        }
+
+        $deliveryCount = (int) ($deliveryStats->get($pid)?->delivery_count ?? 0);
+        $gameCount     = (int) ($gameStats->get($pid)?->game_count ?? 0);
+
+        // 有游戏记录但完全没有对应账变 → 游戏直接操作余额，非异常，跳过
+        if ($deliveryCount === 0 && $gameCount > 0) {
+            $skippedDirect++;
             continue;
         }
 
@@ -365,8 +388,8 @@ function checkGameVsDelivery(string $start, string $end, ?string $playerId, floa
         if (abs($diff) > $tolerance) {
             $rows[] = [
                 $pid,
-                $deliveryStats->get($pid)?->delivery_count ?? 0,
-                $gameStats->get($pid)?->game_count ?? 0,
+                $deliveryCount,
+                $gameCount,
                 number_format($deliveryTotal, 4),
                 number_format($gameTotal,     4),
                 sprintf('%+.4f', $diff),
@@ -374,8 +397,8 @@ function checkGameVsDelivery(string $start, string $end, ?string $playerId, floa
         }
     }
 
-    $checked = $allPids->count() - $skipped;
-    cdim("  共对比 {$checked} 名单一钱包玩家（跳过 {$skipped} 名双钱包玩家）");
+    $checked = $allPids->count() - $skippedDual - $skippedDirect;
+    cdim("  共对比 {$checked} 名玩家（跳过 {$skippedDual} 名双钱包、{$skippedDirect} 名游戏直接管理余额）");
 
     if (empty($rows)) {
         cok("  ✓ 全部通过，账变与游戏记录一致");
