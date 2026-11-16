@@ -257,11 +257,11 @@ class ChannelStoreFinanceSummaryController
         $overviewData      = $this->queryOverviewData($playerIds, $start, $end);
         $welfareData       = $this->queryWelfareData($playerIds, $start, $end);
         $couponData        = $this->queryCouponData($storeId, $start, $end);
-        $machineDelivery   = $this->queryMachineDeliveryData($playerIds, $start, $end);
+        $machineDelivery   = $this->queryMachineDeliveryData($playerIds, $storeId, $start, $end);
         $electronicGame    = $this->queryElectronicGameData($playerIds, $start, $end);
         $electronicLottery = $this->queryElectronicLotteryData($playerIds, $start, $end);
         $machineLottery    = $this->queryMachineLotteryData($playerIds, $start, $end);
-        $slotPressure      = $this->querySlotPressureScoreData($playerIds, $start, $end);
+        $slotPressure      = $this->querySlotPressureScoreData($playerIds, $storeId, $start, $end);
 
         return json(['code' => 200, 'data' => $this->buildReportData(
             $overviewData, $welfareData, $couponData, $machineDelivery,
@@ -470,41 +470,57 @@ class ChannelStoreFinanceSummaryController
     /**
      * 查询实体机台上分/下分点数，按 game_type 和 machine_source 分组。
      *
-     * 不 JOIN machine/machine_category，直接用 player_game_log 自身的
-     * game_id（1=斯洛/2=钢珠）和 source_type（1=线上/2=线下）字段，
-     * 避免 machine_id=0 或 JOIN 路径断裂导致数据丢失。
+     * 线下实体机台 player_game_log.player_id = 0（玩家直接投币，无账号），
+     * 必须通过 channel_machine.store_admin_id 定位机台，再关联 player_game_log。
+     * 线上机台 player_game_log.player_id 有值，通过 playerIds 过滤。
+     * 两路 OR 合并，JOIN machine → machine_category 获取 game_id / machine_source。
      *
-     * game_amount 符号因写入方不同而不统一（gk_work 上分写正、gk_api 写负、
-     * 投钞写 0），统一用 ABS 处理。
+     * game_amount 符号因写入方不同而不统一，统一用 ABS 处理。
      *
      * @return array [game_type][machine_source][TYPE_MACHINE_UP|TYPE_MACHINE_DOWN] => float
      */
-    private function queryMachineDeliveryData(array $playerIds, string $start, string $end): array
+    private function queryMachineDeliveryData(array $playerIds, int $storeId, string $start, string $end): array
     {
-        $pglTable   = plugin()->webman->config('database.player_game_log_table');
-        $openAction = PlayerGameLog::ACTION_OPEN; // 1
+        $pglTable  = plugin()->webman->config('database.player_game_log_table');
+        $machTable = plugin()->webman->config('database.machine_table');
+        $cateTable = plugin()->webman->config('database.machine_category_table');
+        $cmTable   = plugin()->webman->config('database.channel_machine_table');
+        $openAction = PlayerGameLog::ACTION_OPEN;
 
-        $query = Db::table($pglTable)
-            ->whereIn('player_id', $playerIds)
-            ->where('machine_id', '>', 0)
-            ->whereIn('game_id', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])
-            ->selectRaw("game_id, source_type,
-                         SUM(CASE WHEN action = {$openAction} THEN ABS(game_amount) ELSE 0 END) AS total_open,
-                         SUM(CASE WHEN action <> {$openAction} THEN ABS(game_amount) ELSE 0 END) AS total_wash")
-            ->groupBy('game_id', 'source_type');
+        // 线下机台 ID 子查询（channel_machine.store_admin_id = storeId）
+        $offlineMachineIds = Db::table($cmTable)
+            ->where('store_admin_id', $storeId)
+            ->whereNotNull('store_admin_id')
+            ->pluck('machine_id')
+            ->toArray();
+
+        $query = Db::table("{$pglTable} as pgl")
+            ->join("{$machTable} as m", 'pgl.machine_id', '=', 'm.id')
+            ->join("{$cateTable} as mc", 'm.cate_id', '=', 'mc.id')
+            ->where('pgl.machine_id', '>', 0)
+            ->whereIn('mc.game_id', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])
+            ->where(function ($q) use ($playerIds, $offlineMachineIds) {
+                $q->whereIn('pgl.player_id', $playerIds);
+                if (!empty($offlineMachineIds)) {
+                    $q->orWhereIn('pgl.machine_id', $offlineMachineIds);
+                }
+            })
+            ->selectRaw("mc.game_id, mc.machine_source,
+                         SUM(CASE WHEN pgl.action = {$openAction} THEN ABS(pgl.game_amount) ELSE 0 END) AS total_open,
+                         SUM(CASE WHEN pgl.action <> {$openAction} THEN ABS(pgl.game_amount) ELSE 0 END) AS total_wash")
+            ->groupBy('mc.game_id', 'mc.machine_source');
 
         if (!empty($start)) {
-            $query->where('created_at', '>=', $start);
+            $query->where('pgl.created_at', '>=', $start);
         }
         if (!empty($end)) {
-            $query->where('created_at', '<=', $end);
+            $query->where('pgl.created_at', '<=', $end);
         }
 
-        // source_type 1=线上 / 2=线下，与 MachineCategory::MACHINE_SOURCE_* 值相同
         $result = [];
         foreach ($query->get() as $row) {
             $gameType      = (int)$row->game_id;
-            $machineSource = (int)$row->source_type;
+            $machineSource = (int)$row->machine_source;
 
             $result[$gameType][$machineSource][PlayerDeliveryRecord::TYPE_MACHINE_UP]   = (float)$row->total_open;
             $result[$gameType][$machineSource][PlayerDeliveryRecord::TYPE_MACHINE_DOWN] = (float)$row->total_wash;
@@ -584,31 +600,46 @@ class ChannelStoreFinanceSummaryController
 
     /**
      * 查询斯洛机台壓分/得分数据，按 machine_source 分组。
-     * 直接用 player_game_log.game_id 和 source_type，不 JOIN machine/machine_category。
+     * 与 queryMachineDeliveryData 相同的 OR 策略：线上用 playerIds，线下用 channel_machine 机台 ID。
      * @return array [machine_source] => ['pressure' => float, 'score' => float]
      */
-    private function querySlotPressureScoreData(array $playerIds, string $start, string $end): array
+    private function querySlotPressureScoreData(array $playerIds, int $storeId, string $start, string $end): array
     {
-        $pglTable = plugin()->webman->config('database.player_game_log_table');
+        $pglTable  = plugin()->webman->config('database.player_game_log_table');
+        $machTable = plugin()->webman->config('database.machine_table');
+        $cateTable = plugin()->webman->config('database.machine_category_table');
+        $cmTable   = plugin()->webman->config('database.channel_machine_table');
 
-        $query = Db::table($pglTable)
-            ->whereIn('player_id', $playerIds)
-            ->where('machine_id', '>', 0)
-            ->where('game_id', GameType::TYPE_SLOT)
-            ->selectRaw('source_type, COALESCE(SUM(pressure), 0) as total_pressure, COALESCE(SUM(score), 0) as total_score')
-            ->groupBy('source_type');
+        $offlineMachineIds = Db::table($cmTable)
+            ->where('store_admin_id', $storeId)
+            ->whereNotNull('store_admin_id')
+            ->pluck('machine_id')
+            ->toArray();
+
+        $query = Db::table("{$pglTable} as pgl")
+            ->join("{$machTable} as m", 'pgl.machine_id', '=', 'm.id')
+            ->join("{$cateTable} as mc", 'm.cate_id', '=', 'mc.id')
+            ->where('pgl.machine_id', '>', 0)
+            ->where('mc.game_id', GameType::TYPE_SLOT)
+            ->where(function ($q) use ($playerIds, $offlineMachineIds) {
+                $q->whereIn('pgl.player_id', $playerIds);
+                if (!empty($offlineMachineIds)) {
+                    $q->orWhereIn('pgl.machine_id', $offlineMachineIds);
+                }
+            })
+            ->selectRaw('mc.machine_source, COALESCE(SUM(pgl.pressure), 0) as total_pressure, COALESCE(SUM(pgl.score), 0) as total_score')
+            ->groupBy('mc.machine_source');
 
         if (!empty($start)) {
-            $query->where('created_at', '>=', $start);
+            $query->where('pgl.created_at', '>=', $start);
         }
         if (!empty($end)) {
-            $query->where('created_at', '<=', $end);
+            $query->where('pgl.created_at', '<=', $end);
         }
 
-        // source_type 1=线上 / 2=线下，与 MachineCategory::MACHINE_SOURCE_* 值相同
         $result = [];
         foreach ($query->get() as $row) {
-            $machineSource = (int)$row->source_type;
+            $machineSource = (int)$row->machine_source;
 
             $result[$machineSource] = [
                 'pressure' => (float)$row->total_pressure,
