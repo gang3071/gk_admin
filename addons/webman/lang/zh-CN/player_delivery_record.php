@@ -62,6 +62,7 @@ return [
         PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS => 'VIP每日登录奖励',
         PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE => '活动外增',
         PlayerDeliveryRecord::TYPE_LEADERBOARD_REWARD => '排行榜奖励',
+        PlayerDeliveryRecord::TYPE_CHILDREN_CASHBACK => '推广红利',
     ],
     'machine_refund' => '机台退款',
     'detail' => '详情',
