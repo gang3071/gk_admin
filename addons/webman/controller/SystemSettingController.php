@@ -659,6 +659,7 @@ class SystemSettingController
 
         return Form::create($data, function (Form $form) use ($data, $config, $prizes) {
             $form->title(admin_trans('system_setting.leaderboard.title'));
+            $form->layout('vertical');
             $form->hidden('id')->default($data['id']);
 
             $form->text('name', admin_trans('system_setting.leaderboard.name'))
@@ -668,6 +669,7 @@ class SystemSettingController
             $form->number('threshold', admin_trans('system_setting.leaderboard.threshold'))
                 ->value($config['threshold'] ?? 0)
                 ->min(0)
+                ->style(['width' => '100%'])
                 ->required();
 
             $form->switch('automatic', admin_trans('system_setting.leaderboard.automatic'))
@@ -677,17 +679,32 @@ class SystemSettingController
             $form->number('rank1_amount', admin_trans('system_setting.leaderboard.rank1'))
                 ->value($prizes[1] ?? 0)
                 ->min(0)
+                ->style(['width' => '100%'])
                 ->required();
 
             $form->number('rank2_amount', admin_trans('system_setting.leaderboard.rank2'))
                 ->value($prizes[2] ?? 0)
                 ->min(0)
+                ->style(['width' => '100%'])
                 ->required();
 
             $form->number('rank3_amount', admin_trans('system_setting.leaderboard.rank3'))
                 ->value($prizes[3] ?? 0)
                 ->min(0)
+                ->style(['width' => '100%'])
                 ->required();
+
+            $form->textarea('activity_rules', admin_trans('system_setting.leaderboard.activity_rules'))
+                ->value($config['activity_rules'] ?? '')
+                ->rows(8);
+
+            $form->textarea('distribution_rules', admin_trans('system_setting.leaderboard.distribution_rules'))
+                ->value($config['distribution_rules'] ?? '')
+                ->rows(6);
+
+            $form->textarea('disclaimer', admin_trans('system_setting.leaderboard.disclaimer'))
+                ->value($config['disclaimer'] ?? '')
+                ->rows(5);
 
             $form->saving(function (Form $form) use ($config) {
                 $newConfig = $config;
@@ -699,6 +716,9 @@ class SystemSettingController
                     ['rank' => 2, 'amount' => (float)$form->input('rank2_amount')],
                     ['rank' => 3, 'amount' => (float)$form->input('rank3_amount')],
                 ];
+                $newConfig['activity_rules'] = $form->input('activity_rules');
+                $newConfig['distribution_rules'] = $form->input('distribution_rules');
+                $newConfig['disclaimer'] = $form->input('disclaimer');
                 $form->input('content', json_encode($newConfig, JSON_UNESCAPED_UNICODE));
             });
 

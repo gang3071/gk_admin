@@ -348,6 +348,7 @@ return [
     'machine_type_steel_ball' => 'パチンコ',
     'machine_open_point' => '上分',
     'machine_wash_point' => '下分',
+    'machine_lottery' => '宝くじ',
     'machine_profit' => '小計',
     'machine_pressure' => 'プレッシャー',
     'machine_score' => '得点',

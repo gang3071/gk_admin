@@ -1875,6 +1875,7 @@ class ChannelAgentController
                     case PlayerDeliveryRecord::TYPE_RECHARGE_REWARD:
                     case PlayerDeliveryRecord::TYPE_DAMAGE_REBATE:
                     case PlayerDeliveryRecord::TYPE_LOTTERY:
+                    case PlayerDeliveryRecord::TYPE_CHILDREN_CASHBACK:
                         return Tag::create($translatedText)->color('orange');
                     case PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT:
                         /** @var PlayerWalletTransfer $playerWalletTransfer */
@@ -2002,6 +2003,9 @@ class ChannelAgentController
                             break;
                         case PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS:
                             $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS))->color('#eb2f96');
+                            break;
+                        case PlayerDeliveryRecord::TYPE_CHILDREN_CASHBACK:
+                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_CHILDREN_CASHBACK))->color('#e8c521');
                             break;
                         default:
                             $tag = '';
@@ -2145,6 +2149,7 @@ class ChannelAgentController
                         'agent_out' => admin_trans('message.target.agent_out'),
                         'storage_recharge' => admin_trans('message.target.storage_recharge'),
                         'retry_refund' => admin_trans('message.target.retry_refund'),
+                        'reverse_children_cashback' => admin_trans('message.target.reverse_children_cashback'),
                     ]);
                 $filter->select('search_type')
                     ->showSearch()
@@ -2217,6 +2222,7 @@ class ChannelAgentController
                         PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS),
                         PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS),
                         PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS),
+                        PlayerDeliveryRecord::TYPE_CHILDREN_CASHBACK => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_CHILDREN_CASHBACK),
                     ]);
             });
             $grid->expandFilter(false);

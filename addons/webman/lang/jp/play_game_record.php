@@ -24,6 +24,8 @@ return [
         'vip_level_id' => 'VIPレベル',
         'cashback_ratio' => 'キャッシュバック率',
         'cashback_amount' => 'キャッシュバック額',
+        'parent_cashback_ratio' => 'プロモーション報酬の割合',
+        'parent_cashback_amount' => 'プロモーション報酬額',
     ],
     'status' => [
         PlayGameRecord::STATUS_UNSETTLED => '未分潤',

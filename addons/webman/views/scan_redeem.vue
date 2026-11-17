@@ -150,8 +150,8 @@ export default {
   computed: {
     canRedeem() {
       if (!this.record) return false;
-      // 全票種可核銷，僅保留狀態校驗（需為「正常」，與後端 STATUS_NORMAL 對齊）
-      return this.record.status === 1;
+      // 體驗券(3)/福利券(4)不支持核銷，其餘票種僅保留狀態校驗（需為「正常」，與後端 STATUS_NORMAL 對齊）
+      return this.record.status === 1 && ![3, 4].includes(Number(this.record.ticket_type));
     }
   },
   mounted() {
@@ -271,6 +271,7 @@ export default {
 
     getRedeemDisabledReason() {
       if (!this.record) return '無法核銷';
+      if ([3, 4].includes(Number(this.record.ticket_type))) return '體驗券/福利券不支持核銷';
       if (this.record.status === 0) return '該記錄已禁用';
       if (this.record.status === 2 || this.record.status === 3) return '該記錄已核銷';
       return '無法核銷';

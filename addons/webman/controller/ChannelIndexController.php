@@ -4781,6 +4781,22 @@ class ChannelIndexController
             ->whereIn('id', $machineIds)
             ->pluck('code', 'id');
 
+        // 彩金（拉彩）按 machine_id + game_type 聚合 player_lottery_record
+        // 注意：机台彩金记录不设 source（靠 DB 默认值，不可靠），只能用 game_type 识别斯洛/钢珠
+        $lotteryMap = \addons\webman\model\PlayerLotteryRecord::query()
+            ->selectRaw('machine_id, game_type, COALESCE(SUM(amount), 0) AS total_amount')
+            ->whereIn('player_id', $playerIds)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->where('status', \addons\webman\model\PlayerLotteryRecord::STATUS_COMPLETE)
+            ->whereIn('game_type', [
+                \addons\webman\model\GameType::TYPE_SLOT,
+                \addons\webman\model\GameType::TYPE_STEEL_BALL,
+            ])
+            ->groupBy('machine_id', 'game_type')
+            ->get()
+            ->keyBy(fn ($r) => $r->machine_id . '_' . $r->game_type);
+
         // 保存机台明细
         foreach ($machineLogs as $log) {
             $openPoint = (float)$log->open_point;
@@ -4793,6 +4809,9 @@ class ChannelIndexController
                 ? (float)$log->chip_amount
                 : (float)$log->pressure;
 
+            // 当次班別该台拉彩累積
+            $lotteryAmount = (float)($lotteryMap[$machineId . '_' . $machineType]->total_amount ?? 0);
+
             \addons\webman\model\StoreShiftMachineDetail::create([
                 'shift_record_id' => $shiftRecordId,
                 'department_id' => $departmentId,
@@ -4803,7 +4822,8 @@ class ChannelIndexController
                 'type' => $machineType,
                 'open_point' => $openPoint,
                 'wash_point' => $washPoint,
-                'profit' => (float)bcsub($openPoint, $washPoint, 2),
+                'lottery_amount' => $lotteryAmount,
+                'profit' => (float)bcsub(bcsub($openPoint, $washPoint, 2), $lotteryAmount, 2),
                 'pressure' => $pressure,
                 'score' => (float)$log->score,
             ]);

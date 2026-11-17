@@ -310,6 +310,7 @@ return [
         'lottery_fixed' => '固定彩金派彩',
         'reverse_water' => '电子游戏反水',
         'reverse_water_pool' => '反水池反水领取',
+        'reverse_children_cashback' => '推广红利领取',
         'gb_recharge' => '购宝钱包开分',
         'gb_withdrawal' => '购宝钱包洗分',
         'wallet_transfer_out' => '平台转出{name}',

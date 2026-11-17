@@ -190,13 +190,18 @@ export default {
       return { wash: 'red', leave: 'volcano', open: 'cyan' }[item.action] || 'default';
     },
     markerLabel(m) {
-      return { open_start: '▶ 開分開始', open_end: '✓ 開分結束', wash_start: '▶ 洗分開始', wash_end: '✓ 洗分結束' }[m] || m;
+      return {
+        open_start: '▶ 開分開始', open_end: '✓ 開分結束',
+        wash_start: '▶ 洗分開始', wash_end: '✓ 洗分結束',
+        bet_drop:   '⚠ BET下降',
+      }[m] || m;
     },
     dotClass(item) {
       if (item.marker === 'open_start') return 'dot-open-start';
       if (item.marker === 'open_end')   return 'dot-open-end';
       if (item.marker === 'wash_start') return 'dot-wash-start';
       if (item.marker === 'wash_end')   return 'dot-wash-end';
+      if (item.marker === 'bet_drop')   return 'dot-bet-drop';
       const base = 'dot-' + item.display_type;
       if (item.level === 'ERROR')   return base + ' dot-error';
       if (item.level === 'WARNING') return base + ' dot-warn';
@@ -207,6 +212,7 @@ export default {
       if (item.marker === 'open_end')   return 'body-open-end';
       if (item.marker === 'wash_start') return 'body-wash-start';
       if (item.marker === 'wash_end')   return 'body-wash-end';
+      if (item.marker === 'bet_drop')   return 'body-bet-drop';
       if (item.level === 'ERROR')   return 'body-error';
       if (item.level === 'WARNING') return 'body-warn';
       if (['wash', 'leave', 'account_query', 'wash_zero', 'all_down'].includes(item.action)) return 'body-key';
@@ -311,6 +317,7 @@ export default {
 .dot-open-end   { width:12px; height:12px; background:#52c41a; border-color:#237804; }
 .dot-wash-start { width:12px; height:12px; background:#fa8c16; border-color:#ad4e00; }
 .dot-wash-end   { width:12px; height:12px; background:#722ed1; border-color:#391085; }
+.dot-bet-drop   { width:12px; height:12px; background:#fff1f0; border-color:#f5222d; }
 
 .tl-body      { flex:1; padding:5px 8px; border-radius:4px; margin-bottom:4px; border-left:3px solid transparent; min-width:0; }
 .body-default { background:#fafafa; border-left-color:#e8e8e8; }
@@ -322,6 +329,7 @@ export default {
 .body-open-end   { background:#f6ffed; border-left:4px solid #52c41a; }
 .body-wash-start { background:#fff7e6; border-left:4px solid #fa8c16; }
 .body-wash-end   { background:#f9f0ff; border-left:4px solid #722ed1; }
+.body-bet-drop   { background:#fff1f0; border-left:4px solid #f5222d; }
 
 .tl-head    { display:flex; align-items:center; flex-wrap:wrap; gap:4px; margin-bottom:3px; }
 .tl-time    { font-size:12px; color:#595959; font-weight:700; background:none; padding:0; }
@@ -333,6 +341,7 @@ export default {
 .marker-open_end   { background:#f6ffed; border-color:#52c41a; color:#237804; }
 .marker-wash_start { background:#fff7e6; border-color:#fa8c16; color:#ad4e00; }
 .marker-wash_end   { background:#f9f0ff; border-color:#722ed1; color:#391085; }
+.marker-bet_drop   { background:#fff1f0; border-color:#f5222d; color:#a8071a; }
 
 .state-card  { background:#fff; border:1px solid #e8e8e8; border-radius:4px; padding:6px 10px; margin:4px 0; }
 .state-grid  { display:flex; flex-wrap:wrap; gap:16px; }
@@ -374,4 +383,5 @@ export default {
 .anchor-btn-open_end   { background:#f6ffed; border-color:#52c41a; color:#237804; }
 .anchor-btn-wash_start { background:#fff7e6; border-color:#fa8c16; color:#ad4e00; }
 .anchor-btn-wash_end   { background:#f9f0ff; border-color:#722ed1; color:#391085; }
+.anchor-btn-bet_drop   { background:#fff1f0; border-color:#f5222d; color:#a8071a; }
 </style>

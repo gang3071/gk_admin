@@ -92,6 +92,9 @@ return [
         'switch_enabled' => '有効',
         'switch_disabled' => '無効',
         'save_success' => '保存成功',
+        'activity_rules' => '活動ルール',
+        'distribution_rules' => '配布ルール',
+        'disclaimer' => '免責事項',
     ],
     // リベート設定
     'rebate' => [
