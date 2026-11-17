@@ -425,10 +425,8 @@ class ChannelStoreFinanceSummaryController
             PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD,
             PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS,
             PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS,
-            PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL,
             PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS,
             PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE,
-            PlayerDeliveryRecord::TYPE_CHILDREN_CASHBACK,
         ];
 
         $query = PlayerDeliveryRecord::query()
@@ -536,11 +534,11 @@ class ChannelStoreFinanceSummaryController
         $query = PlayGameRecord::query()
             ->whereIn('player_id', $playerIds)
             ->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)
-            ->selectRaw('COALESCE(SUM(bet), 0) as total_bet, COALESCE(SUM(win), 0) as total_win, COALESCE(SUM(diff), 0) as total_diff');
+            ->selectRaw('COALESCE(SUM(bet), 0) as total_bet, COALESCE(SUM(win), 0) as total_win, COALESCE(SUM(diff), 0) as total_diff, COALESCE(SUM(cashback_amount), 0) as cashback_amount, COALESCE(SUM(parent_cashback_amount), 0) as children_cashback_amount');
 
         $this->applyCreatedAtFilter($query, $start, $end, $dateType);
 
-        return $query->first() ?? (object)['total_bet' => 0, 'total_win' => 0, 'total_diff' => 0];
+        return $query->first() ?? (object)['total_bet' => 0, 'total_win' => 0, 'total_diff' => 0, 'cashback_amount' => 0, 'children_cashback_amount' => 0];
     }
 
     /**
@@ -711,8 +709,8 @@ class ChannelStoreFinanceSummaryController
         $vipDailyLogin    = $welfareData[PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS] ?? 0.0;
         $activityGive     = $welfareData[PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE]         ?? 0.0;
         $lotteryTicket    = $welfareData[PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD] ?? 0.0;
-        $reverseWaterPool = $welfareData[PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL]    ?? 0.0;
-        $childrenCashback = $welfareData[PlayerDeliveryRecord::TYPE_CHILDREN_CASHBACK]     ?? 0.0;
+        $reverseWaterPool = (float)($electronicGame->cashback_amount          ?? 0);
+        $childrenCashback = (float)($electronicGame->children_cashback_amount ?? 0);
         $experienceCoupon = $couponData[TicketRecord::TYPE_EXPERIENCE] ?? 0.0;
         $welfareCoupon    = $couponData[TicketRecord::TYPE_WELFARE]    ?? 0.0;
 

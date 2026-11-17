@@ -648,14 +648,14 @@
               </div>
               <div class="desc-item" id="desc-welfare-reverse-water" :class="{ 'desc-item-active': activeDescId === 'desc-welfare-reverse-water' }">
                 <div class="desc-item-name">返水</div>
-                <div class="desc-item-body">玩家累積遊戲量達標後，系統依返水比例發放至錢包，屬遊戲消費的部分回饋。<br>
-                  <span class="desc-source">player_delivery_record type=36</span>
+                <div class="desc-item-body">玩家累積遊戲量達標後依 VIP 返水比例計算的回饋金額，取自各電子遊戲結算紀錄的 cashback_amount 加總。<br>
+                  <span class="desc-source">play_game_record SUM(cashback_amount) settlement_status=SETTLED</span>
                 </div>
               </div>
               <div class="desc-item" id="desc-welfare-children-cashback" :class="{ 'desc-item-active': activeDescId === 'desc-welfare-children-cashback' }">
                 <div class="desc-item-name">推廣紅利</div>
-                <div class="desc-item-body">玩家成功推薦新玩家後，依推廣規則獲得的紅利點數，發放至錢包。<br>
-                  <span class="desc-source">player_delivery_record type=40</span>
+                <div class="desc-item-body">玩家下注時由系統計算並累積給其上級推廣人的紅利金額，取自各電子遊戲結算紀錄的 parent_cashback_amount 加總。<br>
+                  <span class="desc-source">play_game_record SUM(parent_cashback_amount) settlement_status=SETTLED</span>
                 </div>
               </div>
               <div class="desc-item" id="desc-welfare-subtotal" :class="{ 'desc-item-active': activeDescId === 'desc-welfare-subtotal' }">
@@ -696,8 +696,8 @@
               </div>
               <div class="desc-item" id="desc-electronic-reverse-water" :class="{ 'desc-item-active': activeDescId === 'desc-electronic-reverse-water' }">
                 <div class="desc-item-name">返水</div>
-                <div class="desc-item-body">玩家累積遊戲量達標後依返水比例發放至錢包的回饋點數，與贈點福利明細中的返水為同一資料來源。<br>
-                  <span class="desc-source">player_delivery_record type=36</span>
+                <div class="desc-item-body">依 VIP 返水比例計算的回饋金額，與贈點福利明細中的返水為同一資料來源。<br>
+                  <span class="desc-source">play_game_record SUM(cashback_amount) settlement_status=SETTLED</span>
                 </div>
               </div>
 
