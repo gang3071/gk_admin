@@ -331,6 +331,8 @@
                     <th class="th-link" @click="scrollToDesc('desc-welfare-experience')">體驗券</th>
                     <th class="th-link" @click="scrollToDesc('desc-welfare-welfare')">福利券</th>
                     <th class="th-link" @click="scrollToDesc('desc-welfare-lottery-ticket')">摸彩獎</th>
+                    <th class="th-link" @click="scrollToDesc('desc-welfare-reverse-water')">返水</th>
+                    <th class="th-link" @click="scrollToDesc('desc-welfare-children-cashback')">推廣紅利</th>
                     <th class="subtotal-col th-link" @click="scrollToDesc('desc-welfare-subtotal')">小計</th>
                   </tr>
                 </thead>
@@ -343,6 +345,8 @@
                     <td>{{ fmtNum(reportData.welfare.experience_coupon) }}</td>
                     <td>{{ fmtNum(reportData.welfare.welfare_coupon) }}</td>
                     <td>{{ fmtNum(reportData.welfare.lottery_ticket) }}</td>
+                    <td>{{ fmtNum(reportData.welfare.reverse_water_pool) }}</td>
+                    <td>{{ fmtNum(reportData.welfare.children_cashback) }}</td>
                     <td class="subtotal-col">{{ fmtNum(reportData.welfare.subtotal) }}</td>
                   </tr>
                 </tbody>
@@ -640,9 +644,21 @@
                   <span class="desc-source">player_delivery_record type=33</span>
                 </div>
               </div>
+              <div class="desc-item" id="desc-welfare-reverse-water" :class="{ 'desc-item-active': activeDescId === 'desc-welfare-reverse-water' }">
+                <div class="desc-item-name">返水</div>
+                <div class="desc-item-body">玩家累積遊戲量達標後，系統依返水比例發放至錢包，屬遊戲消費的部分回饋。<br>
+                  <span class="desc-source">player_delivery_record type=36</span>
+                </div>
+              </div>
+              <div class="desc-item" id="desc-welfare-children-cashback" :class="{ 'desc-item-active': activeDescId === 'desc-welfare-children-cashback' }">
+                <div class="desc-item-name">推廣紅利</div>
+                <div class="desc-item-body">玩家成功推薦新玩家後，依推廣規則獲得的紅利點數，發放至錢包。<br>
+                  <span class="desc-source">player_delivery_record type=40</span>
+                </div>
+              </div>
               <div class="desc-item" id="desc-welfare-subtotal" :class="{ 'desc-item-active': activeDescId === 'desc-welfare-subtotal' }">
                 <div class="desc-item-name">小計</div>
-                <div class="desc-item-body">= VIP生日禮 + VIP升級禮 + VIP每日登陸獎 + 總外贈點 + 體驗券 + 福利券 + 摸彩獎<br>代表門店當期所有福利成本合計。</div>
+                <div class="desc-item-body">= VIP生日禮 + VIP升級禮 + VIP每日登陸獎 + 總外贈點 + 體驗券 + 福利券 + 摸彩獎 + 返水 + 推廣紅利<br>代表門店當期所有福利成本合計。</div>
               </div>
 
               <a-divider style="margin:8px 0" />

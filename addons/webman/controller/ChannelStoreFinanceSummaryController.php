@@ -425,8 +425,10 @@ class ChannelStoreFinanceSummaryController
             PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD,
             PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS,
             PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS,
+            PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL,
             PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS,
             PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE,
+            PlayerDeliveryRecord::TYPE_CHILDREN_CASHBACK,
         ];
 
         $query = PlayerDeliveryRecord::query()
@@ -709,13 +711,19 @@ class ChannelStoreFinanceSummaryController
         $vipDailyLogin    = $welfareData[PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS] ?? 0.0;
         $activityGive     = $welfareData[PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE]         ?? 0.0;
         $lotteryTicket    = $welfareData[PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD] ?? 0.0;
+        $reverseWaterPool = $welfareData[PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL]    ?? 0.0;
+        $childrenCashback = $welfareData[PlayerDeliveryRecord::TYPE_CHILDREN_CASHBACK]     ?? 0.0;
         $experienceCoupon = $couponData[TicketRecord::TYPE_EXPERIENCE] ?? 0.0;
         $welfareCoupon    = $couponData[TicketRecord::TYPE_WELFARE]    ?? 0.0;
 
         $welfareSubtotal = bcadd(
             bcadd(
-                bcadd(bcadd((string)$vipBirthday, (string)$vipUpgrade, 2), (string)$vipDailyLogin, 2),
-                bcadd((string)$activityGive, (string)$lotteryTicket, 2),
+                bcadd(
+                    bcadd(bcadd((string)$vipBirthday, (string)$vipUpgrade, 2), (string)$vipDailyLogin, 2),
+                    bcadd((string)$activityGive, (string)$lotteryTicket, 2),
+                    2
+                ),
+                bcadd((string)$reverseWaterPool, (string)$childrenCashback, 2),
                 2
             ),
             bcadd((string)$experienceCoupon, (string)$welfareCoupon, 2),
@@ -736,14 +744,16 @@ class ChannelStoreFinanceSummaryController
                 'rtp'           => $this->calcRtp((float)$totalOut, (float)$totalIn),
             ],
             'welfare' => [
-                'vip_birthday'      => $vipBirthday,
-                'vip_upgrade'       => $vipUpgrade,
-                'vip_daily_login'   => $vipDailyLogin,
-                'activity_give'     => $activityGive,
-                'experience_coupon' => $experienceCoupon,
-                'welfare_coupon'    => $welfareCoupon,
-                'lottery_ticket'    => $lotteryTicket,
-                'subtotal'          => (float)$welfareSubtotal,
+                'vip_birthday'       => $vipBirthday,
+                'vip_upgrade'        => $vipUpgrade,
+                'vip_daily_login'    => $vipDailyLogin,
+                'activity_give'      => $activityGive,
+                'experience_coupon'  => $experienceCoupon,
+                'welfare_coupon'     => $welfareCoupon,
+                'lottery_ticket'     => $lotteryTicket,
+                'reverse_water_pool' => $reverseWaterPool,
+                'children_cashback'  => $childrenCashback,
+                'subtotal'           => (float)$welfareSubtotal,
             ],
             'electronic' => [
                 'total_bet'   => $totalBet,
@@ -826,7 +836,7 @@ class ChannelStoreFinanceSummaryController
 
         return [
             'overview'   => ['total_in' => 0, 'total_out' => 0, 'profit' => 0, 'total_lottery' => 0, 'rtp' => 0],
-            'welfare'    => ['vip_birthday' => 0, 'vip_upgrade' => 0, 'vip_daily_login' => 0, 'activity_give' => 0, 'experience_coupon' => 0, 'welfare_coupon' => 0, 'lottery_ticket' => 0, 'subtotal' => 0],
+            'welfare'    => ['vip_birthday' => 0, 'vip_upgrade' => 0, 'vip_daily_login' => 0, 'activity_give' => 0, 'experience_coupon' => 0, 'welfare_coupon' => 0, 'lottery_ticket' => 0, 'reverse_water_pool' => 0, 'children_cashback' => 0, 'subtotal' => 0],
             'electronic' => ['total_bet' => 0, 'total_win' => 0, 'player_diff' => 0, 'lottery' => 0, 'rtp' => 0],
             'steel_ball' => [
                 'offline' => $emptyMachineSection,
