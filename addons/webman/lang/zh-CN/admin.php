@@ -3,6 +3,7 @@
 return [
     'user_info' => '个人信息',
     'system_user'=>'系统用户',
+    'system' => '系统',
     'not_access_permission' => '没有访问该操作的权限',
     'super_admin'=>'超级管理员',
     'super_admin_delete'=>'超级管理员不可以删除!',

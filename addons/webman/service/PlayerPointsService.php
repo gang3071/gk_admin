@@ -447,7 +447,9 @@ class PlayerPointsService
         }
 
         if ($type !== null) {
-            $query->where('type', $type);
+            // 限定表名：JOIN player 后 player 表也有 type 列，裸列名会报
+            // "Column 'type' in where clause is ambiguous"，导致按类型搜索查不到任何数据
+            $query->where('player_points_record.type', $type);
         }
 
         if (!empty($uuid)) {

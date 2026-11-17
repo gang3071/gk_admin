@@ -126,7 +126,11 @@ class PlayerPointsController
             $grid->column('points_before', admin_trans('player_points.fields.points_before'))->width(120)->align('center');
             $grid->column('points_after', admin_trans('player_points.fields.points_after'))->width(120)->align('center');
             $grid->column('remark', admin_trans('player_points.fields.remark'))->width(250);
-            $grid->column('admin_name', admin_trans('player_points.fields.admin_name'))->width(120)->align('center');
+            $grid->column('admin_name', admin_trans('player_points.fields.admin_name'))->width(120)->align('center')
+                ->display(function ($val) {
+                    // 系统发放（队列写入 admin_name='system'）显示为「系统」
+                    return $val === 'system' ? admin_trans('admin.system') : $val;
+                });
             $grid->column('admin_ip', admin_trans('player_points.fields.admin_ip'))->width(150)->align('center');
             $grid->column('created_at', admin_trans('player_points.fields.created_at'))->width(180)->align('center');
 

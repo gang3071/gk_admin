@@ -3,6 +3,7 @@
 return [
     'user_info' => '個人資訊',
     'system_user' => '系統用戶',
+    'system' => '系統',
     'not_access_permission' => '沒有訪問該操作的許可權',
     'super_admin' => '超級管理員',
     'super_admin_delete' => '超級管理員不可以删除！',
