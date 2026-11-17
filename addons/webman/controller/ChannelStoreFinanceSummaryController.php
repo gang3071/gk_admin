@@ -508,7 +508,9 @@ class ChannelStoreFinanceSummaryController
             })
             ->selectRaw("m.type AS game_type, COALESCE(mc.machine_source, 2) AS machine_source,
                          SUM(CASE WHEN pgl.action = {$openAction} THEN ABS(pgl.game_amount) ELSE 0 END) AS total_open,
-                         SUM(CASE WHEN pgl.action <> {$openAction} THEN ABS(pgl.game_amount) ELSE 0 END) AS total_wash")
+                         SUM(CASE WHEN pgl.action <> {$openAction} THEN ABS(pgl.game_amount) ELSE 0 END) AS total_wash,
+                         COALESCE(SUM(pgl.cashback_amount), 0) AS cashback_amount,
+                         COALESCE(SUM(pgl.parent_cashback_amount), 0) AS parent_cashback_amount")
             ->groupBy('m.type', 'mc.machine_source');
 
         $this->applyTimeFilter($query, 'pgl.created_at', $dateType ?: null, $start, $end);
@@ -520,6 +522,8 @@ class ChannelStoreFinanceSummaryController
 
             $result[$gameType][$machineSource][PlayerDeliveryRecord::TYPE_MACHINE_UP]   = (float)$row->total_open;
             $result[$gameType][$machineSource][PlayerDeliveryRecord::TYPE_MACHINE_DOWN] = (float)$row->total_wash;
+            $result[$gameType][$machineSource]['cashback_amount']                       = (float)$row->cashback_amount;
+            $result[$gameType][$machineSource]['parent_cashback_amount']                = (float)$row->parent_cashback_amount;
         }
 
         return $result;
@@ -662,8 +666,12 @@ class ChannelStoreFinanceSummaryController
         $steelOfflineDown = $machineDelivery[$steelBall][$offline][$downType] ?? 0.0;
         $steelOnlineUp    = $machineDelivery[$steelBall][$online][$upType]    ?? 0.0;
         $steelOnlineDown  = $machineDelivery[$steelBall][$online][$downType]  ?? 0.0;
-        $steelOfflineLottery = $machineLottery[$steelBall][$offline] ?? 0.0;
-        $steelOnlineLottery  = $machineLottery[$steelBall][$online]  ?? 0.0;
+        $steelOfflineLottery        = $machineLottery[$steelBall][$offline] ?? 0.0;
+        $steelOnlineLottery         = $machineLottery[$steelBall][$online]  ?? 0.0;
+        $steelOfflineCashback       = $machineDelivery[$steelBall][$offline]['cashback_amount']        ?? 0.0;
+        $steelOfflineParentCashback = $machineDelivery[$steelBall][$offline]['parent_cashback_amount'] ?? 0.0;
+        $steelOnlineCashback        = $machineDelivery[$steelBall][$online]['cashback_amount']         ?? 0.0;
+        $steelOnlineParentCashback  = $machineDelivery[$steelBall][$online]['parent_cashback_amount']  ?? 0.0;
 
         $steelOfflineSubtotal = bcsub((string)$steelOfflineUp, (string)$steelOfflineDown, 2);
         $steelOnlineSubtotal  = bcsub((string)$steelOnlineUp, (string)$steelOnlineDown, 2);
@@ -675,8 +683,12 @@ class ChannelStoreFinanceSummaryController
         $slotOfflineDown = $machineDelivery[$slot][$offline][$downType] ?? 0.0;
         $slotOnlineUp    = $machineDelivery[$slot][$online][$upType]    ?? 0.0;
         $slotOnlineDown  = $machineDelivery[$slot][$online][$downType]  ?? 0.0;
-        $slotOfflineLottery = $machineLottery[$slot][$offline] ?? 0.0;
-        $slotOnlineLottery  = $machineLottery[$slot][$online]  ?? 0.0;
+        $slotOfflineLottery        = $machineLottery[$slot][$offline] ?? 0.0;
+        $slotOnlineLottery         = $machineLottery[$slot][$online]  ?? 0.0;
+        $slotOfflineCashback       = $machineDelivery[$slot][$offline]['cashback_amount']        ?? 0.0;
+        $slotOfflineParentCashback = $machineDelivery[$slot][$offline]['parent_cashback_amount'] ?? 0.0;
+        $slotOnlineCashback        = $machineDelivery[$slot][$online]['cashback_amount']         ?? 0.0;
+        $slotOnlineParentCashback  = $machineDelivery[$slot][$online]['parent_cashback_amount']  ?? 0.0;
 
         $slotOfflineSubtotal  = bcsub((string)$slotOfflineUp, (string)$slotOfflineDown, 2);
         $slotOnlineSubtotal   = bcsub((string)$slotOnlineUp, (string)$slotOnlineDown, 2);
@@ -763,20 +775,24 @@ class ChannelStoreFinanceSummaryController
             ],
             'steel_ball' => [
                 'offline' => [
-                    'up_point'     => $steelOfflineUp,
-                    'down_point'   => $steelOfflineDown,
-                    'subtotal'     => (float)$steelOfflineSubtotal,
-                    'lottery'      => $steelOfflineLottery,
-                    'total_profit' => (float)$steelOfflineProfit,
-                    'rtp'          => $this->calcRtp($steelOfflineDown, $steelOfflineUp),
+                    'up_point'           => $steelOfflineUp,
+                    'down_point'         => $steelOfflineDown,
+                    'subtotal'           => (float)$steelOfflineSubtotal,
+                    'lottery'            => $steelOfflineLottery,
+                    'total_profit'       => (float)$steelOfflineProfit,
+                    'rtp'                => $this->calcRtp($steelOfflineDown, $steelOfflineUp),
+                    'reverse_water_pool' => $steelOfflineCashback,
+                    'children_cashback'  => $steelOfflineParentCashback,
                 ],
                 'online' => [
-                    'up_point'     => $steelOnlineUp,
-                    'down_point'   => $steelOnlineDown,
-                    'subtotal'     => (float)$steelOnlineSubtotal,
-                    'lottery'      => $steelOnlineLottery,
-                    'total_profit' => (float)$steelOnlineProfit,
-                    'rtp'          => $this->calcRtp($steelOnlineDown, $steelOnlineUp),
+                    'up_point'           => $steelOnlineUp,
+                    'down_point'         => $steelOnlineDown,
+                    'subtotal'           => (float)$steelOnlineSubtotal,
+                    'lottery'            => $steelOnlineLottery,
+                    'total_profit'       => (float)$steelOnlineProfit,
+                    'rtp'                => $this->calcRtp($steelOnlineDown, $steelOnlineUp),
+                    'reverse_water_pool' => $steelOnlineCashback,
+                    'children_cashback'  => $steelOnlineParentCashback,
                 ],
             ],
             'slot' => [
@@ -791,6 +807,8 @@ class ChannelStoreFinanceSummaryController
                     'score'              => $slotOfflineScore,
                     'press_score_profit' => (float)$slotOfflinePressProfit,
                     'press_score_rtp'    => $this->calcRtp($slotOfflineScore, $slotOfflinePressure),
+                    'reverse_water_pool' => $slotOfflineCashback,
+                    'children_cashback'  => $slotOfflineParentCashback,
                 ],
                 'online' => [
                     'up_point'           => $slotOnlineUp,
@@ -803,6 +821,8 @@ class ChannelStoreFinanceSummaryController
                     'score'              => $slotOnlineScore,
                     'press_score_profit' => (float)$slotOnlinePressProfit,
                     'press_score_rtp'    => $this->calcRtp($slotOnlineScore, $slotOnlinePressure),
+                    'reverse_water_pool' => $slotOnlineCashback,
+                    'children_cashback'  => $slotOnlineParentCashback,
                 ],
             ],
         ];
@@ -831,6 +851,7 @@ class ChannelStoreFinanceSummaryController
         $emptyMachineSection = [
             'up_point' => 0, 'down_point' => 0, 'subtotal' => 0,
             'lottery' => 0, 'total_profit' => 0, 'rtp' => 0,
+            'reverse_water_pool' => 0, 'children_cashback' => 0,
         ];
 
         return [

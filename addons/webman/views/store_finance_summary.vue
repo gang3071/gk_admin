@@ -396,7 +396,7 @@
                 <tbody>
                   <!-- 斯洛線下 -->
                   <tr>
-                    <td class="row-label" rowspan="10">斯洛</td>
+                    <td class="row-label" rowspan="12">斯洛</td>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-up')">斯洛總上點</td>
                     <td>{{ fmtNum(reportData.slot.offline.up_point) }}</td>
                   </tr>
@@ -436,9 +436,17 @@
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-press-rtp')">押得RTP</td>
                     <td>{{ fmtPct(reportData.slot.offline.press_score_rtp) }}</td>
                   </tr>
+                  <tr>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-reverse-water')">返水</td>
+                    <td>{{ fmtNum(reportData.slot.offline.reverse_water_pool) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-children-cashback')">推廣紅利</td>
+                    <td>{{ fmtNum(reportData.slot.offline.children_cashback) }}</td>
+                  </tr>
                   <!-- 鋼珠線下 -->
                   <tr class="section-divider">
-                    <td class="row-label" rowspan="6">鋼珠</td>
+                    <td class="row-label" rowspan="8">鋼珠</td>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-up')">鋼珠總上點</td>
                     <td>{{ fmtNum(reportData.steel_ball.offline.up_point) }}</td>
                   </tr>
@@ -462,6 +470,14 @@
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-rtp')">RTP</td>
                     <td>{{ fmtPct(reportData.steel_ball.offline.rtp) }}</td>
                   </tr>
+                  <tr>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-reverse-water')">返水</td>
+                    <td>{{ fmtNum(reportData.steel_ball.offline.reverse_water_pool) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-children-cashback')">推廣紅利</td>
+                    <td>{{ fmtNum(reportData.steel_ball.offline.children_cashback) }}</td>
+                  </tr>
                 </tbody>
               </table>
             </a-card>
@@ -480,7 +496,7 @@
                 <tbody>
                   <!-- 斯洛線上 -->
                   <tr>
-                    <td class="row-label" rowspan="10">斯洛</td>
+                    <td class="row-label" rowspan="12">斯洛</td>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-up')">斯洛總上點</td>
                     <td>{{ fmtNum(reportData.slot.online.up_point) }}</td>
                   </tr>
@@ -520,9 +536,17 @@
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-press-rtp')">押得RTP</td>
                     <td>{{ fmtPct(reportData.slot.online.press_score_rtp) }}</td>
                   </tr>
+                  <tr>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-reverse-water')">返水</td>
+                    <td>{{ fmtNum(reportData.slot.online.reverse_water_pool) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-children-cashback')">推廣紅利</td>
+                    <td>{{ fmtNum(reportData.slot.online.children_cashback) }}</td>
+                  </tr>
                   <!-- 鋼珠線上 -->
                   <tr class="section-divider">
-                    <td class="row-label" rowspan="6">鋼珠</td>
+                    <td class="row-label" rowspan="8">鋼珠</td>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-up')">鋼珠總上點</td>
                     <td>{{ fmtNum(reportData.steel_ball.online.up_point) }}</td>
                   </tr>
@@ -545,6 +569,14 @@
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-rtp')">RTP</td>
                     <td>{{ fmtPct(reportData.steel_ball.online.rtp) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-reverse-water')">返水</td>
+                    <td>{{ fmtNum(reportData.steel_ball.online.reverse_water_pool) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-children-cashback')">推廣紅利</td>
+                    <td>{{ fmtNum(reportData.steel_ball.online.children_cashback) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -738,6 +770,18 @@
                 <div class="desc-item-name">RTP</div>
                 <div class="desc-item-body">= 總下點 ÷ 總上點 × 100%<br>越高代表玩家回吐率越高。</div>
               </div>
+              <div class="desc-item" id="desc-steel-ball-reverse-water" :class="{ 'desc-item-active': activeDescId === 'desc-steel-ball-reverse-water' }">
+                <div class="desc-item-name">返水</div>
+                <div class="desc-item-body">依 VIP 返水比例計算的回饋金額，按線上/線下機台分別統計。<br>
+                  <span class="desc-source">player_game_log SUM(cashback_amount)</span>
+                </div>
+              </div>
+              <div class="desc-item" id="desc-steel-ball-children-cashback" :class="{ 'desc-item-active': activeDescId === 'desc-steel-ball-children-cashback' }">
+                <div class="desc-item-name">推廣紅利</div>
+                <div class="desc-item-body">玩家下注時累積給其上級推廣人的紅利金額，按線上/線下機台分別統計。<br>
+                  <span class="desc-source">player_game_log SUM(parent_cashback_amount)</span>
+                </div>
+              </div>
 
               <a-divider style="margin:8px 0" />
 
@@ -789,6 +833,17 @@
               <div class="desc-item" id="desc-slot-press-rtp" :class="{ 'desc-item-active': activeDescId === 'desc-slot-press-rtp' }">
                 <div class="desc-item-name">押得RTP</div>
                 <div class="desc-item-body">= 總得分 ÷ 總押分 × 100%</div>
+              </div>
+              <div class="desc-item" id="desc-slot-reverse-water" :class="{ 'desc-item-active': activeDescId === 'desc-slot-reverse-water' }">
+                <div class="desc-item-name">返水</div>
+                <div class="desc-item-body">依 VIP 返水比例計算的回饋金額，按線上/線下機台分別統計。<br>
+                  <span class="desc-source">player_game_log SUM(cashback_amount)</span>
+                </div>
+              </div>
+              <div class="desc-item" id="desc-slot-children-cashback" :class="{ 'desc-item-active': activeDescId === 'desc-slot-children-cashback' }">
+                <div class="desc-item-name">推廣紅利</div>
+                <div class="desc-item-body">玩家下注時累積給其上級推廣人的紅利金額，按線上/線下機台分別統計。<br>
+                  <span class="desc-source">player_game_log SUM(parent_cashback_amount)</span>
               </div>
 
             </div>
