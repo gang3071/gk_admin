@@ -378,91 +378,23 @@
               </table>
             </a-card>
 
-            <!-- 4+5. 鋼珠 / 斯洛 並排 -->
+            <!-- 4+5. 線下 / 線上 並排 -->
             <div class="side-by-side-cards">
-            <!-- 4. 鋼珠（線下 / 線上） -->
+            <!-- 4. 線下（斯洛 / 鋼珠） -->
             <a-card class="section-card side-card">
-              <template #title><span class="section-title-link" @click="scrollToDesc('desc-steel-ball')">鋼珠（線下 / 線上）</span></template>
+              <template #title><span class="section-title-link" @click="scrollToDesc('desc-slot')">線下（斯洛 / 鋼珠）</span></template>
               <table class="report-table vertical-table">
                 <thead>
                   <tr>
-                    <th style="width:80px">類別</th>
+                    <th style="width:80px">機種</th>
                     <th>項目</th>
                     <th style="width:160px">數值</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <!-- 線下 -->
+                  <!-- 斯洛線下 -->
                   <tr>
-                    <td class="row-label" rowspan="6">線下</td>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-up')">鋼珠總上點</td>
-                    <td>{{ fmtNum(reportData.steel_ball.offline.up_point) }}</td>
-                  </tr>
-                  <tr>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-down')">鋼珠總下點</td>
-                    <td>{{ fmtNum(reportData.steel_ball.offline.down_point) }}</td>
-                  </tr>
-                  <tr>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-subtotal')">上下點小計</td>
-                    <td>{{ fmtNum(reportData.steel_ball.offline.subtotal) }}</td>
-                  </tr>
-                  <tr>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-lottery')">鋼珠彩金</td>
-                    <td>{{ fmtNum(reportData.steel_ball.offline.lottery) }}</td>
-                  </tr>
-                  <tr>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-profit')">鋼珠總盈虧</td>
-                    <td :class="profitClass(reportData.steel_ball.offline.total_profit)">{{ fmtNum(reportData.steel_ball.offline.total_profit) }}</td>
-                  </tr>
-                  <tr>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-rtp')">RTP</td>
-                    <td>{{ fmtPct(reportData.steel_ball.offline.rtp) }}</td>
-                  </tr>
-                  <!-- 線上 -->
-                  <tr class="section-divider">
-                    <td class="row-label" rowspan="6">線上</td>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-up')">鋼珠總上點</td>
-                    <td>{{ fmtNum(reportData.steel_ball.online.up_point) }}</td>
-                  </tr>
-                  <tr>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-down')">鋼珠總下點</td>
-                    <td>{{ fmtNum(reportData.steel_ball.online.down_point) }}</td>
-                  </tr>
-                  <tr>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-subtotal')">上下點小計</td>
-                    <td>{{ fmtNum(reportData.steel_ball.online.subtotal) }}</td>
-                  </tr>
-                  <tr>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-lottery')">鋼珠彩金</td>
-                    <td>{{ fmtNum(reportData.steel_ball.online.lottery) }}</td>
-                  </tr>
-                  <tr>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-profit')">鋼珠總盈虧</td>
-                    <td :class="profitClass(reportData.steel_ball.online.total_profit)">{{ fmtNum(reportData.steel_ball.online.total_profit) }}</td>
-                  </tr>
-                  <tr>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-rtp')">RTP</td>
-                    <td>{{ fmtPct(reportData.steel_ball.online.rtp) }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </a-card>
-
-            <!-- 5. 斯洛（線下 / 線上） -->
-            <a-card class="section-card side-card">
-              <template #title><span class="section-title-link" @click="scrollToDesc('desc-slot')">斯洛（線下 / 線上）</span></template>
-              <table class="report-table vertical-table">
-                <thead>
-                  <tr>
-                    <th style="width:80px">類別</th>
-                    <th>項目</th>
-                    <th style="width:160px">數值</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <!-- 線下 -->
-                  <tr>
-                    <td class="row-label" rowspan="10">線下</td>
+                    <td class="row-label" rowspan="10">斯洛</td>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-up')">斯洛總上點</td>
                     <td>{{ fmtNum(reportData.slot.offline.up_point) }}</td>
                   </tr>
@@ -502,9 +434,51 @@
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-press-rtp')">押得RTP</td>
                     <td>{{ fmtPct(reportData.slot.offline.press_score_rtp) }}</td>
                   </tr>
-                  <!-- 線上 -->
+                  <!-- 鋼珠線下 -->
                   <tr class="section-divider">
-                    <td class="row-label" rowspan="10">線上</td>
+                    <td class="row-label" rowspan="6">鋼珠</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-up')">鋼珠總上點</td>
+                    <td>{{ fmtNum(reportData.steel_ball.offline.up_point) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-down')">鋼珠總下點</td>
+                    <td>{{ fmtNum(reportData.steel_ball.offline.down_point) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-subtotal')">上下點小計</td>
+                    <td>{{ fmtNum(reportData.steel_ball.offline.subtotal) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-lottery')">鋼珠彩金</td>
+                    <td>{{ fmtNum(reportData.steel_ball.offline.lottery) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-profit')">鋼珠總盈虧</td>
+                    <td :class="profitClass(reportData.steel_ball.offline.total_profit)">{{ fmtNum(reportData.steel_ball.offline.total_profit) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-rtp')">RTP</td>
+                    <td>{{ fmtPct(reportData.steel_ball.offline.rtp) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </a-card>
+
+            <!-- 5. 線上（斯洛 / 鋼珠） -->
+            <a-card class="section-card side-card">
+              <template #title><span class="section-title-link" @click="scrollToDesc('desc-slot')">線上（斯洛 / 鋼珠）</span></template>
+              <table class="report-table vertical-table">
+                <thead>
+                  <tr>
+                    <th style="width:80px">機種</th>
+                    <th>項目</th>
+                    <th style="width:160px">數值</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- 斯洛線上 -->
+                  <tr>
+                    <td class="row-label" rowspan="10">斯洛</td>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-up')">斯洛總上點</td>
                     <td>{{ fmtNum(reportData.slot.online.up_point) }}</td>
                   </tr>
@@ -543,6 +517,32 @@
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-press-rtp')">押得RTP</td>
                     <td>{{ fmtPct(reportData.slot.online.press_score_rtp) }}</td>
+                  </tr>
+                  <!-- 鋼珠線上 -->
+                  <tr class="section-divider">
+                    <td class="row-label" rowspan="6">鋼珠</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-up')">鋼珠總上點</td>
+                    <td>{{ fmtNum(reportData.steel_ball.online.up_point) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-down')">鋼珠總下點</td>
+                    <td>{{ fmtNum(reportData.steel_ball.online.down_point) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-subtotal')">上下點小計</td>
+                    <td>{{ fmtNum(reportData.steel_ball.online.subtotal) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-lottery')">鋼珠彩金</td>
+                    <td>{{ fmtNum(reportData.steel_ball.online.lottery) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-profit')">鋼珠總盈虧</td>
+                    <td :class="profitClass(reportData.steel_ball.online.total_profit)">{{ fmtNum(reportData.steel_ball.online.total_profit) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-rtp')">RTP</td>
+                    <td>{{ fmtPct(reportData.steel_ball.online.rtp) }}</td>
                   </tr>
                 </tbody>
               </table>
