@@ -669,6 +669,7 @@ class SystemSettingController
             $form->number('threshold', admin_trans('system_setting.leaderboard.threshold'))
                 ->value($config['threshold'] ?? 0)
                 ->min(0)
+                ->style(['width' => '100%'])
                 ->required();
 
             $form->switch('automatic', admin_trans('system_setting.leaderboard.automatic'))
@@ -678,16 +679,19 @@ class SystemSettingController
             $form->number('rank1_amount', admin_trans('system_setting.leaderboard.rank1'))
                 ->value($prizes[1] ?? 0)
                 ->min(0)
+                ->style(['width' => '100%'])
                 ->required();
 
             $form->number('rank2_amount', admin_trans('system_setting.leaderboard.rank2'))
                 ->value($prizes[2] ?? 0)
                 ->min(0)
+                ->style(['width' => '100%'])
                 ->required();
 
             $form->number('rank3_amount', admin_trans('system_setting.leaderboard.rank3'))
                 ->value($prizes[3] ?? 0)
                 ->min(0)
+                ->style(['width' => '100%'])
                 ->required();
 
             $form->textarea('activity_rules', admin_trans('system_setting.leaderboard.activity_rules'))
