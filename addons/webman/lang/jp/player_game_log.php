@@ -54,6 +54,8 @@ return [
         'total_chip_amount' => '総打符号量',
         'total_wash_amount' => '下分ゲームポイント',
         'total_open_amount' => '上分ゲームポイント',
+        'total_cashback_amount' => 'キャッシュバック総額',
+        'total_parent_cashback_amount' => 'プロモーション報酬総額',
     ],
     'stats' => [
         'panel_header'    => '統計データを表示',

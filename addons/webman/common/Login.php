@@ -613,6 +613,9 @@ class Login extends LoginAbstract
                             ->where('store_admin_id', $adminUser->id)
                             ->pluck('id');
                         $query->whereIn('player_id', $playerIds);
+                    } elseif (!empty($departmentId)) {
+                        // 渠道后台：按部门过滤（与列表口径一致，勿统计全站）
+                        $query->where('department_id', $departmentId);
                     }
                 }
                 // 2. 子站后台：通过 department_id 过滤
@@ -711,6 +714,10 @@ class Login extends LoginAbstract
                     ->selectRaw('sum(bet) as total_bet, sum(diff) as total_diff, count(*) as count')->first();
                 $cancelledData = (clone $query)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_CANCELLED)
                     ->selectRaw('sum(bet) as total_bet, count(*) as count')->first();
+                // ✅ 反水 / 推广红利统计（随当前筛选口径合计，与列表反水列一致）
+                $cashbackData = (clone $query)
+                    ->selectRaw('sum(cashback_amount) as total_cashback, sum(parent_cashback_amount) as total_parent_cashback')
+                    ->first();
 
                 // 总投注/总盈亏 = 已结算 + 未结算
                 $totalBet = floatval($settledData['total_bet'] ?? 0) + floatval($unsettledData['total_bet'] ?? 0);
@@ -747,6 +754,18 @@ class Login extends LoginAbstract
                         'number' => !empty($cancelledData['total_bet']) ? floatval($cancelledData['total_bet']) : 0,
                         'prefix' => '',
                         'suffix' => '(' . ($cancelledData['count'] ?? 0) . '笔)'
+                    ],
+                    [
+                        'title' => admin_trans('play_game_record.all_cashback_amount'),
+                        'number' => floatval($cashbackData['total_cashback'] ?? 0),
+                        'prefix' => '',
+                        'suffix' => ''
+                    ],
+                    [
+                        'title' => admin_trans('play_game_record.all_parent_cashback_amount'),
+                        'number' => floatval($cashbackData['total_parent_cashback'] ?? 0),
+                        'prefix' => '',
+                        'suffix' => ''
                     ]
                 ];
                 break;

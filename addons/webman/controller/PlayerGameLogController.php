@@ -968,7 +968,9 @@ class PlayerGameLogController
                 sum(pressure) as total_pressure,
                 sum(score) as total_score,
                 sum(turn_point) as total_turn_point,
-                sum(chip_amount) as total_chip_amount")
+                sum(chip_amount) as total_chip_amount,
+                sum(cashback_amount) as total_cashback_amount,
+                sum(parent_cashback_amount) as total_parent_cashback_amount")
             ->first();
 
         $val = fn($field) => $totalData && $totalData->$field !== null ? floatval($totalData->$field) : 0.0;
@@ -982,6 +984,8 @@ class PlayerGameLogController
             ['title' => admin_trans('player_game_log.total_data.total_score'), 'number' => $val('total_score'), 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('player_game_log.total_data.total_turn_point'), 'number' => $val('total_turn_point'), 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('player_game_log.total_data.total_chip_amount'), 'number' => $val('total_chip_amount'), 'prefix' => '', 'suffix' => ''],
+            ['title' => admin_trans('player_game_log.total_data.total_cashback_amount'), 'number' => $val('total_cashback_amount'), 'prefix' => '', 'suffix' => ''],
+            ['title' => admin_trans('player_game_log.total_data.total_parent_cashback_amount'), 'number' => $val('total_parent_cashback_amount'), 'prefix' => '', 'suffix' => ''],
         ];
 
         return json(['code' => 200, 'data' => $data]);

@@ -55,6 +55,8 @@ return [
         'total_chip_amount' => 'Total chip amount',
         'total_wash_amount' => 'Divide the game points',
         'total_open_amount' => 'Score game points',
+        'total_cashback_amount' => 'Total Cashback Amount',
+        'total_parent_cashback_amount' => 'Total Referral Bonus Amount',
     ],
     'stats' => [
         'panel_header'    => 'View Statistics',
