@@ -19,6 +19,7 @@ return [
         'agent_profit' => '代理分潤',
         'channel_commission' => '管道抽成比例',
         'channel_profit' => '管道分潤',
+        'profit' => '累計分潤',
     ],
 
     // 篩選器

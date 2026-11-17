@@ -737,6 +737,11 @@ class AgentStoreProfitReportController
                 ->display(function ($value) {
                     return number_format(floatval($value), 2);
                 });
+            $grid->column('profit', admin_trans('agent_store_profit.fields.profit'))->align('center')
+                ->display(function ($value, $data) {
+                    $profit = bcadd(bcadd(floatval($data['machine_put_point']), floatval($data['recharge_amount']), 2), -floatval($data['withdraw_amount']), 2);
+                    return number_format(floatval($profit), 2);
+                });
 
             $grid->hideAction();
         });

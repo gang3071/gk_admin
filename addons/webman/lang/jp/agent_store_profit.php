@@ -19,6 +19,7 @@ return [
         'agent_profit' => '代理分潤',
         'channel_commission' => 'チャネル手数料率',
         'channel_profit' => 'チャネル分潤',
+        'profit' => '累計分潤',
     ],
 
     // フィルター

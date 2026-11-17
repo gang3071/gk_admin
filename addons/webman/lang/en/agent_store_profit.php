@@ -19,6 +19,7 @@ return [
         'agent_profit' => 'Agent Profit',
         'channel_commission' => 'Channel Commission %',
         'channel_profit' => 'Channel Profit',
+        'profit' => 'Total Profit',
     ],
 
     // Filters
