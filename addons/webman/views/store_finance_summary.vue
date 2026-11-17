@@ -79,6 +79,12 @@
             </div>
 
             <div v-else class="panels-scroll">
+              <!-- 查詢時段 -->
+              <div v-if="tab1TimeRange" class="tab1-time-bar">
+                <span class="tab1-time-label">查詢時段：</span>
+                <span class="tab1-time-range">{{ tab1TimeRange }}</span>
+                <span v-if="form.dateType" class="report-header-shift-badge">交班週期 08:00</span>
+              </div>
               <a-row :gutter="[16, 16]">
                 <a-col
                   v-for="panel in panels"
@@ -812,6 +818,7 @@ export default {
       stores:       [],
       panels:       [],
       activeTypeId: null,
+      tab1TimeRange: null,
 
       // ── Tab 2 state ──
       detailForm:      { store_id: null },
@@ -937,9 +944,12 @@ export default {
       if (val) this.form.dateRange = null;
     },
     async doSearch() {
-      this.loading  = true;
-      this.searched = true;
-      this.error    = null;
+      this.loading      = true;
+      this.searched     = true;
+      this.error        = null;
+      this.tab1TimeRange = this.calcShiftRange(this.form.dateType, this.form.dateRange
+        ? [this.form.dateRange[0]?.format('YYYY-MM-DD HH:mm:ss'), this.form.dateRange[1]?.format('YYYY-MM-DD HH:mm:ss')]
+        : []);
 
       try {
         const res = await this.$request({
@@ -961,11 +971,12 @@ export default {
       }
     },
     doReset() {
-      this.form         = { agentId: null, storeIds: [], dateType: null, dateRange: null };
-      this.searched     = false;
-      this.panels       = [];
-      this.error        = null;
-      this.activeTypeId = null;
+      this.form          = { agentId: null, storeIds: [], dateType: null, dateRange: null };
+      this.searched      = false;
+      this.panels        = [];
+      this.error         = null;
+      this.activeTypeId  = null;
+      this.tab1TimeRange = null;
     },
 
     // ── Tab 2 methods ──
@@ -1170,6 +1181,11 @@ export default {
 /* ── Tab 2 layout ── */
 .finance-summary { padding: 16px; }
 .section-card    { margin-bottom: 16px; }
+
+/* ── Tab 1 查詢時段列 ── */
+.tab1-time-bar   { display: flex; align-items: center; gap: 8px; padding: 7px 12px; margin-bottom: 10px; background: #f0f5ff; border: 1px solid #adc6ff; border-radius: 8px; flex-wrap: wrap; }
+.tab1-time-label { font-size: 12px; color: #8c8c8c; }
+.tab1-time-range { font-size: 13px; color: #1d39c4; font-weight: 600; }
 
 /* ── Tab 2 報表頭部 ── */
 .report-header-bar        { display: flex; align-items: center; gap: 8px; padding: 10px 16px; margin-bottom: 12px; background: #f0f5ff; border: 1px solid #adc6ff; border-radius: 8px; flex-wrap: wrap; }
