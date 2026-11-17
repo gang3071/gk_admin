@@ -473,7 +473,7 @@ class ChannelStoreFinanceSummaryController
      * 线下实体机台 player_game_log.player_id = 0（玩家直接投币，无账号），
      * 必须通过 channel_machine.store_admin_id 定位机台，再关联 player_game_log。
      * 线上机台 player_game_log.player_id 有值，通过 playerIds 过滤。
-     * 两路 OR 合并，JOIN machine → machine_category 获取 game_id / machine_source。
+     * 两路 OR 合并，JOIN machine 获取 m.type（游戏类型）+ machine_category 获取 machine_source。
      *
      * game_amount 符号因写入方不同而不统一，统一用 ABS 处理。
      *
@@ -496,19 +496,19 @@ class ChannelStoreFinanceSummaryController
 
         $query = Db::table("{$pglTable} as pgl")
             ->join("{$machTable} as m", 'pgl.machine_id', '=', 'm.id')
-            ->join("{$cateTable} as mc", 'm.cate_id', '=', 'mc.id')
+            ->leftJoin("{$cateTable} as mc", 'm.cate_id', '=', 'mc.id')
             ->where('pgl.machine_id', '>', 0)
-            ->whereIn('mc.game_id', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])
+            ->whereIn('m.type', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])
             ->where(function ($q) use ($playerIds, $offlineMachineIds) {
                 $q->whereIn('pgl.player_id', $playerIds);
                 if (!empty($offlineMachineIds)) {
                     $q->orWhereIn('pgl.machine_id', $offlineMachineIds);
                 }
             })
-            ->selectRaw("mc.game_id, mc.machine_source,
+            ->selectRaw("m.type AS game_type, COALESCE(mc.machine_source, 2) AS machine_source,
                          SUM(CASE WHEN pgl.action = {$openAction} THEN ABS(pgl.game_amount) ELSE 0 END) AS total_open,
                          SUM(CASE WHEN pgl.action <> {$openAction} THEN ABS(pgl.game_amount) ELSE 0 END) AS total_wash")
-            ->groupBy('mc.game_id', 'mc.machine_source');
+            ->groupBy('m.type', 'mc.machine_source');
 
         if (!empty($start)) {
             $query->where('pgl.created_at', '>=', $start);
@@ -519,7 +519,7 @@ class ChannelStoreFinanceSummaryController
 
         $result = [];
         foreach ($query->get() as $row) {
-            $gameType      = (int)$row->game_id;
+            $gameType      = (int)$row->game_type;
             $machineSource = (int)$row->machine_source;
 
             $result[$gameType][$machineSource][PlayerDeliveryRecord::TYPE_MACHINE_UP]   = (float)$row->total_open;
@@ -618,16 +618,16 @@ class ChannelStoreFinanceSummaryController
 
         $query = Db::table("{$pglTable} as pgl")
             ->join("{$machTable} as m", 'pgl.machine_id', '=', 'm.id')
-            ->join("{$cateTable} as mc", 'm.cate_id', '=', 'mc.id')
+            ->leftJoin("{$cateTable} as mc", 'm.cate_id', '=', 'mc.id')
             ->where('pgl.machine_id', '>', 0)
-            ->where('mc.game_id', GameType::TYPE_SLOT)
+            ->where('m.type', GameType::TYPE_SLOT)
             ->where(function ($q) use ($playerIds, $offlineMachineIds) {
                 $q->whereIn('pgl.player_id', $playerIds);
                 if (!empty($offlineMachineIds)) {
                     $q->orWhereIn('pgl.machine_id', $offlineMachineIds);
                 }
             })
-            ->selectRaw('mc.machine_source, COALESCE(SUM(pgl.pressure), 0) as total_pressure, COALESCE(SUM(pgl.score), 0) as total_score')
+            ->selectRaw('COALESCE(mc.machine_source, 2) AS machine_source, COALESCE(SUM(pgl.pressure), 0) as total_pressure, COALESCE(SUM(pgl.score), 0) as total_score')
             ->groupBy('mc.machine_source');
 
         if (!empty($start)) {
