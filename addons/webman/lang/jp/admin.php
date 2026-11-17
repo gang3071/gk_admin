@@ -3,6 +3,7 @@
 return [
     'user_info' => '個人情報',
     'system_user' => 'システム ユーザー',
+    'system' => 'システム',
     'not_access_permission' => '操作へのアクセス権がありません',
     'super_admin' => 'スーパー管理者',
     'super_admin_delete' => 'スーパー管理者は削除できません!',

@@ -3,6 +3,7 @@
 return [
     'user_info' => 'Personal information',
     'system_user' => 'system user',
+    'system' => 'System',
     'not_access_permission' => 'No permission to access this operation',
     'super_admin' => 'Super Administrator',
     'super_admin_delete' => 'Super administrator cannot delete!',
