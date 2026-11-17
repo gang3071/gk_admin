@@ -272,6 +272,14 @@
             </a-space>
           </a-card>
 
+          <!-- 報表頭部 -->
+          <div v-if="reportMeta" class="report-header-bar">
+            <span class="report-header-store">{{ reportMeta.storeName }}</span>
+            <span class="report-header-sep">｜</span>
+            <span class="report-header-time">{{ reportMeta.timeRange }}</span>
+            <span v-if="detailDateType" class="report-header-shift-badge">交班週期 08:00</span>
+          </div>
+
           <!-- 加载状态 -->
           <div v-if="detailLoading" style="text-align: center; padding: 60px;">
             <a-spin size="large" />
@@ -813,6 +821,7 @@ export default {
       detailSearched:  false,
       reportData:      null,
       activeDescId:    null,
+      reportMeta:      null,
 
       // ── Tab 1 账变类型说明文案 ──
       typeDescriptions: {
@@ -971,6 +980,38 @@ export default {
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       });
     },
+    calcShiftRange(dateType, dateRange) {
+      const pad  = n => String(n).padStart(2, '0');
+      const fmt  = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      const s8   = d => `${fmt(d)} 08:00`;
+      const add  = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
+      const addM = (d, n) => new Date(d.getFullYear(), d.getMonth() + n, 1);
+      const mon  = d => { const dow = d.getDay() === 0 ? 6 : d.getDay()-1; return add(d, -dow); };
+
+      if (dateType) {
+        const label = (this.trans.date_types || []).find(t => t.value === Number(dateType));
+        const lbl   = label ? label.label : '';
+        const now   = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        // 業務日：08:00 前算前一天（與 getDateWhere8am 一致）
+        const bd    = now.getHours() >= 8 ? today : add(today, -1);
+        let start, end;
+        switch (Number(dateType)) {
+          case 1: start = bd;            end = add(bd, 1);   break; // 今日
+          case 2: start = add(bd, -1);   end = bd;           break; // 昨日
+          case 3: start = mon(today);    end = add(mon(today), 7);  break; // 本週（周一 08:00 起）
+          case 4: { const tm = mon(today); start = add(tm, -7); end = tm; break; } // 上週
+          case 5: start = new Date(today.getFullYear(), today.getMonth(), 1); end = addM(today, 1); break; // 本月
+          case 6: start = addM(today, -1); end = new Date(today.getFullYear(), today.getMonth(), 1); break; // 上月
+          default: return lbl;
+        }
+        return `${lbl}　${s8(start)} ~ ${s8(end)}`;
+      }
+      if (dateRange && dateRange[0]) {
+        return dateRange[1] ? `${dateRange[0]} ~ ${dateRange[1]}` : dateRange[0];
+      }
+      return '全部時間';
+    },
     filterOption(input, option) {
       return option.children[0].children.toLowerCase().includes(input.toLowerCase());
     },
@@ -996,6 +1037,10 @@ export default {
 
       this.detailLoading = true;
       this.reportData    = null;
+      this.reportMeta    = {
+        storeName: this.store_options[this.detailForm.store_id] || `門店 #${this.detailForm.store_id}`,
+        timeRange: this.calcShiftRange(this.detailDateType, this.detailDateRange),
+      };
 
       const payload = {
         store_id:   this.detailForm.store_id,
@@ -1125,6 +1170,13 @@ export default {
 /* ── Tab 2 layout ── */
 .finance-summary { padding: 16px; }
 .section-card    { margin-bottom: 16px; }
+
+/* ── Tab 2 報表頭部 ── */
+.report-header-bar        { display: flex; align-items: center; gap: 8px; padding: 10px 16px; margin-bottom: 12px; background: #f0f5ff; border: 1px solid #adc6ff; border-radius: 8px; flex-wrap: wrap; }
+.report-header-store      { font-size: 15px; font-weight: 700; color: #1d39c4; }
+.report-header-sep        { color: #adb5bd; }
+.report-header-time       { font-size: 13px; color: #262626; }
+.report-header-shift-badge { margin-left: 4px; padding: 1px 8px; background: #fff7e6; border: 1px solid #ffd591; border-radius: 10px; font-size: 11px; color: #d46b08; font-weight: 600; }
 
 /* ── Tab 2 report table ── */
 .report-table {

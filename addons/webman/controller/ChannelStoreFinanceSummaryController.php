@@ -368,7 +368,7 @@ class ChannelStoreFinanceSummaryController
     private function applyTimeFilter($query, string $column, ?string $dateType, ?string $start, ?string $end): void
     {
         if (!empty($dateType)) {
-            $query->where(getDateWhere($dateType, $column));
+            $query->where(getDateWhere8am($dateType, $column));
         } else {
             if (!empty($start)) $query->where($column, '>=', $start);
             if (!empty($end))   $query->where($column, '<=', $end);
