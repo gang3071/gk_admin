@@ -659,6 +659,7 @@ class SystemSettingController
 
         return Form::create($data, function (Form $form) use ($data, $config, $prizes) {
             $form->title(admin_trans('system_setting.leaderboard.title'));
+            $form->layout('vertical');
             $form->hidden('id')->default($data['id']);
 
             $form->text('name', admin_trans('system_setting.leaderboard.name'))
