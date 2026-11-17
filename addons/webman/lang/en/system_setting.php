@@ -92,6 +92,9 @@ return [
         'switch_enabled' => 'Enabled',
         'switch_disabled' => 'Disabled',
         'save_success' => 'Saved successfully',
+        'activity_rules' => 'Activity Rules',
+        'distribution_rules' => 'Distribution Rules',
+        'disclaimer' => 'Disclaimer',
     ],
     // Rebate Configuration
     'rebate' => [

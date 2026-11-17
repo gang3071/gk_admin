@@ -689,6 +689,18 @@ class SystemSettingController
                 ->min(0)
                 ->required();
 
+            $form->textarea('activity_rules', admin_trans('system_setting.leaderboard.activity_rules'))
+                ->value($config['activity_rules'] ?? '')
+                ->rows(8);
+
+            $form->textarea('distribution_rules', admin_trans('system_setting.leaderboard.distribution_rules'))
+                ->value($config['distribution_rules'] ?? '')
+                ->rows(6);
+
+            $form->textarea('disclaimer', admin_trans('system_setting.leaderboard.disclaimer'))
+                ->value($config['disclaimer'] ?? '')
+                ->rows(5);
+
             $form->saving(function (Form $form) use ($config) {
                 $newConfig = $config;
                 $newConfig['name'] = $form->input('name');
@@ -699,6 +711,9 @@ class SystemSettingController
                     ['rank' => 2, 'amount' => (float)$form->input('rank2_amount')],
                     ['rank' => 3, 'amount' => (float)$form->input('rank3_amount')],
                 ];
+                $newConfig['activity_rules'] = $form->input('activity_rules');
+                $newConfig['distribution_rules'] = $form->input('distribution_rules');
+                $newConfig['disclaimer'] = $form->input('disclaimer');
                 $form->input('content', json_encode($newConfig, JSON_UNESCAPED_UNICODE));
             });
 

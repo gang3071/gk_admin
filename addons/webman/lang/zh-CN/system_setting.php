@@ -92,6 +92,9 @@ return [
         'switch_enabled' => '已启用',
         'switch_disabled' => '已停用',
         'save_success' => '保存成功',
+        'activity_rules' => '活动规则',
+        'distribution_rules' => '发放规则',
+        'disclaimer' => '免责声明',
     ],
     // 反水配置
     'rebate' => [
