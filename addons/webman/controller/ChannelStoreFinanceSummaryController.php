@@ -225,10 +225,11 @@ class ChannelStoreFinanceSummaryController
     public function searchDetail(): Response
     {
         /** @var AdminUser $admin */
-        $admin   = Admin::user();
-        $storeId = (int)Request::input('store_id', 0);
-        $start   = Request::input('start_date', '');
-        $end     = Request::input('end_date', '');
+        $admin    = Admin::user();
+        $storeId  = (int)Request::input('store_id', 0);
+        $dateType = (string)Request::input('date_type', '');
+        $start    = $dateType ? '' : (string)Request::input('start_date', '');
+        $end      = $dateType ? '' : (string)Request::input('end_date', '');
 
         if (empty($storeId)) {
             return json(['code' => 400, 'msg' => '請選擇門店']);
@@ -254,14 +255,14 @@ class ChannelStoreFinanceSummaryController
             return json(['code' => 200, 'data' => $this->buildEmptyData()]);
         }
 
-        $overviewData      = $this->queryOverviewData($playerIds, $start, $end);
-        $welfareData       = $this->queryWelfareData($playerIds, $start, $end);
-        $couponData        = $this->queryCouponData($storeId, $start, $end);
-        $machineDelivery   = $this->queryMachineDeliveryData($playerIds, $storeId, $start, $end);
-        $electronicGame    = $this->queryElectronicGameData($playerIds, $start, $end);
-        $electronicLottery = $this->queryElectronicLotteryData($playerIds, $start, $end);
-        $machineLottery    = $this->queryMachineLotteryData($playerIds, $start, $end);
-        $slotPressure      = $this->querySlotPressureScoreData($playerIds, $storeId, $start, $end);
+        $overviewData      = $this->queryOverviewData($playerIds, $start, $end, $dateType);
+        $welfareData       = $this->queryWelfareData($playerIds, $start, $end, $dateType);
+        $couponData        = $this->queryCouponData($storeId, $start, $end, $dateType);
+        $machineDelivery   = $this->queryMachineDeliveryData($playerIds, $storeId, $start, $end, $dateType);
+        $electronicGame    = $this->queryElectronicGameData($playerIds, $start, $end, $dateType);
+        $electronicLottery = $this->queryElectronicLotteryData($playerIds, $start, $end, $dateType);
+        $machineLottery    = $this->queryMachineLotteryData($playerIds, $start, $end, $dateType);
+        $slotPressure      = $this->querySlotPressureScoreData($playerIds, $storeId, $start, $end, $dateType);
 
         return json(['code' => 200, 'data' => $this->buildReportData(
             $overviewData, $welfareData, $couponData, $machineDelivery,
@@ -382,7 +383,7 @@ class ChannelStoreFinanceSummaryController
      * 查询总入/总出数据：总入=投钞(type=23)+充值(type=6)，总出=提现(type=7)
      * @return array ['total_in' => float, 'total_out' => float]
      */
-    private function queryOverviewData(array $playerIds, string $start, string $end): array
+    private function queryOverviewData(array $playerIds, string $start, string $end, string $dateType = ''): array
     {
         $query = PlayerDeliveryRecord::query()
             ->whereIn('player_id', $playerIds)
@@ -394,7 +395,7 @@ class ChannelStoreFinanceSummaryController
             ->selectRaw('`type`, COALESCE(SUM(`amount`), 0) as total')
             ->groupBy('type');
 
-        $this->applyCreatedAtFilter($query, $start, $end);
+        $this->applyCreatedAtFilter($query, $start, $end, $dateType);
 
         $byType = [];
         foreach ($query->get() as $row) {
@@ -418,7 +419,7 @@ class ChannelStoreFinanceSummaryController
      * 查询福利赠点数据（types: 33=摸彩奖, 34=VIP生日, 35=VIP升级, 37=VIP每日登录, 38=活动外增）
      * @return array [type => float]
      */
-    private function queryWelfareData(array $playerIds, string $start, string $end): array
+    private function queryWelfareData(array $playerIds, string $start, string $end, string $dateType = ''): array
     {
         $welfareTypes = [
             PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD,
@@ -434,7 +435,7 @@ class ChannelStoreFinanceSummaryController
             ->selectRaw('`type`, SUM(`amount`) as total')
             ->groupBy('type');
 
-        $this->applyCreatedAtFilter($query, $start, $end);
+        $this->applyCreatedAtFilter($query, $start, $end, $dateType);
 
         $result = [];
         foreach ($query->get() as $row) {
@@ -448,7 +449,7 @@ class ChannelStoreFinanceSummaryController
      * 查询体验券/福利券数据
      * @return array [ticket_type => float]
      */
-    private function queryCouponData(int $storeId, string $start, string $end): array
+    private function queryCouponData(int $storeId, string $start, string $end, string $dateType = ''): array
     {
         $query = TicketRecord::query()
             ->where('store_admin_id', $storeId)
@@ -457,7 +458,7 @@ class ChannelStoreFinanceSummaryController
             ->selectRaw('ticket_type, SUM(score) as total')
             ->groupBy('ticket_type');
 
-        $this->applyCreatedAtFilter($query, $start, $end);
+        $this->applyCreatedAtFilter($query, $start, $end, $dateType);
 
         $result = [];
         foreach ($query->get() as $row) {
@@ -479,7 +480,7 @@ class ChannelStoreFinanceSummaryController
      *
      * @return array [game_type][machine_source][TYPE_MACHINE_UP|TYPE_MACHINE_DOWN] => float
      */
-    private function queryMachineDeliveryData(array $playerIds, int $storeId, string $start, string $end): array
+    private function queryMachineDeliveryData(array $playerIds, int $storeId, string $start, string $end, string $dateType = ''): array
     {
         $pglTable  = plugin()->webman->config('database.player_game_log_table');
         $machTable = plugin()->webman->config('database.machine_table');
@@ -510,12 +511,7 @@ class ChannelStoreFinanceSummaryController
                          SUM(CASE WHEN pgl.action <> {$openAction} THEN ABS(pgl.game_amount) ELSE 0 END) AS total_wash")
             ->groupBy('m.type', 'mc.machine_source');
 
-        if (!empty($start)) {
-            $query->where('pgl.created_at', '>=', $start);
-        }
-        if (!empty($end)) {
-            $query->where('pgl.created_at', '<=', $end);
-        }
+        $this->applyTimeFilter($query, 'pgl.created_at', $dateType ?: null, $start, $end);
 
         $result = [];
         foreach ($query->get() as $row) {
@@ -533,14 +529,14 @@ class ChannelStoreFinanceSummaryController
      * 查询电子游戏数据
      * @return object {total_bet, total_win, total_diff}
      */
-    private function queryElectronicGameData(array $playerIds, string $start, string $end): object
+    private function queryElectronicGameData(array $playerIds, string $start, string $end, string $dateType = ''): object
     {
         $query = PlayGameRecord::query()
             ->whereIn('player_id', $playerIds)
             ->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)
             ->selectRaw('COALESCE(SUM(bet), 0) as total_bet, COALESCE(SUM(win), 0) as total_win, COALESCE(SUM(diff), 0) as total_diff');
 
-        $this->applyCreatedAtFilter($query, $start, $end);
+        $this->applyCreatedAtFilter($query, $start, $end, $dateType);
 
         return $query->first() ?? (object)['total_bet' => 0, 'total_win' => 0, 'total_diff' => 0];
     }
@@ -548,14 +544,14 @@ class ChannelStoreFinanceSummaryController
     /**
      * 查询电子游戏彩金总额
      */
-    private function queryElectronicLotteryData(array $playerIds, string $start, string $end): float
+    private function queryElectronicLotteryData(array $playerIds, string $start, string $end, string $dateType = ''): float
     {
         $query = PlayerLotteryRecord::query()
             ->whereIn('player_id', $playerIds)
             ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
             ->whereIn('source', [PlayerLotteryRecord::SOURCE_GAME, PlayerLotteryRecord::SOURCE_MANUAL]);
 
-        $this->applyCreatedAtFilter($query, $start, $end);
+        $this->applyCreatedAtFilter($query, $start, $end, $dateType);
 
         return (float)$query->sum('amount');
     }
@@ -564,7 +560,7 @@ class ChannelStoreFinanceSummaryController
      * 查询实体机台彩金数据，按 game_type 和 machine_source 分组
      * @return array [game_type][machine_source] => float
      */
-    private function queryMachineLotteryData(array $playerIds, string $start, string $end): array
+    private function queryMachineLotteryData(array $playerIds, string $start, string $end, string $dateType = ''): array
     {
         $plrTable  = plugin()->webman->config('database.player_lottery_record_table') ?? 'player_lottery_record';
         $machTable = plugin()->webman->config('database.machine_table');
@@ -580,12 +576,7 @@ class ChannelStoreFinanceSummaryController
             ->selectRaw('plr.game_type, mc.machine_source, SUM(plr.amount) as total_amount')
             ->groupBy('plr.game_type', 'mc.machine_source');
 
-        if (!empty($start)) {
-            $query->where('plr.created_at', '>=', $start);
-        }
-        if (!empty($end)) {
-            $query->where('plr.created_at', '<=', $end);
-        }
+        $this->applyTimeFilter($query, 'plr.created_at', $dateType ?: null, $start, $end);
 
         $result = [];
         foreach ($query->get() as $row) {
@@ -603,7 +594,7 @@ class ChannelStoreFinanceSummaryController
      * 与 queryMachineDeliveryData 相同的 OR 策略：线上用 playerIds，线下用 channel_machine 机台 ID。
      * @return array [machine_source] => ['pressure' => float, 'score' => float]
      */
-    private function querySlotPressureScoreData(array $playerIds, int $storeId, string $start, string $end): array
+    private function querySlotPressureScoreData(array $playerIds, int $storeId, string $start, string $end, string $dateType = ''): array
     {
         $pglTable  = plugin()->webman->config('database.player_game_log_table');
         $machTable = plugin()->webman->config('database.machine_table');
@@ -630,12 +621,7 @@ class ChannelStoreFinanceSummaryController
             ->selectRaw('COALESCE(mc.machine_source, 2) AS machine_source, COALESCE(SUM(pgl.pressure), 0) as total_pressure, COALESCE(SUM(pgl.score), 0) as total_score')
             ->groupBy('mc.machine_source');
 
-        if (!empty($start)) {
-            $query->where('pgl.created_at', '>=', $start);
-        }
-        if (!empty($end)) {
-            $query->where('pgl.created_at', '<=', $end);
-        }
+        $this->applyTimeFilter($query, 'pgl.created_at', $dateType ?: null, $start, $end);
 
         $result = [];
         foreach ($query->get() as $row) {
@@ -817,14 +803,9 @@ class ChannelStoreFinanceSummaryController
     // 通用工具方法
     // ================================================================
 
-    private function applyCreatedAtFilter($query, string $start, string $end): void
+    private function applyCreatedAtFilter($query, string $start, string $end, string $dateType = ''): void
     {
-        if (!empty($start)) {
-            $query->where('created_at', '>=', $start);
-        }
-        if (!empty($end)) {
-            $query->where('created_at', '<=', $end);
-        }
+        $this->applyTimeFilter($query, 'created_at', $dateType ?: null, $start, $end);
     }
 
     private function calcRtp(float $dividend, float $divisor): float

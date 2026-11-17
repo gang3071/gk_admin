@@ -249,6 +249,15 @@
                 </a-select-option>
               </a-select>
 
+              <a-select
+                v-model:value="detailDateType"
+                allow-clear
+                :placeholder="trans.filter.placeholder_date"
+                style="width: 130px"
+                :options="dateTypeOptions"
+                @change="onDetailDateTypeChange"
+              />
+
               <a-range-picker
                 v-model:value="detailDateRange"
                 :show-time="{ format: 'HH:mm:ss' }"
@@ -256,6 +265,7 @@
                 value-format="YYYY-MM-DD HH:mm:ss"
                 style="width: 420px;"
                 :placeholder="['開始時間', '結束時間']"
+                :disabled="!!detailDateType"
               />
 
               <a-button type="primary" :loading="detailLoading" @click="handleDetailSearch">查詢</a-button>
@@ -603,11 +613,12 @@ export default {
       activeTypeId: null,
 
       // ── Tab 2 state ──
-      detailForm:     { store_id: null },
+      detailForm:      { store_id: null },
+      detailDateType:  null,
       detailDateRange: [],
-      detailLoading:  false,
-      detailSearched: false,
-      reportData:     null,
+      detailLoading:   false,
+      detailSearched:  false,
+      reportData:      null,
 
       // ── Tab 1 账变类型说明文案 ──
       typeDescriptions: {
@@ -756,6 +767,9 @@ export default {
 
     // ── Tab 2 methods ──
 
+    onDetailDateTypeChange(val) {
+      if (val) this.detailDateRange = [];
+    },
     filterOption(input, option) {
       return option.children[0].children.toLowerCase().includes(input.toLowerCase());
     },
@@ -784,8 +798,9 @@ export default {
 
       const payload = {
         store_id:   this.detailForm.store_id,
-        start_date: this.detailDateRange && this.detailDateRange[0] ? this.detailDateRange[0] : '',
-        end_date:   this.detailDateRange && this.detailDateRange[1] ? this.detailDateRange[1] : '',
+        date_type:  this.detailDateType || '',
+        start_date: this.detailDateType ? '' : (this.detailDateRange && this.detailDateRange[0] ? this.detailDateRange[0] : ''),
+        end_date:   this.detailDateType ? '' : (this.detailDateRange && this.detailDateRange[1] ? this.detailDateRange[1] : ''),
       };
 
       this.$request({
