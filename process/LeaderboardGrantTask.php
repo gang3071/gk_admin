@@ -43,13 +43,21 @@ class LeaderboardGrantTask
                 $content = json_decode($value->content, true);
 
                 if (! is_array($content)) {
+                    // content 为空/坏 JSON 会被静默跳过，榜单永远进不了发奖白名单——必须留痕
+                    $this->log->warning('LeaderboardGrantTask 設定 content 非法，已跳過', [
+                        'setting_id' => $value->id,
+                        'feature' => $value->feature,
+                        'content' => mb_substr((string)$value->content, 0, 100),
+                    ]);
                     continue;
                 }
 
                 $content['automatic'] = (int)($content['automatic'] ?? 0);
 
                 if ($content['automatic'] == 1) {
-                    $codes[] = $content['code'];
+                    // 与 LeaderboardService::getSettings 的取码规则保持一致（缺 code 时退回 feature），
+                    // 否则榜单按 feature 建出、发奖却拿 null 去匹配，永远发不出去
+                    $codes[] = (string)($content['code'] ?? $value->feature);
                 }
             }
 
@@ -73,13 +81,14 @@ class LeaderboardGrantTask
         try {
             $result = LeaderboardService::grant($codes);
 
-            if ($result['notified'] > 0 || $result['failed'] > 0) {
-                $this->log->info('LeaderboardGrantTask 通知完成', [
-                    'notified' => $result['notified'],
-                    'failed' => $result['failed'],
-                    'elapsed' => round(microtime(true) - $startTime, 3),
-                ]);
-            }
+            // 每轮都记：0 笔也要留痕，否则「跑了但没匹配上」与「根本没跑」无法区分
+            $this->log->info('LeaderboardGrantTask 通知完成', [
+                'codes' => $codes,
+                'matched' => $result['matched'],
+                'notified' => $result['notified'],
+                'failed' => $result['failed'],
+                'elapsed' => round(microtime(true) - $startTime, 3),
+            ]);
 
         } catch (\Throwable $e) {
             $this->log->error('LeaderboardGrantTask 通知異常', [

@@ -426,6 +426,8 @@ class LeaderboardService
             ->limit(500)
             ->get();
 
+        $result['matched'] = $entries->count();
+
         foreach ($entries as $entry) {
             try {
                 if (self::grantOne($entry, $now)) {
