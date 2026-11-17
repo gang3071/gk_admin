@@ -392,6 +392,11 @@ class StoreTicketRedeemController
             return json_encode(['code' => -1, 'msg' => admin_trans('ticket_machine.redeem.record_not_found')]);
         }
 
+        // 体验券/福利券不支持后台核销
+        if (in_array((int)$record->ticket_type, [TicketRecord::TYPE_EXPERIENCE, TicketRecord::TYPE_WELFARE])) {
+            return json_encode(['code' => -1, 'msg' => admin_trans('ticket_machine.redeem.type_not_supported')]);
+        }
+
         // 更新状态为已使用（后台核销）
         $record->update([
             'status' => TicketRecord::STATUS_BACKEND_USED,
@@ -591,6 +596,11 @@ class StoreTicketRedeemController
             return message_error(admin_trans('ticket_machine.redeem.record_not_found'));
         }
 
+        // 体验券/福利券不支持后台核销
+        if (in_array((int)$record->ticket_type, [TicketRecord::TYPE_EXPERIENCE, TicketRecord::TYPE_WELFARE])) {
+            return message_error(admin_trans('ticket_machine.redeem.type_not_supported'));
+        }
+
         // 更新状态为已使用（后台核销）
         $record->update([
             'status' => TicketRecord::STATUS_BACKEND_USED,
@@ -766,6 +776,11 @@ class StoreTicketRedeemController
 
         if (empty($record)) {
             return message_error(admin_trans('ticket_machine.redeem.record_not_found'));
+        }
+
+        // 体验券/福利券不支持后台核销
+        if (in_array((int)$record->ticket_type, [TicketRecord::TYPE_EXPERIENCE, TicketRecord::TYPE_WELFARE])) {
+            return message_error(admin_trans('ticket_machine.redeem.type_not_supported'));
         }
 
         // 更新状态为已使用（后台核销）

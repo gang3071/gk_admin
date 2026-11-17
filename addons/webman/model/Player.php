@@ -6,6 +6,8 @@ use addons\webman\Admin;
 use addons\webman\traits\DataPermissions;
 use addons\webman\traits\HasDateTimeFormatter;
 use DateTimeInterface;
+use ExAdmin\ui\support\Arr;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -105,6 +107,8 @@ class Player extends Model
     const AUDIT_STATUS_PENDING = 0;   // 未审核
     const AUDIT_STATUS_APPROVED = 1;  // 已通过
     const AUDIT_STATUS_REJECTED = 2;  // 未通过
+
+    const PARENT_ONLINE_TIME = '2026-11-17 00:00:00';  // 推廣紅利上線日期
 
     //数据权限字段
     protected $dataAuth = ['department_id' => 'department_id'];
@@ -427,5 +431,48 @@ class Player extends Model
     public function vipPeriods(): HasMany
     {
         return $this->hasMany(PlayerVipPeriod::class, 'player_id');
+    }
+
+    /**
+     * 獲取上級會員選項樹
+     * @param $playerId
+     * @param $storeId
+     * @param bool $isTest
+     * @param bool $isTree
+     * @param bool $withSearchText
+     * @return array
+     */
+    public static function getParentTreeOptions(int $playerId, int $storeId, bool $isTest = false, bool $isTree = false): array
+    {
+        $list = [];
+        $players = Player::query()
+            ->when($isTest, function (Builder $query) {
+                $query->where('is_test', 1);
+            })
+            ->where(function (Builder $query) use ($playerId) {
+                $query->whereNull('recommend_id')->orWhere('recommend_id', '<>', $playerId);
+            })
+            ->where('status', 1)
+            ->where('store_admin_id', $storeId)
+            ->where('id', '<>', $playerId)
+            ->get();
+
+        foreach ($players as $value) {
+            $option = [
+                'id' => $value->id,
+                'name' => $value->name . ' (' . $value->phone . ')',
+                'pid' => $value->recommend_id
+            ];
+
+            $option['search_text'] = trim(
+                ($value->name ?? '') . ' ' .
+                ($value->phone ?? '') . ' ' .
+                ($value->uuid ?? '')
+            );
+
+            $list[] = $option;
+        }
+
+        return $isTree ? Arr::tree($list) : $list;
     }
 }

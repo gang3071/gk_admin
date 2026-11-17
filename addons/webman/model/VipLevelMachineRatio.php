@@ -75,24 +75,31 @@ class VipLevelMachineRatio extends Model
      * 计算机台反水金额
      * @param float $bet 打码量
      * @param float $ratio 比例
+     * @param float $parentRatio 上級推廣紅利比例
      * @return float
      */
-    public static function calculateMachineAmount(float $bet, float $ratio): float
+    public static function calculateMachineAmount(float $bet, float $ratio, float $parentRatio): float
     {
-        return round($bet * $ratio / 100, 4);
+        $cashbackAmount = $bet * ($ratio / 100) * (1 - $parentRatio / 100);
+
+        return round($cashbackAmount, 4);
     }
 
     /**
      * 格式化存储数据（0值转null）
      * @param float $ratio
      * @param float $amount
+     * @param float $parentRatio
+     * @param float $parentAmount
      * @return array
      */
-    public static function formatForStorage(float $ratio, float $amount): array
+    public static function formatForStorage(float $ratio, float $amount, float $parentRatio, float $parentAmount): array
     {
         return [
             'cashback_ratio' => $ratio > 0 ? $ratio : null,
             'cashback_amount' => $amount > 0 ? $amount : null,
+            'parent_cashback_ratio' => $parentRatio > 0 ? $parentRatio : 0,
+            'parent_cashback_amount' => $parentAmount > 0 ? $parentAmount : 0,
         ];
     }
 }

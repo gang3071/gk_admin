@@ -282,6 +282,20 @@ class AgentPlayerGameLogController
             })->align('center');
             $grid->column('chip_amount',
                 admin_trans('player_game_log.fields.chip_amount'))->sortable()->align('center');
+            // 机台反水比例
+            $grid->column('cashback_ratio', admin_trans('player_game_log.fields.cashback_ratio'))->display(function ($val) {
+                if ($val !== null && $val > 0) {
+                    return number_format((float)$val, 4) . '%';
+                }
+                return '-';
+            })->align('center');
+            // 机台反水金额
+            $grid->column('cashback_amount', admin_trans('player_game_log.fields.cashback_amount'))->display(function ($val) {
+                if ($val !== null && $val > 0) {
+                    return Html::create()->content(['+' . number_format((float)$val, 4)])->style(['color' => 'green']);
+                }
+                return '-';
+            })->align('center');
             $grid->column('created_at', admin_trans('player_game_log.fields.create_at'))->align('center');
             $grid->filter(function (Filter $filter) use ($admin) {
                 $filter->like()->text('player.name')->placeholder(admin_trans('player.fields.device_name'));

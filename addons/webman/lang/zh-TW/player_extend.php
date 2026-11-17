@@ -32,6 +32,8 @@ return [
         'third_withdraw_amount' => '第三方總洗分金額',
         'pending_cashback_amount' => '待領取反水',
         'total_cashback_amount' => '總反水金額',
+        'pending_children_cashback_amount' => '待領取推廣紅利',
+        'total_children_cashback_amount' => '總推廣紅利',
         'created_at' => '創建時間',
         'updated_at' => '更新時間',
         'machine_put_amount' => '總投鈔數',

@@ -32,6 +32,8 @@ return [
         'third_withdraw_amount' => 'Total third-party wash score points',
         'pending_cashback_amount' => 'Pending Cashback',
         'total_cashback_amount' => 'Total Cashback',
+        'pending_children_cashback_amount' => 'Promotional bonuses pending collection',
+        'total_children_cashback_amount' => 'Total promotional bonuses',
         'created_at' => 'Creation time',
         'updated_at' => 'Update time',
         'machine_put_amount' => 'Total number of banknotes dispensed',

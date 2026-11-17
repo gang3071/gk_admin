@@ -215,6 +215,15 @@ class ChannelPlayGameRecordController
                 return '-';
             })->align('center');
 
+            $grid->column('parent_cashback_ratio', admin_trans('play_game_record.fields.parent_cashback_ratio'))->align('center')
+                ->display(function ($value) {
+                    return number_format((float)$value, 2) . '%';
+                });
+            $grid->column('parent_cashback_amount', admin_trans('play_game_record.fields.parent_cashback_amount'))->align('center')
+                ->display(function ($value) {
+                    return Html::create()->content(['+' . number_format((float)$value, 5)])->style(['color' => 'green']);
+                });
+
             // ✅ 添加结算状态显示列
             $grid->column('settlement_status', admin_trans('play_game_record.fields.settlement_status'))->display(function ($val) {
                 switch ($val) {

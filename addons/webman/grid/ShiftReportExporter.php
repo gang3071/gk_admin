@@ -694,11 +694,13 @@ class ShiftReportExporter extends Excel
         $reportSheet->setTitle(admin_trans('shift_handover.machine_report_sheet_title'));
 
         // 斯洛类型列定义（全部列；押分栏取 pressure，自动交班已按斯洛口径写好）
+        // 小計 = 上分 - 下分 - 彩金
         $slotColumns = [
             'machine_code' => admin_trans('shift_handover.machine_code'),
             'machine_name' => admin_trans('shift_handover.machine_name'),
             'open_point' => admin_trans('shift_handover.machine_open_point'),
             'wash_point' => admin_trans('shift_handover.machine_wash_point'),
+            'lottery_amount' => admin_trans('shift_handover.machine_lottery'),
             'profit' => admin_trans('shift_handover.machine_profit'),
             'pressure' => admin_trans('shift_handover.machine_pressure'),
             'score' => admin_trans('shift_handover.machine_score'),
@@ -710,6 +712,7 @@ class ShiftReportExporter extends Excel
             'machine_name' => admin_trans('shift_handover.machine_name'),
             'open_point' => admin_trans('shift_handover.machine_open_point'),
             'wash_point' => admin_trans('shift_handover.machine_wash_point'),
+            'lottery_amount' => admin_trans('shift_handover.machine_lottery'),
             'profit' => admin_trans('shift_handover.machine_profit'),
             'pressure' => admin_trans('shift_handover.machine_pressure'),
         ];
@@ -722,8 +725,9 @@ class ShiftReportExporter extends Excel
         $reportSheet->getColumnDimension('E')->setWidth(12);
         $reportSheet->getColumnDimension('F')->setWidth(12);
         $reportSheet->getColumnDimension('G')->setWidth(12);
+        $reportSheet->getColumnDimension('H')->setWidth(12);
 
-        $maxColLetter = 'G';
+        $maxColLetter = 'H';
         $row = 1;
 
         foreach ($this->shiftSummary as $index => $item) {
@@ -778,15 +782,17 @@ class ShiftReportExporter extends Excel
                 $row++;
 
                 // 数据行
-                $slotSubtotal = ['open_point' => 0, 'wash_point' => 0, 'profit' => 0, 'pressure' => 0, 'score' => 0];
+                $slotSubtotal = ['open_point' => 0, 'wash_point' => 0, 'lottery_amount' => 0, 'profit' => 0, 'pressure' => 0, 'score' => 0];
                 foreach ($slotDetails as $detailIndex => $detail) {
+                    $lotteryAmount = (float)($detail->lottery_amount ?? 0);
                     $reportSheet->setCellValue('A' . $row, $detail->machine_code ?: '-');
                     $reportSheet->setCellValue('B' . $row, $detail->machine_name ?: '-');
                     $reportSheet->setCellValue('C' . $row, number_format($detail->open_point, 2));
                     $reportSheet->setCellValue('D' . $row, number_format($detail->wash_point, 2));
-                    $reportSheet->setCellValue('E' . $row, number_format($detail->profit, 2));
-                    $reportSheet->setCellValue('F' . $row, number_format($detail->pressure, 2));
-                    $reportSheet->setCellValue('G' . $row, number_format($detail->score, 2));
+                    $reportSheet->setCellValue('E' . $row, number_format($lotteryAmount, 2));
+                    $reportSheet->setCellValue('F' . $row, number_format($detail->profit, 2));
+                    $reportSheet->setCellValue('G' . $row, number_format($detail->pressure, 2));
+                    $reportSheet->setCellValue('H' . $row, number_format($detail->score, 2));
 
                     // 数字列右对齐
                     $reportSheet->getStyle('C' . $row . ':' . $maxColLetter . $row)
@@ -801,12 +807,13 @@ class ShiftReportExporter extends Excel
 
                     // 利润颜色
                     $profitColor = $detail->profit >= 0 ? '3f8600' : 'cf1322';
-                    $reportSheet->getStyle('E' . $row)->getFont()->getColor()->setRGB($profitColor);
-                    $reportSheet->getStyle('E' . $row)->getFont()->setBold(true);
+                    $reportSheet->getStyle('F' . $row)->getFont()->getColor()->setRGB($profitColor);
+                    $reportSheet->getStyle('F' . $row)->getFont()->setBold(true);
 
                     // 累加小计
                     $slotSubtotal['open_point'] += $detail->open_point;
                     $slotSubtotal['wash_point'] += $detail->wash_point;
+                    $slotSubtotal['lottery_amount'] += $lotteryAmount;
                     $slotSubtotal['profit'] += $detail->profit;
                     $slotSubtotal['pressure'] += $detail->pressure;
                     $slotSubtotal['score'] += $detail->score;
@@ -819,9 +826,10 @@ class ShiftReportExporter extends Excel
                 $reportSheet->setCellValue('B' . $row, '');
                 $reportSheet->setCellValue('C' . $row, number_format($slotSubtotal['open_point'], 2));
                 $reportSheet->setCellValue('D' . $row, number_format($slotSubtotal['wash_point'], 2));
-                $reportSheet->setCellValue('E' . $row, number_format($slotSubtotal['profit'], 2));
-                $reportSheet->setCellValue('F' . $row, number_format($slotSubtotal['pressure'], 2));
-                $reportSheet->setCellValue('G' . $row, number_format($slotSubtotal['score'], 2));
+                $reportSheet->setCellValue('E' . $row, number_format($slotSubtotal['lottery_amount'], 2));
+                $reportSheet->setCellValue('F' . $row, number_format($slotSubtotal['profit'], 2));
+                $reportSheet->setCellValue('G' . $row, number_format($slotSubtotal['pressure'], 2));
+                $reportSheet->setCellValue('H' . $row, number_format($slotSubtotal['score'], 2));
 
                 $reportSheet->getStyle('A' . $row . ':' . $maxColLetter . $row)->applyFromArray([
                     'font' => ['bold' => true, 'size' => 11],
@@ -833,7 +841,7 @@ class ShiftReportExporter extends Excel
 
                 // 小计利润颜色
                 $subtotalProfitColor = $slotSubtotal['profit'] >= 0 ? '3f8600' : 'cf1322';
-                $reportSheet->getStyle('E' . $row)->getFont()->getColor()->setRGB($subtotalProfitColor);
+                $reportSheet->getStyle('F' . $row)->getFont()->getColor()->setRGB($subtotalProfitColor);
 
                 $row++;
             }
@@ -854,13 +862,13 @@ class ShiftReportExporter extends Excel
                 $reportSheet->getRowDimension($row)->setRowHeight(22);
                 $row++;
 
-                // 表头（钢珠显示6列）
+                // 表头（钢珠显示7列）
                 $colIndex = 1;
                 foreach ($steelBallColumns as $header) {
                     $reportSheet->setCellValueByColumnAndRow($colIndex, $row, $header);
                     $colIndex++;
                 }
-                $reportSheet->getStyle('A' . $row . ':F' . $row)->applyFromArray([
+                $reportSheet->getStyle('A' . $row . ':G' . $row)->applyFromArray([
                     'font' => ['bold' => true, 'size' => 11],
                     'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8F4F8']],
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
@@ -870,34 +878,37 @@ class ShiftReportExporter extends Excel
                 $row++;
 
                 // 数据行
-                $steelBallSubtotal = ['open_point' => 0, 'wash_point' => 0, 'profit' => 0, 'pressure' => 0];
+                $steelBallSubtotal = ['open_point' => 0, 'wash_point' => 0, 'lottery_amount' => 0, 'profit' => 0, 'pressure' => 0];
                 foreach ($steelBallDetails as $detailIndex => $detail) {
+                    $lotteryAmount = (float)($detail->lottery_amount ?? 0);
                     $reportSheet->setCellValue('A' . $row, $detail->machine_code ?: '-');
                     $reportSheet->setCellValue('B' . $row, $detail->machine_name ?: '-');
                     $reportSheet->setCellValue('C' . $row, number_format($detail->open_point, 2));
                     $reportSheet->setCellValue('D' . $row, number_format($detail->wash_point, 2));
-                    $reportSheet->setCellValue('E' . $row, number_format($detail->profit, 2));
-                    $reportSheet->setCellValue('F' . $row, number_format($detail->pressure, 2));
+                    $reportSheet->setCellValue('E' . $row, number_format($lotteryAmount, 2));
+                    $reportSheet->setCellValue('F' . $row, number_format($detail->profit, 2));
+                    $reportSheet->setCellValue('G' . $row, number_format($detail->pressure, 2));
 
                     // 数字列右对齐
-                    $reportSheet->getStyle('C' . $row . ':F' . $row)
+                    $reportSheet->getStyle('C' . $row . ':G' . $row)
                         ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
                     // 交替行背景色
                     $rowColor = $detailIndex % 2 == 0 ? 'FFFFFF' : 'F9F9F9';
-                    $reportSheet->getStyle('A' . $row . ':F' . $row)->applyFromArray([
+                    $reportSheet->getStyle('A' . $row . ':G' . $row)->applyFromArray([
                         'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $rowColor]],
                         'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E0E0E0']]]
                     ]);
 
                     // 利润颜色
                     $profitColor = $detail->profit >= 0 ? '3f8600' : 'cf1322';
-                    $reportSheet->getStyle('E' . $row)->getFont()->getColor()->setRGB($profitColor);
-                    $reportSheet->getStyle('E' . $row)->getFont()->setBold(true);
+                    $reportSheet->getStyle('F' . $row)->getFont()->getColor()->setRGB($profitColor);
+                    $reportSheet->getStyle('F' . $row)->getFont()->setBold(true);
 
                     // 累加小计
                     $steelBallSubtotal['open_point'] += $detail->open_point;
                     $steelBallSubtotal['wash_point'] += $detail->wash_point;
+                    $steelBallSubtotal['lottery_amount'] += $lotteryAmount;
                     $steelBallSubtotal['profit'] += $detail->profit;
                     $steelBallSubtotal['pressure'] += $detail->pressure;
 
@@ -909,10 +920,11 @@ class ShiftReportExporter extends Excel
                 $reportSheet->setCellValue('B' . $row, '');
                 $reportSheet->setCellValue('C' . $row, number_format($steelBallSubtotal['open_point'], 2));
                 $reportSheet->setCellValue('D' . $row, number_format($steelBallSubtotal['wash_point'], 2));
-                $reportSheet->setCellValue('E' . $row, number_format($steelBallSubtotal['profit'], 2));
-                $reportSheet->setCellValue('F' . $row, number_format($steelBallSubtotal['pressure'], 2));
+                $reportSheet->setCellValue('E' . $row, number_format($steelBallSubtotal['lottery_amount'], 2));
+                $reportSheet->setCellValue('F' . $row, number_format($steelBallSubtotal['profit'], 2));
+                $reportSheet->setCellValue('G' . $row, number_format($steelBallSubtotal['pressure'], 2));
 
-                $reportSheet->getStyle('A' . $row . ':F' . $row)->applyFromArray([
+                $reportSheet->getStyle('A' . $row . ':G' . $row)->applyFromArray([
                     'font' => ['bold' => true, 'size' => 11],
                     'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFE599']],
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT, 'vertical' => Alignment::VERTICAL_CENTER],
@@ -922,7 +934,7 @@ class ShiftReportExporter extends Excel
 
                 // 小计利润颜色
                 $subtotalProfitColor = $steelBallSubtotal['profit'] >= 0 ? '3f8600' : 'cf1322';
-                $reportSheet->getStyle('E' . $row)->getFont()->getColor()->setRGB($subtotalProfitColor);
+                $reportSheet->getStyle('F' . $row)->getFont()->getColor()->setRGB($subtotalProfitColor);
 
                 $row++;
             }

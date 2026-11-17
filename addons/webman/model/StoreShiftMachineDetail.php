@@ -20,7 +20,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $type 类型
  * @property float $open_point 上分
  * @property float $wash_point 下分
- * @property float $profit 利润（上分-下分）
+ * @property float $lottery_amount 彩金（当次班別各台拉彩累積）
+ * @property float $profit 小计（上分-下分-彩金）
  * @property float $pressure 押分
  * @property float $chip_amount 打码量
  * @property float $score 得分
@@ -51,6 +52,7 @@ class StoreShiftMachineDetail extends Model
         'type',
         'open_point',
         'wash_point',
+        'lottery_amount',
         'profit',
         'pressure',
         'chip_amount',
@@ -62,6 +64,7 @@ class StoreShiftMachineDetail extends Model
         'type' => 'integer',
         'open_point' => 'float',
         'wash_point' => 'float',
+        'lottery_amount' => 'float',
         'profit' => 'float',
         'pressure' => 'float',
         'chip_amount' => 'float',

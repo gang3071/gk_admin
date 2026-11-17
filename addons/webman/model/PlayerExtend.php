@@ -41,6 +41,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property float team_machine_put_amount 机器投钞总金额(团队)
  * @property float pending_cashback_amount 待领取反水金额
  * @property float total_cashback_amount 总反水金额
+ * @property float pending_children_cashback_amount 待領取推廣紅利
+ * @property float total_children_cashback_amount 總推廣紅利
  * @property string created_at 创建时间
  * @property string updated_at 最后一次修改时间
  *
@@ -180,6 +182,22 @@ class PlayerExtend extends Model
         }
         $this->increment('pending_cashback_amount', $amount);
         $this->increment('total_cashback_amount', $amount);
+    }
+
+    /**
+     * 增加推廣紅利（待領取 & 總額）
+     *
+     * @param float $amount 推廣紅利金额
+     * @return void
+     */
+    public function addChildrenCashback(float $amount): void
+    {
+        if ($amount <= 0) {
+            return;
+        }
+
+        $this->increment('pending_children_cashback_amount', $amount);
+        $this->increment('total_children_cashback_amount', $amount);
     }
 
     /**

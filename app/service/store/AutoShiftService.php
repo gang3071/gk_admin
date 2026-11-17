@@ -7,6 +7,7 @@ use addons\webman\model\PlayGameRecord;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerGameLog;
+use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\TicketRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\StoreAutoShiftConfig;
@@ -955,12 +956,25 @@ class AutoShiftService
             $experienceCoupon = (float)($experienceCouponMap[$player->id] ?? 0);
             $welfareCoupon = (float)($welfareCouponMap[$player->id] ?? 0);
 
-            // 如果没有 PlayerDeliveryRecord 记录，也没有核销记录，也没有票券记录，也没有打码量，则跳过
+            // 查询开票金额（ticket_type=1开分类型，排除禁用和打印失败）
+            // 必须在跳过判断之前查询：开分票出票（saveTicketRecord）与后台核销（redeemRecord）
+            // 只写 qr_ticket_record、不写 PlayerDeliveryRecord，开票金额不参与判断会把这类玩家整行跳过
+            $ticketOpenScoreAmount = (float)TicketRecord::query()
+                ->where('player_id', $player->id)
+                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+                ->where('status', '!=', TicketRecord::STATUS_PRINT_FAILED)
+                ->where('created_at', '>', $startTime)
+                ->where('created_at', '<=', $endTime)
+                ->sum('score');
+
+            // 如果没有 PlayerDeliveryRecord 记录，也没有核销记录，也没有票券记录，也没有打码量，也没有开票，则跳过
             // 注意：machineBet / electronicGameBet 必须参与判断——洗分 money<=0 的分支只写 chip_amount
             // 不写 PlayerDeliveryRecord（gk_work machineWashZero「即使没有下分，也要计算打码量」），
             // 只有打码量的玩家若被跳过，设备明细的机器打码量合计会比汇总口径少
             if (!$stat && $redeemAmountExport <= 0 && $experienceCoupon <= 0 && $welfareCoupon <= 0
-                && $ticketUnredeemed <= 0 && $electronicGameBet <= 0 && $machineBet <= 0) {
+                && $ticketUnredeemed <= 0 && $electronicGameBet <= 0 && $machineBet <= 0
+                && $ticketOpenScoreAmount <= 0) {
                 continue;
             }
 
@@ -981,16 +995,6 @@ class AutoShiftService
                 'modified_add_amount' => 0,
                 'modified_deduct_amount' => 0,
             ];
-
-            // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，排除禁用和打印失败）
-            $ticketOpenScoreAmount = (float)TicketRecord::query()
-                ->where('player_id', $player->id)
-                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
-                ->where('status', '!=', TicketRecord::STATUS_DISABLED)
-                ->where('status', '!=', TicketRecord::STATUS_PRINT_FAILED)
-                ->where('created_at', '>', $startTime)
-                ->where('created_at', '<=', $endTime)
-                ->sum('score');
 
             // 统计开票已使用金额（用于入票计算，ticket_type=1开分类型，status=3机台使用）
             // 使用 scanned_at（核销时间）作为筛选条件
@@ -1154,6 +1158,22 @@ class AutoShiftService
             ->whereIn('id', $machineIds)
             ->pluck('code', 'id');
 
+        // 彩金（拉彩）按 machine_id + game_type 聚合 player_lottery_record
+        // 注意：机台彩金记录不设 source（靠 DB 默认值，不可靠），只能用 game_type 识别斯洛/钢珠
+        $lotteryMap = PlayerLotteryRecord::query()
+            ->selectRaw('machine_id, game_type, COALESCE(SUM(amount), 0) AS total_amount')
+            ->whereIn('player_id', $playerIds)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
+            ->whereIn('game_type', [
+                \addons\webman\model\GameType::TYPE_SLOT,
+                \addons\webman\model\GameType::TYPE_STEEL_BALL,
+            ])
+            ->groupBy('machine_id', 'game_type')
+            ->get()
+            ->keyBy(fn ($r) => $r->machine_id . '_' . $r->game_type);
+
         // 组装机台明细数据
         $machineDetails = [];
         foreach ($machineLogs as $log) {
@@ -1167,6 +1187,9 @@ class AutoShiftService
                 ? (float)$log->chip_amount
                 : (float)$log->pressure;
 
+            // 当次班別该台拉彩累積
+            $lotteryAmount = (float)($lotteryMap[$machineId . '_' . $machineType]->total_amount ?? 0);
+
             $machineDetails[] = [
                 'department_id' => $departmentId,
                 'bind_admin_user_id' => $bindAdminUserId,
@@ -1176,7 +1199,8 @@ class AutoShiftService
                 'type' => $machineType,
                 'open_point' => $openPoint,
                 'wash_point' => $washPoint,
-                'profit' => (float)bcsub($openPoint, $washPoint, 2),
+                'lottery_amount' => $lotteryAmount,
+                'profit' => (float)bcsub(bcsub($openPoint, $washPoint, 2), $lotteryAmount, 2),
                 'pressure' => $pressure,
                 // 打码量原值（斯洛打码量展示用；钢珠押分即 chip_amount）
                 'chip_amount' => (float)$log->chip_amount,
