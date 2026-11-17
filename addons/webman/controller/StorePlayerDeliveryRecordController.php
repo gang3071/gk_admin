@@ -253,8 +253,16 @@ class StorePlayerDeliveryRecordController
                         Tag::create($label)->color(PlayerDeliveryRecord::typeColor((int)$value))
                     ]);
                 })->align('center')->sortable();
-            $grid->column('remark', admin_trans('player_withdraw_record.fields.remark'))->display(function ($value) {
-                return Html::create()->content([Html::div()->content($value)]);
+            $grid->column('remark', admin_trans('player_withdraw_record.fields.remark'))->display(function ($value, PlayerDeliveryRecord $data) {
+                $text = (string)$value;
+                // 退款类型：在备注前增加机台名称
+                if ((int)$data->type === PlayerDeliveryRecord::TYPE_REFUND) {
+                    $machineName = (string)($data->machine_name ?: ($data->machine ? $data->machine->name : ''));
+                    if ($machineName !== '') {
+                        $text = trim($machineName . ' ' . $text);
+                    }
+                }
+                return Html::create()->content([Html::div()->content($text)]);
             })->width('150px')->align('center');
             $grid->column('activity', admin_trans('activity.title'))->display(function ($activity, PlayerDeliveryRecord $data) {
                 if ($data->target == 'player_money_edit_log') {
