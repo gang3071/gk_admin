@@ -280,15 +280,16 @@
           <!-- 报表内容 -->
           <div v-else-if="reportData">
             <!-- 1. 總覽 -->
-            <a-card title="總覽" class="section-card">
+            <a-card class="section-card">
+              <template #title><span class="section-title-link" @click="scrollToDesc('desc-overview')">總覽</span></template>
               <table class="report-table">
                 <thead>
                   <tr>
-                    <th>總入</th>
-                    <th>總出</th>
-                    <th>利潤</th>
-                    <th>總彩金</th>
-                    <th>RTP</th>
+                    <th class="th-link" @click="scrollToDesc('desc-overview-total-in')">總入</th>
+                    <th class="th-link" @click="scrollToDesc('desc-overview-total-out')">總出</th>
+                    <th class="th-link" @click="scrollToDesc('desc-overview-profit')">利潤</th>
+                    <th class="th-link" @click="scrollToDesc('desc-overview-lottery')">總彩金</th>
+                    <th class="th-link" @click="scrollToDesc('desc-overview-rtp')">RTP</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -304,18 +305,19 @@
             </a-card>
 
             <!-- 2. 贈點與福利明細 -->
-            <a-card title="贈點與福利明細" class="section-card">
+            <a-card class="section-card">
+              <template #title><span class="section-title-link" @click="scrollToDesc('desc-welfare')">贈點與福利明細</span></template>
               <table class="report-table">
                 <thead>
                   <tr>
-                    <th>VIP生日禮</th>
-                    <th>VIP升級禮</th>
-                    <th>VIP每日登陸獎</th>
-                    <th>總外贈點</th>
-                    <th>體驗券</th>
-                    <th>福利券</th>
-                    <th>摸彩獎</th>
-                    <th class="subtotal-col">小計</th>
+                    <th class="th-link" @click="scrollToDesc('desc-welfare-vip-birthday')">VIP生日禮</th>
+                    <th class="th-link" @click="scrollToDesc('desc-welfare-vip-upgrade')">VIP升級禮</th>
+                    <th class="th-link" @click="scrollToDesc('desc-welfare-vip-daily')">VIP每日登陸獎</th>
+                    <th class="th-link" @click="scrollToDesc('desc-welfare-activity-give')">總外贈點</th>
+                    <th class="th-link" @click="scrollToDesc('desc-welfare-experience')">體驗券</th>
+                    <th class="th-link" @click="scrollToDesc('desc-welfare-welfare')">福利券</th>
+                    <th class="th-link" @click="scrollToDesc('desc-welfare-lottery-ticket')">摸彩獎</th>
+                    <th class="subtotal-col th-link" @click="scrollToDesc('desc-welfare-subtotal')">小計</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -334,15 +336,16 @@
             </a-card>
 
             <!-- 3. 電子遊戲 -->
-            <a-card title="電子遊戲" class="section-card">
+            <a-card class="section-card">
+              <template #title><span class="section-title-link" @click="scrollToDesc('desc-electronic')">電子遊戲</span></template>
               <table class="report-table">
                 <thead>
                   <tr>
-                    <th>電子總押注</th>
-                    <th>電子總贏分</th>
-                    <th>玩家輸贏</th>
-                    <th>電子彩金</th>
-                    <th>RTP</th>
+                    <th class="th-link" @click="scrollToDesc('desc-electronic-bet')">電子總押注</th>
+                    <th class="th-link" @click="scrollToDesc('desc-electronic-win')">電子總贏分</th>
+                    <th class="th-link" @click="scrollToDesc('desc-electronic-diff')">玩家輸贏</th>
+                    <th class="th-link" @click="scrollToDesc('desc-electronic-lottery')">電子彩金</th>
+                    <th class="th-link" @click="scrollToDesc('desc-electronic-rtp')">RTP</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -360,7 +363,8 @@
             <!-- 4+5. 鋼珠 / 斯洛 並排 -->
             <div class="side-by-side-cards">
             <!-- 4. 鋼珠（線下 / 線上） -->
-            <a-card title="鋼珠（線下 / 線上）" class="section-card side-card">
+            <a-card class="section-card side-card">
+              <template #title><span class="section-title-link" @click="scrollToDesc('desc-steel-ball')">鋼珠（線下 / 線上）</span></template>
               <table class="report-table vertical-table">
                 <thead>
                   <tr>
@@ -373,53 +377,53 @@
                   <!-- 線下 -->
                   <tr>
                     <td class="row-label" rowspan="6">線下</td>
-                    <td class="item-label">鋼珠總上點</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-up')">鋼珠總上點</td>
                     <td>{{ fmtNum(reportData.steel_ball.offline.up_point) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">鋼珠總下點</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-down')">鋼珠總下點</td>
                     <td>{{ fmtNum(reportData.steel_ball.offline.down_point) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">上下點小計</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-subtotal')">上下點小計</td>
                     <td>{{ fmtNum(reportData.steel_ball.offline.subtotal) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">鋼珠彩金</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-lottery')">鋼珠彩金</td>
                     <td>{{ fmtNum(reportData.steel_ball.offline.lottery) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">鋼珠總盈虧</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-profit')">鋼珠總盈虧</td>
                     <td :class="profitClass(reportData.steel_ball.offline.total_profit)">{{ fmtNum(reportData.steel_ball.offline.total_profit) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">RTP</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-rtp')">RTP</td>
                     <td>{{ fmtPct(reportData.steel_ball.offline.rtp) }}</td>
                   </tr>
                   <!-- 線上 -->
                   <tr class="section-divider">
                     <td class="row-label" rowspan="6">線上</td>
-                    <td class="item-label">鋼珠總上點</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-up')">鋼珠總上點</td>
                     <td>{{ fmtNum(reportData.steel_ball.online.up_point) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">鋼珠總下點</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-down')">鋼珠總下點</td>
                     <td>{{ fmtNum(reportData.steel_ball.online.down_point) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">上下點小計</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-subtotal')">上下點小計</td>
                     <td>{{ fmtNum(reportData.steel_ball.online.subtotal) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">鋼珠彩金</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-lottery')">鋼珠彩金</td>
                     <td>{{ fmtNum(reportData.steel_ball.online.lottery) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">鋼珠總盈虧</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-profit')">鋼珠總盈虧</td>
                     <td :class="profitClass(reportData.steel_ball.online.total_profit)">{{ fmtNum(reportData.steel_ball.online.total_profit) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">RTP</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-rtp')">RTP</td>
                     <td>{{ fmtPct(reportData.steel_ball.online.rtp) }}</td>
                   </tr>
                 </tbody>
@@ -427,7 +431,8 @@
             </a-card>
 
             <!-- 5. 斯洛（線下 / 線上） -->
-            <a-card title="斯洛（線下 / 線上）" class="section-card side-card">
+            <a-card class="section-card side-card">
+              <template #title><span class="section-title-link" @click="scrollToDesc('desc-slot')">斯洛（線下 / 線上）</span></template>
               <table class="report-table vertical-table">
                 <thead>
                   <tr>
@@ -440,85 +445,85 @@
                   <!-- 線下 -->
                   <tr>
                     <td class="row-label" rowspan="10">線下</td>
-                    <td class="item-label">斯洛總上點</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-up')">斯洛總上點</td>
                     <td>{{ fmtNum(reportData.slot.offline.up_point) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">斯洛總下點</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-down')">斯洛總下點</td>
                     <td>{{ fmtNum(reportData.slot.offline.down_point) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">上下點小計</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-subtotal')">上下點小計</td>
                     <td>{{ fmtNum(reportData.slot.offline.subtotal) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">斯洛彩金</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-lottery')">斯洛彩金</td>
                     <td>{{ fmtNum(reportData.slot.offline.lottery) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">總盈虧</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-profit')">總盈虧</td>
                     <td :class="profitClass(reportData.slot.offline.total_profit)">{{ fmtNum(reportData.slot.offline.total_profit) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">上下點RTP</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-updown-rtp')">上下點RTP</td>
                     <td>{{ fmtPct(reportData.slot.offline.up_down_rtp) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">斯洛總押分</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-pressure')">斯洛總押分</td>
                     <td>{{ fmtNum(reportData.slot.offline.pressure) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">斯洛總得分</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-score')">斯洛總得分</td>
                     <td>{{ fmtNum(reportData.slot.offline.score) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">押得總盈虧</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-press-profit')">押得總盈虧</td>
                     <td :class="profitClass(reportData.slot.offline.press_score_profit)">{{ fmtNum(reportData.slot.offline.press_score_profit) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">押得RTP</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-press-rtp')">押得RTP</td>
                     <td>{{ fmtPct(reportData.slot.offline.press_score_rtp) }}</td>
                   </tr>
                   <!-- 線上 -->
                   <tr class="section-divider">
                     <td class="row-label" rowspan="10">線上</td>
-                    <td class="item-label">斯洛總上點</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-up')">斯洛總上點</td>
                     <td>{{ fmtNum(reportData.slot.online.up_point) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">斯洛總下點</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-down')">斯洛總下點</td>
                     <td>{{ fmtNum(reportData.slot.online.down_point) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">上下點小計</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-subtotal')">上下點小計</td>
                     <td>{{ fmtNum(reportData.slot.online.subtotal) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">斯洛彩金</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-lottery')">斯洛彩金</td>
                     <td>{{ fmtNum(reportData.slot.online.lottery) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">總盈虧</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-profit')">總盈虧</td>
                     <td :class="profitClass(reportData.slot.online.total_profit)">{{ fmtNum(reportData.slot.online.total_profit) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">上下點RTP</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-updown-rtp')">上下點RTP</td>
                     <td>{{ fmtPct(reportData.slot.online.up_down_rtp) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">斯洛總押分</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-pressure')">斯洛總押分</td>
                     <td>{{ fmtNum(reportData.slot.online.pressure) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">斯洛總得分</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-score')">斯洛總得分</td>
                     <td>{{ fmtNum(reportData.slot.online.score) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">押得總盈虧</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-press-profit')">押得總盈虧</td>
                     <td :class="profitClass(reportData.slot.online.press_score_profit)">{{ fmtNum(reportData.slot.online.press_score_profit) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label">押得RTP</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-press-rtp')">押得RTP</td>
                     <td>{{ fmtPct(reportData.slot.online.press_score_rtp) }}</td>
                   </tr>
                 </tbody>
@@ -534,32 +539,220 @@
 
           <!-- 右側：常駐說明面板 -->
           <div class="tab2-desc-panel">
-            <div class="desc-panel-title">報表說明</div>
+            <div class="desc-panel-title">報表說明 <span style="font-size:10px;font-weight:400;color:#8c8c8c">（點擊欄位標題定位）</span></div>
             <div class="tab2-desc-content">
-              <div class="tab2-desc-block">
+
+              <!-- 一、總覽 -->
+              <div class="tab2-desc-block" id="desc-overview">
                 <div class="tab2-desc-block-title">一、總覽</div>
-                <div class="tab2-desc-text">彙總門店查詢期間資金流入與流出。<br><br>• <b>總入</b>：投鈔(type=23) + 充值/開分(type=6)<br>• <b>總出</b>：提現/洗分(type=7)<br>• <b>利潤</b>：總入 - 總出<br>• <b>總彩金</b>：所有機台彩金發放總額<br>• <b>RTP</b>：總出 ÷ 總入 × 100%</div>
+                <div class="tab2-desc-text">彙總門店查詢期間錢包資金的流入與流出。</div>
               </div>
+              <div class="desc-item" id="desc-overview-total-in" :class="{ 'desc-item-active': activeDescId === 'desc-overview-total-in' }">
+                <div class="desc-item-name">總入</div>
+                <div class="desc-item-body">= 投鈔(type=23) + 充值/開分(type=6)<br>
+                  <b>投鈔</b>：玩家向實體機台投入現金，機台硬件讀取後由 gk_work 寫入錢包，資金進機台錢箱。<br>
+                  <b>充值</b>：玩家透過 App 提交開分申請，核准後掃碼完成，錢包扣款並對應機台上點。<br>
+                  <span class="desc-source">來源：player_delivery_record type IN (23, 6)</span>
+                </div>
+              </div>
+              <div class="desc-item" id="desc-overview-total-out" :class="{ 'desc-item-active': activeDescId === 'desc-overview-total-out' }">
+                <div class="desc-item-name">總出</div>
+                <div class="desc-item-body">= 提現/洗分(type=7)<br>
+                  玩家在 App 發起洗分申請，錢包扣款並生成洗分券，門店線下現金兌現。<br>
+                  <span class="desc-source">來源：player_delivery_record type=7</span>
+                </div>
+              </div>
+              <div class="desc-item" id="desc-overview-profit" :class="{ 'desc-item-active': activeDescId === 'desc-overview-profit' }">
+                <div class="desc-item-name">利潤</div>
+                <div class="desc-item-body">= 總入 - 總出<br>正值表示門店收入多於支出。</div>
+              </div>
+              <div class="desc-item" id="desc-overview-lottery" :class="{ 'desc-item-active': activeDescId === 'desc-overview-lottery' }">
+                <div class="desc-item-name">總彩金</div>
+                <div class="desc-item-body">= 電子彩金 + 鋼珠彩金 + 斯洛彩金<br>所有機台與電子遊戲的 Jackpot 彩金發放總額。<br>
+                  <span class="desc-source">來源：player_lottery_record status=COMPLETE</span>
+                </div>
+              </div>
+              <div class="desc-item" id="desc-overview-rtp" :class="{ 'desc-item-active': activeDescId === 'desc-overview-rtp' }">
+                <div class="desc-item-name">RTP</div>
+                <div class="desc-item-body">= 總出 ÷ 總入 × 100%<br>反映玩家對門店的資金回吐率，越高對玩家越有利。</div>
+              </div>
+
               <a-divider style="margin:8px 0" />
-              <div class="tab2-desc-block">
+
+              <!-- 二、贈點與福利明細 -->
+              <div class="tab2-desc-block" id="desc-welfare">
                 <div class="tab2-desc-block-title">二、贈點與福利明細</div>
-                <div class="tab2-desc-text">統計會員各類福利贈點，均屬門店運營成本支出。<br><br>• <b>VIP生日禮</b>：生日月自動發放（每年一次）<br>• <b>VIP升級禮</b>：首次升至該等級時發放<br>• <b>VIP每日登陸獎</b>：每日登入自動觸發<br>• <b>總外贈點</b>：後台手動發放（type=38）<br>• <b>體驗/福利券</b>：活動券兌換發放<br>• <b>摸彩獎</b>：摸獎券活動中獎發放</div>
+                <div class="tab2-desc-text">平台主動向玩家錢包發放的福利點數，屬門店運營成本支出。</div>
               </div>
+              <div class="desc-item" id="desc-welfare-vip-birthday" :class="{ 'desc-item-active': activeDescId === 'desc-welfare-vip-birthday' }">
+                <div class="desc-item-name">VIP生日禮</div>
+                <div class="desc-item-body">gk_work Worker 每日掃描，當月為生日月且本年度未領取者自動發放，每年一次。<br>
+                  <span class="desc-source">player_delivery_record type=34</span>
+                </div>
+              </div>
+              <div class="desc-item" id="desc-welfare-vip-upgrade" :class="{ 'desc-item-active': activeDescId === 'desc-welfare-vip-upgrade' }">
+                <div class="desc-item-name">VIP升級禮</div>
+                <div class="desc-item-body">玩家首次升至指定 VIP 等級時觸發，每等級限一次，降級後重升不重複發放。<br>
+                  <span class="desc-source">player_delivery_record type=35</span>
+                </div>
+              </div>
+              <div class="desc-item" id="desc-welfare-vip-daily" :class="{ 'desc-item-active': activeDescId === 'desc-welfare-vip-daily' }">
+                <div class="desc-item-name">VIP每日登陸獎</div>
+                <div class="desc-item-body">玩家登入 App/H5 時自動觸發，每自然日限一次，依 VIP 等級決定點數。<br>
+                  <span class="desc-source">player_delivery_record type=37</span>
+                </div>
+              </div>
+              <div class="desc-item" id="desc-welfare-activity-give" :class="{ 'desc-item-active': activeDescId === 'desc-welfare-activity-give' }">
+                <div class="desc-item-name">總外贈點</div>
+                <div class="desc-item-body">後台管理員手動批量或單點發放，不走標準活動審批流程，常用於臨時補償或推廣。<br>
+                  <span class="desc-source">player_delivery_record type=38</span>
+                </div>
+              </div>
+              <div class="desc-item" id="desc-welfare-experience" :class="{ 'desc-item-active': activeDescId === 'desc-welfare-experience' }">
+                <div class="desc-item-name">體驗券</div>
+                <div class="desc-item-body">活動體驗券發放至玩家，玩家在機台使用後消耗，此處統計該門店發出的體驗券總分數。<br>
+                  <span class="desc-source">ticket_record ticket_type=EXPERIENCE</span>
+                </div>
+              </div>
+              <div class="desc-item" id="desc-welfare-welfare" :class="{ 'desc-item-active': activeDescId === 'desc-welfare-welfare' }">
+                <div class="desc-item-name">福利券</div>
+                <div class="desc-item-body">活動福利券發放至玩家，玩家在機台使用後消耗，此處統計該門店發出的福利券總分數。<br>
+                  <span class="desc-source">ticket_record ticket_type=WELFARE</span>
+                </div>
+              </div>
+              <div class="desc-item" id="desc-welfare-lottery-ticket" :class="{ 'desc-item-active': activeDescId === 'desc-welfare-lottery-ticket' }">
+                <div class="desc-item-name">摸彩獎</div>
+                <div class="desc-item-body">玩家使用摸獎券參與活動抽獎，命中獎項後即時發放至錢包。<br>
+                  <span class="desc-source">player_delivery_record type=33</span>
+                </div>
+              </div>
+              <div class="desc-item" id="desc-welfare-subtotal" :class="{ 'desc-item-active': activeDescId === 'desc-welfare-subtotal' }">
+                <div class="desc-item-name">小計</div>
+                <div class="desc-item-body">= VIP生日禮 + VIP升級禮 + VIP每日登陸獎 + 總外贈點 + 體驗券 + 福利券 + 摸彩獎<br>代表門店當期所有福利成本合計。</div>
+              </div>
+
               <a-divider style="margin:8px 0" />
-              <div class="tab2-desc-block">
+
+              <!-- 三、電子遊戲 -->
+              <div class="tab2-desc-block" id="desc-electronic">
                 <div class="tab2-desc-block-title">三、電子遊戲</div>
-                <div class="tab2-desc-text">統計線上電子遊戲平台的投注與贏分。<br><br>• <b>電子總押注</b>：玩家投注總額<br>• <b>電子總贏分</b>：玩家贏得總積分<br>• <b>玩家輸贏</b>：總贏分 - 總押注（正值=玩家盈利）<br>• <b>電子彩金</b>：Jackpot 發放金額<br>• <b>RTP</b>：總贏分 ÷ 總押注 × 100%</div>
+                <div class="tab2-desc-text">統計線上電子遊戲平台已結算的投注與贏分。<br>
+                  <span class="desc-source">play_game_record settlement_status=SETTLED</span>
+                </div>
               </div>
+              <div class="desc-item" id="desc-electronic-bet" :class="{ 'desc-item-active': activeDescId === 'desc-electronic-bet' }">
+                <div class="desc-item-name">電子總押注</div>
+                <div class="desc-item-body">= SUM(bet)<br>玩家在電子遊戲的全部押注金額（已結算局）。</div>
+              </div>
+              <div class="desc-item" id="desc-electronic-win" :class="{ 'desc-item-active': activeDescId === 'desc-electronic-win' }">
+                <div class="desc-item-name">電子總贏分</div>
+                <div class="desc-item-body">= SUM(win)<br>玩家在電子遊戲中贏得的總點數。</div>
+              </div>
+              <div class="desc-item" id="desc-electronic-diff" :class="{ 'desc-item-active': activeDescId === 'desc-electronic-diff' }">
+                <div class="desc-item-name">玩家輸贏</div>
+                <div class="desc-item-body">= SUM(diff) = 總贏分 - 總押注<br>正值 = 玩家盈利（平台虧損）<br>負值 = 玩家虧損（平台獲利）</div>
+              </div>
+              <div class="desc-item" id="desc-electronic-lottery" :class="{ 'desc-item-active': activeDescId === 'desc-electronic-lottery' }">
+                <div class="desc-item-name">電子彩金</div>
+                <div class="desc-item-body">電子遊戲 Jackpot 發放金額。<br>
+                  <span class="desc-source">player_lottery_record source IN (GAME, MANUAL) status=COMPLETE</span>
+                </div>
+              </div>
+              <div class="desc-item" id="desc-electronic-rtp" :class="{ 'desc-item-active': activeDescId === 'desc-electronic-rtp' }">
+                <div class="desc-item-name">RTP</div>
+                <div class="desc-item-body">= 總贏分 ÷ 總押注 × 100%<br>越高代表玩家回吐率越高。</div>
+              </div>
+
               <a-divider style="margin:8px 0" />
-              <div class="tab2-desc-block">
+
+              <!-- 四、鋼珠 -->
+              <div class="tab2-desc-block" id="desc-steel-ball">
                 <div class="tab2-desc-block-title">四、鋼珠（線下 / 線上）</div>
-                <div class="tab2-desc-text">分線下與線上兩種模式統計鋼珠機台。<br><br>• <b>線下</b>：玩家直接在實體機台操作<br>• <b>線上</b>：玩家透過 App 掃碼開分/洗分<br><br>• <b>總上點</b>：玩家充入機台的總積分<br>• <b>總下點</b>：玩家從機台取出的總積分<br>• <b>上下點小計</b>：總上點 - 總下點<br>• <b>鋼珠彩金</b>：Jackpot 發放金額<br>• <b>總盈虧</b>：上下點小計 - 鋼珠彩金<br>• <b>RTP</b>：總下點 ÷ 總上點 × 100%</div>
+                <div class="tab2-desc-text">
+                  <b>線下</b>：machine_category.machine_source=OFFLINE，玩家直接投幣操作實體機台，player_game_log.player_id=0，透過 channel_machine.store_admin_id 定位機台。<br>
+                  <b>線上</b>：machine_category.machine_source=ONLINE，玩家透過 App 掃碼開分/洗分，player_game_log.player_id 有值。<br>
+                  <span class="desc-source">player_game_log JOIN machine(type=STEEL_BALL) JOIN machine_category</span>
+                </div>
               </div>
+              <div class="desc-item" id="desc-steel-ball-up" :class="{ 'desc-item-active': activeDescId === 'desc-steel-ball-up' }">
+                <div class="desc-item-name">鋼珠總上點</div>
+                <div class="desc-item-body">= SUM(ABS(game_amount)) WHERE action=ACTION_OPEN<br>玩家充入（開分）機台的總點數，對應錢包扣款。</div>
+              </div>
+              <div class="desc-item" id="desc-steel-ball-down" :class="{ 'desc-item-active': activeDescId === 'desc-steel-ball-down' }">
+                <div class="desc-item-name">鋼珠總下點</div>
+                <div class="desc-item-body">= SUM(ABS(game_amount)) WHERE action≠ACTION_OPEN<br>玩家取出（洗分）機台的總點數，對應錢包加款。</div>
+              </div>
+              <div class="desc-item" id="desc-steel-ball-subtotal" :class="{ 'desc-item-active': activeDescId === 'desc-steel-ball-subtotal' }">
+                <div class="desc-item-name">上下點小計</div>
+                <div class="desc-item-body">= 總上點 - 總下點<br>正值 = 平台盈利，負值 = 平台虧損。</div>
+              </div>
+              <div class="desc-item" id="desc-steel-ball-lottery" :class="{ 'desc-item-active': activeDescId === 'desc-steel-ball-lottery' }">
+                <div class="desc-item-name">鋼珠彩金</div>
+                <div class="desc-item-body">鋼珠機台 Jackpot 發放金額。<br>
+                  <span class="desc-source">player_lottery_record game_type=STEEL_BALL status=COMPLETE</span>
+                </div>
+              </div>
+              <div class="desc-item" id="desc-steel-ball-profit" :class="{ 'desc-item-active': activeDescId === 'desc-steel-ball-profit' }">
+                <div class="desc-item-name">鋼珠總盈虧</div>
+                <div class="desc-item-body">= 上下點小計 - 鋼珠彩金<br>反映扣除彩金後門店的實際盈虧。</div>
+              </div>
+              <div class="desc-item" id="desc-steel-ball-rtp" :class="{ 'desc-item-active': activeDescId === 'desc-steel-ball-rtp' }">
+                <div class="desc-item-name">RTP</div>
+                <div class="desc-item-body">= 總下點 ÷ 總上點 × 100%<br>越高代表玩家回吐率越高。</div>
+              </div>
+
               <a-divider style="margin:8px 0" />
-              <div class="tab2-desc-block">
+
+              <!-- 五、斯洛 -->
+              <div class="tab2-desc-block" id="desc-slot">
                 <div class="tab2-desc-block-title">五、斯洛（線下 / 線上）</div>
-                <div class="tab2-desc-text">分線下與線上兩種模式統計斯洛機台。<br><br>• <b>上下點</b>：同鋼珠，玩家充入/取出積分<br>• <b>總盈虧</b>：上下點小計 - 彩金<br>• <b>上下點RTP</b>：總下點 ÷ 總上點 × 100%<br><br>• <b>總押分</b>：玩家在斯洛的押注積分<br>• <b>總得分</b>：玩家從斯洛贏得的積分<br>• <b>押得總盈虧</b>：總得分 - 總押分<br>• <b>押得RTP</b>：總得分 ÷ 總押分 × 100%</div>
+                <div class="tab2-desc-text">線下/線上定義同鋼珠（machine_source 區分）。<br>
+                  <span class="desc-source">player_game_log JOIN machine(type=SLOT) JOIN machine_category</span>
+                </div>
               </div>
+              <div class="desc-item" id="desc-slot-up" :class="{ 'desc-item-active': activeDescId === 'desc-slot-up' }">
+                <div class="desc-item-name">斯洛總上點</div>
+                <div class="desc-item-body">= SUM(ABS(game_amount)) WHERE action=ACTION_OPEN<br>玩家充入（開分）機台的總點數。</div>
+              </div>
+              <div class="desc-item" id="desc-slot-down" :class="{ 'desc-item-active': activeDescId === 'desc-slot-down' }">
+                <div class="desc-item-name">斯洛總下點</div>
+                <div class="desc-item-body">= SUM(ABS(game_amount)) WHERE action≠ACTION_OPEN<br>玩家取出（洗分）機台的總點數。</div>
+              </div>
+              <div class="desc-item" id="desc-slot-subtotal" :class="{ 'desc-item-active': activeDescId === 'desc-slot-subtotal' }">
+                <div class="desc-item-name">上下點小計</div>
+                <div class="desc-item-body">= 總上點 - 總下點<br>正值 = 平台盈利，負值 = 平台虧損。</div>
+              </div>
+              <div class="desc-item" id="desc-slot-lottery" :class="{ 'desc-item-active': activeDescId === 'desc-slot-lottery' }">
+                <div class="desc-item-name">斯洛彩金</div>
+                <div class="desc-item-body">斯洛機台 Jackpot 發放金額。<br>
+                  <span class="desc-source">player_lottery_record game_type=SLOT status=COMPLETE</span>
+                </div>
+              </div>
+              <div class="desc-item" id="desc-slot-profit" :class="{ 'desc-item-active': activeDescId === 'desc-slot-profit' }">
+                <div class="desc-item-name">總盈虧（上下點）</div>
+                <div class="desc-item-body">= 上下點小計 - 斯洛彩金</div>
+              </div>
+              <div class="desc-item" id="desc-slot-updown-rtp" :class="{ 'desc-item-active': activeDescId === 'desc-slot-updown-rtp' }">
+                <div class="desc-item-name">上下點RTP</div>
+                <div class="desc-item-body">= 總下點 ÷ 總上點 × 100%</div>
+              </div>
+              <div class="desc-item" id="desc-slot-pressure" :class="{ 'desc-item-active': activeDescId === 'desc-slot-pressure' }">
+                <div class="desc-item-name">斯洛總押分</div>
+                <div class="desc-item-body">= SUM(pressure) from player_game_log<br>機台對玩家押入的分數（如免費遊戲、機台補貼分數等），由機台主動寫入。</div>
+              </div>
+              <div class="desc-item" id="desc-slot-score" :class="{ 'desc-item-active': activeDescId === 'desc-slot-score' }">
+                <div class="desc-item-name">斯洛總得分</div>
+                <div class="desc-item-body">= SUM(score) from player_game_log<br>玩家在押分機制下所贏得的分數，由機台回報寫入。</div>
+              </div>
+              <div class="desc-item" id="desc-slot-press-profit" :class="{ 'desc-item-active': activeDescId === 'desc-slot-press-profit' }">
+                <div class="desc-item-name">押得總盈虧</div>
+                <div class="desc-item-body">= 總得分 - 總押分<br>正值 = 玩家在押分機制中盈利（機台虧損）。</div>
+              </div>
+              <div class="desc-item" id="desc-slot-press-rtp" :class="{ 'desc-item-active': activeDescId === 'desc-slot-press-rtp' }">
+                <div class="desc-item-name">押得RTP</div>
+                <div class="desc-item-body">= 總得分 ÷ 總押分 × 100%</div>
+              </div>
+
             </div>
           </div><!-- /tab2-desc-panel -->
 
@@ -619,6 +812,7 @@ export default {
       detailLoading:   false,
       detailSearched:  false,
       reportData:      null,
+      activeDescId:    null,
 
       // ── Tab 1 账变类型说明文案 ──
       typeDescriptions: {
@@ -769,6 +963,13 @@ export default {
 
     onDetailDateTypeChange(val) {
       if (val) this.detailDateRange = [];
+    },
+    scrollToDesc(id) {
+      this.activeDescId = id;
+      this.$nextTick(() => {
+        const el = document.getElementById(id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
     },
     filterOption(input, option) {
       return option.children[0].children.toLowerCase().includes(input.toLowerCase());
@@ -964,4 +1165,17 @@ export default {
 .vertical-table { width: 100%; }
 .vertical-table .item-label { text-align: left; color: #595959; padding-left: 16px; }
 .vertical-table .section-divider td { border-top: 2px solid #d9d9d9; }
+
+/* ── Tab 2 clickable headers / labels ── */
+.th-link          { cursor: pointer; user-select: none; }
+.th-link:hover    { color: #1677ff; background: #e6f4ff !important; }
+.section-title-link         { cursor: pointer; }
+.section-title-link:hover   { color: #0958d9; }
+
+/* ── Tab 2 desc-item (说明面板细项) ── */
+.desc-item             { padding: 5px 6px 5px 8px; margin-bottom: 3px; border-radius: 4px; border-left: 2px solid transparent; transition: background .2s, border-color .2s; scroll-margin-top: 4px; }
+.desc-item-name        { font-size: 11px; font-weight: 700; color: #262626; margin-bottom: 2px; }
+.desc-item-body        { font-size: 10px; color: #595959; line-height: 1.6; }
+.desc-item-active      { background: #e6f4ff; border-left-color: #1677ff; }
+.desc-source           { display: inline-block; margin-top: 3px; font-size: 10px; color: #8c8c8c; font-style: italic; }
 </style>
