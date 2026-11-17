@@ -756,11 +756,12 @@ class ChannelStoreFinanceSummaryController
                 'subtotal'           => (float)$welfareSubtotal,
             ],
             'electronic' => [
-                'total_bet'   => $totalBet,
-                'total_win'   => $totalWin,
-                'player_diff' => $totalDiff,
-                'lottery'     => $electronicLottery,
-                'rtp'         => $this->calcRtp($totalWin, $totalBet),
+                'total_bet'          => $totalBet,
+                'total_win'          => $totalWin,
+                'player_diff'        => $totalDiff,
+                'lottery'            => $electronicLottery,
+                'rtp'                => $this->calcRtp($totalWin, $totalBet),
+                'reverse_water_pool' => $reverseWaterPool,
             ],
             'steel_ball' => [
                 'offline' => [
@@ -837,7 +838,7 @@ class ChannelStoreFinanceSummaryController
         return [
             'overview'   => ['total_in' => 0, 'total_out' => 0, 'profit' => 0, 'total_lottery' => 0, 'rtp' => 0],
             'welfare'    => ['vip_birthday' => 0, 'vip_upgrade' => 0, 'vip_daily_login' => 0, 'activity_give' => 0, 'experience_coupon' => 0, 'welfare_coupon' => 0, 'lottery_ticket' => 0, 'reverse_water_pool' => 0, 'children_cashback' => 0, 'subtotal' => 0],
-            'electronic' => ['total_bet' => 0, 'total_win' => 0, 'player_diff' => 0, 'lottery' => 0, 'rtp' => 0],
+            'electronic' => ['total_bet' => 0, 'total_win' => 0, 'player_diff' => 0, 'lottery' => 0, 'rtp' => 0, 'reverse_water_pool' => 0],
             'steel_ball' => [
                 'offline' => $emptyMachineSection,
                 'online'  => $emptyMachineSection,

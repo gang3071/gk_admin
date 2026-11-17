@@ -364,6 +364,7 @@
                     <th class="th-link" @click="scrollToDesc('desc-electronic-diff')">玩家輸贏</th>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-lottery')">電子彩金</th>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-rtp')">RTP</th>
+                    <th class="th-link" @click="scrollToDesc('desc-electronic-reverse-water')">返水</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -373,6 +374,7 @@
                     <td :class="profitClass(reportData.electronic.player_diff)">{{ fmtNum(reportData.electronic.player_diff) }}</td>
                     <td>{{ fmtNum(reportData.electronic.lottery) }}</td>
                     <td>{{ fmtPct(reportData.electronic.rtp) }}</td>
+                    <td>{{ fmtNum(reportData.electronic.reverse_water_pool) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -691,6 +693,12 @@
               <div class="desc-item" id="desc-electronic-rtp" :class="{ 'desc-item-active': activeDescId === 'desc-electronic-rtp' }">
                 <div class="desc-item-name">RTP</div>
                 <div class="desc-item-body">= 總贏分 ÷ 總押注 × 100%<br>越高代表玩家回吐率越高。</div>
+              </div>
+              <div class="desc-item" id="desc-electronic-reverse-water" :class="{ 'desc-item-active': activeDescId === 'desc-electronic-reverse-water' }">
+                <div class="desc-item-name">返水</div>
+                <div class="desc-item-body">玩家累積遊戲量達標後依返水比例發放至錢包的回饋點數，與贈點福利明細中的返水為同一資料來源。<br>
+                  <span class="desc-source">player_delivery_record type=36</span>
+                </div>
               </div>
 
               <a-divider style="margin:8px 0" />
