@@ -40,4 +40,6 @@ return [
     'all_bet' => 'total bet',
     'all_diff' => 'total wins and losses',
     'all_reward' => 'Total Bonus',
+    'all_cashback_amount' => 'Total Cashback Amount',
+    'all_parent_cashback_amount' => 'Total Referral Bonus Amount',
 ];

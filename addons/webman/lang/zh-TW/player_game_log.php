@@ -54,6 +54,8 @@ return [
         'total_chip_amount' => '總打碼量',
         'total_wash_amount' => '下分遊戲點數',
         'total_open_amount' => '上分遊戲點數',
+        'total_cashback_amount' => '總反水金額',
+        'total_parent_cashback_amount' => '總推廣紅利金額',
     ],
     'stats' => [
         'panel_header'    => '查看統計數據',

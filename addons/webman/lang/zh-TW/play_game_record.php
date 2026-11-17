@@ -40,4 +40,6 @@ return [
     'all_bet' => '總押注',
     'all_diff' => '總輸贏',
     'all_reward' => '總獎金',
+    'all_cashback_amount' => '總反水金額',
+    'all_parent_cashback_amount' => '總推廣紅利金額',
 ];

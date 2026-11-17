@@ -40,4 +40,6 @@ return [
     'all_bet' => '総注釈',
     'all_diff' => '総勝ち負け',
     'all_reward' => '総ボーナス',
+    'all_cashback_amount' => 'キャッシュバック総額',
+    'all_parent_cashback_amount' => 'プロモーション報酬総額',
 ];
