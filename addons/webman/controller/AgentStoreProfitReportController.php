@@ -38,8 +38,12 @@ class AgentStoreProfitReportController
 
         // ========== 1. 批量查询店家信息（1次查询替代 N 次） ==========
         $storeTable = (new AdminUser())->getTable();
+        // 子帳號用「可見店家」；上層代理用自己的下級店家
+        $allowedStoreIds = $admin->isSubAccount()
+            ? $admin->subAccountStoreIds()
+            : $admin->childStores()->pluck('id')->all();
         $stores = AdminUser::query()
-            ->where("{$storeTable}.parent_admin_id", $admin->id)
+            ->whereIn("{$storeTable}.id", $allowedStoreIds ?: [0])
             ->where("{$storeTable}.type", AdminUser::TYPE_STORE)
             ->where("{$storeTable}.status", 1)
             ->where("{$storeTable}.is_hide", 0)
@@ -375,19 +379,27 @@ class AgentStoreProfitReportController
     {
         $request = Request::input();
         $exAdminFilter = $request['ex_admin_filter'] ?? [];
-        $adminUserId = $request['admin_user_id'] ?? 0;
-
-        $admin = AdminUser::query()->find($adminUserId);
+        // 一律以目前登入者為準；僅超級管理員可用 admin_user_id 指定其他代理
+        $admin = Admin::user();
         if (!$admin) {
             return Response::success([]);
+        }
+        $requestedId = (int) ($request['admin_user_id'] ?? 0);
+        if ($requestedId > 0
+            && (int) $admin->id !== $requestedId
+            && Admin::id() == plugin()->webman->config('admin_auth_id')) {
+            $admin = AdminUser::query()->find($requestedId) ?: $admin;
         }
 
         // 获取筛选参数
         $selectedStoreId = $exAdminFilter['store_id'] ?? null;
 
-        // 获取代理下的所有店家
+        // 子帳號用「可見店家」；上層代理用自己的下級店家
+        $allowedStoreIds = $admin->isSubAccount()
+            ? $admin->subAccountStoreIds()
+            : $admin->childStores()->pluck('id')->all();
         $stores = AdminUser::query()
-            ->where('parent_admin_id', $admin->id)
+            ->whereIn('id', $allowedStoreIds ?: [0])
             ->where('type', AdminUser::TYPE_STORE)
             ->where('status', 1)
             ->where('is_hide', 0)
