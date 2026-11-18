@@ -361,7 +361,7 @@
                   <tr>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-bet')">電子總押注</th>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-win')">電子總贏分</th>
-                    <th class="th-link th-player-diff" @click="scrollToDesc('desc-electronic-diff')">玩家輸贏<span class="note-small">正=平台虧 / 負=平台盈</span></th>
+                    <th class="th-link th-player-diff" @click="scrollToDesc('desc-electronic-diff')">玩家輸贏<span class="note-small">以平台盈虧展示</span></th>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-lottery')">電子彩金</th>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-rtp')">RTP</th>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-reverse-water')">返水<span class="note-small">含未領取</span></th>
@@ -371,7 +371,7 @@
                   <tr>
                     <td class="val-income">{{ fmtIncome(reportData.electronic.total_bet) }}</td>
                     <td class="val-expense">{{ fmtExpense(reportData.electronic.total_win) }}</td>
-                    <td :class="['td-player-diff', profitClassInv(reportData.electronic.player_diff)]">{{ fmtNumSign(reportData.electronic.player_diff) }}</td>
+                    <td :class="['td-player-diff', profitClass(-reportData.electronic.player_diff)]">{{ fmtNumSign(-reportData.electronic.player_diff) }}</td>
                     <td class="val-expense">{{ fmtExpense(reportData.electronic.lottery) }}</td>
                     <td :class="rtpClass(reportData.electronic.rtp)">{{ fmtPct(reportData.electronic.rtp) }}</td>
                     <td class="val-expense">{{ fmtExpense(reportData.electronic.reverse_water_pool) }}</td>
@@ -430,7 +430,7 @@
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-press-profit')">押得總盈虧</td>
-                    <td :class="profitClassInv(reportData.slot.offline.press_score_profit)">{{ fmtNumSign(reportData.slot.offline.press_score_profit) }}</td>
+                    <td :class="profitClass(-reportData.slot.offline.press_score_profit)">{{ fmtNumSign(-reportData.slot.offline.press_score_profit) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-press-rtp')">押得RTP</td>
@@ -530,7 +530,7 @@
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-press-profit')">押得總盈虧</td>
-                    <td :class="profitClassInv(reportData.slot.online.press_score_profit)">{{ fmtNumSign(reportData.slot.online.press_score_profit) }}</td>
+                    <td :class="profitClass(-reportData.slot.online.press_score_profit)">{{ fmtNumSign(-reportData.slot.online.press_score_profit) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-press-rtp')">押得RTP</td>
