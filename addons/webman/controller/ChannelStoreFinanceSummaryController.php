@@ -29,10 +29,14 @@ class ChannelStoreFinanceSummaryController
      */
     public function finance()
     {
-        $t     = fn(string $key) => admin_trans('channel_store_finance_summary.' . $key);
-        $admin = Admin::user();
+        $t            = fn(string $key) => admin_trans('channel_store_finance_summary.' . $key);
+        $admin        = Admin::user();
+        $storeOptions = $this->getDetailStoreOptions($admin->department_id);
+        $storeCount   = count($storeOptions);
 
         return admin_view(plugin()->webman->getPath() . '/views/store_finance_summary.vue')
+            ->attr('ex_admin_title', "門店財務匯總（{$storeCount} 間門店）")
+            ->attr('ex_admin_description', '報表')
             ->attrs([
                 // ── Tab 1：多店概覽（原有功能）──
                 'trans' => [
@@ -102,11 +106,8 @@ class ChannelStoreFinanceSummaryController
                     ],
                 ],
                 // ── Tab 2：單店詳細報表（新功能）──
-                'store_options'     => $this->getDetailStoreOptions($admin->department_id),
+                'store_options'     => $storeOptions,
                 'detail_search_url' => 'ex-admin/addons-webman-controller-ChannelStoreFinanceSummaryController/searchDetail',
-                // ── 頁面標題欄 ──
-                'page_title'  => '門店財務匯總 報表',
-                'breadcrumbs' => ['渠道後台', '門店財務匯總'],
             ]);
     }
 
