@@ -259,8 +259,16 @@ class ChannelStoreFinanceSummaryController
         $welfareData       = $this->queryWelfareData($playerIds, $start, $end, $dateType);
         $couponData        = $this->queryCouponData($storeId, $start, $end, $dateType);
         $machineDelivery   = $this->queryMachineDeliveryData($playerIds, $storeId, $start, $end, $dateType);
-        $electronicGame    = $this->queryElectronicGameData($playerIds, $start, $end, $dateType);
-        $electronicLottery = $this->queryElectronicLotteryData($playerIds, $start, $end, $dateType);
+        // 電子遊戲記錄按月分區，僅保留最近 3 個月；鉗制起始日期，避免查詢已刪除分區產生不完整數據
+        $eStart = $start;
+        if (!$dateType && !empty($eStart)) {
+            $partitionCutoff = date('Y-m-01', strtotime('-2 months'));
+            if ($eStart < $partitionCutoff) {
+                $eStart = $partitionCutoff . ' 00:00:00';
+            }
+        }
+        $electronicGame    = $this->queryElectronicGameData($playerIds, $eStart, $end, $dateType);
+        $electronicLottery = $this->queryElectronicLotteryData($playerIds, $eStart, $end, $dateType);
         $machineLottery    = $this->queryMachineLotteryData($playerIds, $start, $end, $dateType);
         $slotPressure      = $this->querySlotPressureScoreData($playerIds, $storeId, $start, $end, $dateType);
 
