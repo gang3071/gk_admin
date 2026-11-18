@@ -11,7 +11,8 @@ return [
 
     // 标题
     'title' => [
-        'main' => 'Lottery Ticket Management',
+        'main'        => 'Lottery Ticket Management',
+        'description' => 'List',
         'activity_detail' => '活动詳情',
         'ticket_list' => '摸奖券列表',
         'record_list' => '中奖记录',

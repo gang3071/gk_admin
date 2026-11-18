@@ -11,7 +11,8 @@ return [
 
     // 标题
     'title' => [
-        'main' => '抽選チケット管理',
+        'main'        => '抽選チケット管理',
+        'description' => 'リスト',
         'activity_detail' => 'アクティビティ詳細',
         'ticket_list' => '摸奖券列表',
         'record_list' => '中奖记录',

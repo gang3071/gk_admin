@@ -227,7 +227,10 @@ class ChannelLotteryTicketActivityController
         ];
 
         // 使用 admin_view 返回 Vue 组件
-        return admin_view(plugin()->webman->getPath() . '/views/lottery_ticket_activities.vue')->attrs([
+        return admin_view(plugin()->webman->getPath() . '/views/lottery_ticket_activities.vue')
+            ->attr('ex_admin_title', admin_trans('lottery_ticket.title.main'))
+            ->attr('ex_admin_description', admin_trans('lottery_ticket.title.description'))
+            ->attrs([
             'department_id' => $departmentId,
             'vip_levels' => $vipLevels,
             'trans' => $trans,
