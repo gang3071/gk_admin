@@ -355,7 +355,15 @@
 
             <!-- 3. 電子遊戲 -->
             <a-card class="section-card">
-              <template #title><span class="section-title-link" @click="scrollToDesc('desc-electronic')">電子遊戲</span></template>
+              <template #title>
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                  <span class="section-title-link" @click="scrollToDesc('desc-electronic')">電子遊戲</span>
+                  <a-tag color="blue" style="font-size:11px; font-weight:400; margin:0;">
+                    <template #icon><span style="margin-right:3px;">ℹ️</span></template>
+                    僅含近 3 個月數據（{{ electronicDataRange }}），超出範圍的歷史數據不計入
+                  </a-tag>
+                </div>
+              </template>
               <table class="report-table">
                 <thead>
                   <tr>
@@ -944,6 +952,12 @@ export default {
     },
     dateTypeOptions() {
       return (this.trans.date_types || []).map(item => ({ value: item.value, label: item.label }));
+    },
+    electronicDataRange() {
+      const pad = n => String(n).padStart(2, '0');
+      const now = new Date();
+      const from = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      return `${from.getFullYear()}-${pad(from.getMonth() + 1)} ~ ${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
     },
     allTypeLabels() {
       return Object.assign({}, this.trans.cost_types || {}, this.trans.wallet_types || {});
