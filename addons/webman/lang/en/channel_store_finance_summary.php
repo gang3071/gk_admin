@@ -1,7 +1,9 @@
 <?php
 
 return [
-    'title' => 'Store Finance Summary',
+    'title'       => 'Store Finance Summary',
+    'page_title'  => 'Store Finance Summary ({count} stores)',
+    'description' => 'Report',
 
     'fields' => [
         'id'                       => 'ID',

@@ -1,7 +1,9 @@
 <?php
 
 return [
-    'title' => '门店财务汇总',
+    'title'       => '门店财务汇总',
+    'page_title'  => '门店财务汇总（{count} 间门店）',
+    'description' => '报表',
 
     'fields' => [
         'id'                       => 'ID',

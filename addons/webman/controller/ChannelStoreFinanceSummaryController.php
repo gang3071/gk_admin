@@ -35,8 +35,8 @@ class ChannelStoreFinanceSummaryController
         $storeCount   = count($storeOptions);
 
         return admin_view(plugin()->webman->getPath() . '/views/store_finance_summary.vue')
-            ->attr('ex_admin_title', "門店財務匯總（{$storeCount} 間門店）")
-            ->attr('ex_admin_description', '報表')
+            ->attr('ex_admin_title', admin_trans('channel_store_finance_summary.page_title', null, ['count' => $storeCount]))
+            ->attr('ex_admin_description', admin_trans('channel_store_finance_summary.description'))
             ->attrs([
                 // ── Tab 1：多店概覽（原有功能）──
                 'trans' => [

@@ -1,7 +1,9 @@
 <?php
 
 return [
-    'title' => '店舗財務サマリー',
+    'title'       => '店舗財務サマリー',
+    'page_title'  => '店舗財務サマリー（{count} 店舗）',
+    'description' => 'レポート',
 
     'fields' => [
         'id'                       => 'ID',

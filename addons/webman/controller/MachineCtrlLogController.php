@@ -19,6 +19,8 @@ class MachineCtrlLogController
     public function index()
     {
         return admin_view(plugin()->webman->getPath() . '/views/machine_ctrl_log_center.vue')
+            ->attr('ex_admin_title', admin_trans('machine_ctrl_log.title'))
+            ->attr('ex_admin_description', admin_trans('machine_ctrl_log.description'))
             ->attrs([]);
     }
 
