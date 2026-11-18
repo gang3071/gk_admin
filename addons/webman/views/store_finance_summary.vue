@@ -303,7 +303,7 @@
                     <th class="th-link" @click="scrollToDesc('desc-overview-total-out')">總出</th>
                     <th class="th-link" @click="scrollToDesc('desc-overview-profit')">利潤</th>
                     <th class="th-link" @click="scrollToDesc('desc-overview-lottery')">總彩金</th>
-                    <th class="th-link" @click="scrollToDesc('desc-overview-rtp')">RTP</th>
+                    <th class="th-link th-rtp" @click="scrollToDesc('desc-overview-rtp')">RTP</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -312,7 +312,7 @@
                     <td class="val-expense">{{ fmtExpense(reportData.overview.total_out) }}</td>
                     <td :class="profitClass(reportData.overview.profit)">{{ fmtNumSign(reportData.overview.profit) }}</td>
                     <td class="val-expense">{{ fmtExpense(reportData.overview.total_lottery) }}</td>
-                    <td :class="rtpClass(reportData.overview.rtp)">{{ fmtPct(reportData.overview.rtp) }}</td>
+                    <td :class="['td-rtp', rtpClass(reportData.overview.rtp)]">{{ fmtPct(reportData.overview.rtp) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -363,8 +363,8 @@
                     <th class="th-link" @click="scrollToDesc('desc-electronic-win')">電子總贏分</th>
                     <th class="th-link th-player-diff" @click="scrollToDesc('desc-electronic-diff')">玩家輸贏<span class="note-small">以平台盈虧展示</span></th>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-lottery')">電子彩金</th>
-                    <th class="th-link" @click="scrollToDesc('desc-electronic-rtp')">RTP</th>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-reverse-water')">返水<span class="note-small">含未領取</span></th>
+                    <th class="th-link th-rtp" @click="scrollToDesc('desc-electronic-rtp')">RTP</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -373,8 +373,8 @@
                     <td class="val-expense">{{ fmtExpense(reportData.electronic.total_win) }}</td>
                     <td :class="['td-player-diff', profitClass(-reportData.electronic.player_diff)]">{{ fmtNumSign(-reportData.electronic.player_diff) }}</td>
                     <td class="val-expense">{{ fmtExpense(reportData.electronic.lottery) }}</td>
-                    <td :class="rtpClass(reportData.electronic.rtp)">{{ fmtPct(reportData.electronic.rtp) }}</td>
                     <td class="val-expense">{{ fmtExpense(reportData.electronic.reverse_water_pool) }}</td>
+                    <td :class="['td-rtp', rtpClass(reportData.electronic.rtp)]">{{ fmtPct(reportData.electronic.rtp) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -418,7 +418,7 @@
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-updown-rtp')">上下點RTP</td>
-                    <td :class="rtpClass(reportData.slot.offline.up_down_rtp)">{{ fmtPct(reportData.slot.offline.up_down_rtp) }}</td>
+                    <td :class="['td-rtp', rtpClass(reportData.slot.offline.up_down_rtp)]">{{ fmtPct(reportData.slot.offline.up_down_rtp) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-pressure')">斯洛總押分</td>
@@ -434,7 +434,7 @@
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-press-rtp')">押得RTP</td>
-                    <td :class="rtpClass(reportData.slot.offline.press_score_rtp)">{{ fmtPct(reportData.slot.offline.press_score_rtp) }}</td>
+                    <td :class="['td-rtp', rtpClass(reportData.slot.offline.press_score_rtp)]">{{ fmtPct(reportData.slot.offline.press_score_rtp) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-reverse-water')">返水<span class="note-small">含未領取</span></td>
@@ -468,7 +468,7 @@
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-rtp')">RTP</td>
-                    <td :class="rtpClass(reportData.steel_ball.offline.rtp)">{{ fmtPct(reportData.steel_ball.offline.rtp) }}</td>
+                    <td :class="['td-rtp', rtpClass(reportData.steel_ball.offline.rtp)]">{{ fmtPct(reportData.steel_ball.offline.rtp) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-reverse-water')">返水<span class="note-small">含未領取</span></td>
@@ -518,7 +518,7 @@
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-updown-rtp')">上下點RTP</td>
-                    <td :class="rtpClass(reportData.slot.online.up_down_rtp)">{{ fmtPct(reportData.slot.online.up_down_rtp) }}</td>
+                    <td :class="['td-rtp', rtpClass(reportData.slot.online.up_down_rtp)]">{{ fmtPct(reportData.slot.online.up_down_rtp) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-pressure')">斯洛總押分</td>
@@ -534,7 +534,7 @@
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-press-rtp')">押得RTP</td>
-                    <td :class="rtpClass(reportData.slot.online.press_score_rtp)">{{ fmtPct(reportData.slot.online.press_score_rtp) }}</td>
+                    <td :class="['td-rtp', rtpClass(reportData.slot.online.press_score_rtp)]">{{ fmtPct(reportData.slot.online.press_score_rtp) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-reverse-water')">返水<span class="note-small">含未領取</span></td>
@@ -568,7 +568,7 @@
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-rtp')">RTP</td>
-                    <td :class="rtpClass(reportData.steel_ball.online.rtp)">{{ fmtPct(reportData.steel_ball.online.rtp) }}</td>
+                    <td :class="['td-rtp', rtpClass(reportData.steel_ball.online.rtp)]">{{ fmtPct(reportData.steel_ball.online.rtp) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-reverse-water')">返水<span class="note-small">含未領取</span></td>
@@ -1346,6 +1346,10 @@ export default {
 /* ── 玩家輸贏：方向與平台視角相反，特殊標記 ── */
 .th-player-diff { background: #fff7e6 !important; border-left: 2px solid #ffa940 !important; border-right: 2px solid #ffa940 !important; }
 .td-player-diff { background: #fff7e6; border-left: 2px solid #ffa940 !important; border-right: 2px solid #ffa940 !important; font-style: italic; }
+
+/* ── RTP 特殊標記 ── */
+.th-rtp { background: #e6fffb !important; border-left: 2px solid #36cfc9 !important; border-right: 2px solid #36cfc9 !important; color: #006d75 !important; }
+.td-rtp { background: #e6fffb; border-left: 2px solid #36cfc9 !important; border-right: 2px solid #36cfc9 !important; font-weight: 600; }
 
 /* ── Tab 2 vertical table (钢珠/斯洛) ── */
 .vertical-table { width: 100%; }
