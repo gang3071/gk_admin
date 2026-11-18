@@ -846,9 +846,10 @@
                 <div class="desc-item-name">推廣紅利</div>
                 <div class="desc-item-body">玩家下注時累積給其上級推廣人的紅利金額，按線上/線下機台分別統計。<br>
                   <span class="desc-source">player_game_log SUM(parent_cashback_amount)</span>
+                </div>
               </div>
 
-            </div>
+            </div><!-- /tab2-desc-content -->
           </div><!-- /tab2-desc-panel -->
 
         </div><!-- /tab2-main -->
