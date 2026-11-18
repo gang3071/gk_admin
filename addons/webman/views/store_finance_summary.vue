@@ -308,10 +308,10 @@
                 </thead>
                 <tbody>
                   <tr>
-                    <td>{{ fmtNum(reportData.overview.total_in) }}</td>
-                    <td>{{ fmtNum(reportData.overview.total_out) }}</td>
-                    <td :class="profitClass(reportData.overview.profit)">{{ fmtNum(reportData.overview.profit) }}</td>
-                    <td>{{ fmtNum(reportData.overview.total_lottery) }}</td>
+                    <td class="val-income">{{ fmtIncome(reportData.overview.total_in) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.overview.total_out) }}</td>
+                    <td :class="profitClass(reportData.overview.profit)">{{ fmtNumSign(reportData.overview.profit) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.overview.total_lottery) }}</td>
                     <td>{{ fmtPct(reportData.overview.rtp) }}</td>
                   </tr>
                 </tbody>
@@ -331,23 +331,23 @@
                     <th class="th-link" @click="scrollToDesc('desc-welfare-experience')">體驗券</th>
                     <th class="th-link" @click="scrollToDesc('desc-welfare-welfare')">福利券</th>
                     <th class="th-link" @click="scrollToDesc('desc-welfare-lottery-ticket')">摸彩獎</th>
-                    <th class="th-link" @click="scrollToDesc('desc-welfare-reverse-water')">返水</th>
-                    <th class="th-link" @click="scrollToDesc('desc-welfare-children-cashback')">推廣紅利</th>
+                    <th class="th-link" @click="scrollToDesc('desc-welfare-reverse-water')">返水<span class="note-small">含未領取</span></th>
+                    <th class="th-link" @click="scrollToDesc('desc-welfare-children-cashback')">推廣紅利<span class="note-small">含未領取</span></th>
                     <th class="subtotal-col th-link" @click="scrollToDesc('desc-welfare-subtotal')">小計</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td>{{ fmtNum(reportData.welfare.vip_birthday) }}</td>
-                    <td>{{ fmtNum(reportData.welfare.vip_upgrade) }}</td>
-                    <td>{{ fmtNum(reportData.welfare.vip_daily_login) }}</td>
-                    <td>{{ fmtNum(reportData.welfare.activity_give) }}</td>
-                    <td>{{ fmtNum(reportData.welfare.experience_coupon) }}</td>
-                    <td>{{ fmtNum(reportData.welfare.welfare_coupon) }}</td>
-                    <td>{{ fmtNum(reportData.welfare.lottery_ticket) }}</td>
-                    <td>{{ fmtNum(reportData.welfare.reverse_water_pool) }}</td>
-                    <td>{{ fmtNum(reportData.welfare.children_cashback) }}</td>
-                    <td class="subtotal-col">{{ fmtNum(reportData.welfare.subtotal) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.welfare.vip_birthday) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.welfare.vip_upgrade) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.welfare.vip_daily_login) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.welfare.activity_give) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.welfare.experience_coupon) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.welfare.welfare_coupon) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.welfare.lottery_ticket) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.welfare.reverse_water_pool) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.welfare.children_cashback) }}</td>
+                    <td class="subtotal-col val-expense">{{ fmtExpense(reportData.welfare.subtotal) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -364,17 +364,17 @@
                     <th class="th-link" @click="scrollToDesc('desc-electronic-diff')">玩家輸贏</th>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-lottery')">電子彩金</th>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-rtp')">RTP</th>
-                    <th class="th-link" @click="scrollToDesc('desc-electronic-reverse-water')">返水</th>
+                    <th class="th-link" @click="scrollToDesc('desc-electronic-reverse-water')">返水<span class="note-small">含未領取</span></th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td>{{ fmtNum(reportData.electronic.total_bet) }}</td>
-                    <td>{{ fmtNum(reportData.electronic.total_win) }}</td>
-                    <td :class="profitClass(reportData.electronic.player_diff)">{{ fmtNum(reportData.electronic.player_diff) }}</td>
-                    <td>{{ fmtNum(reportData.electronic.lottery) }}</td>
+                    <td class="val-income">{{ fmtIncome(reportData.electronic.total_bet) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.electronic.total_win) }}</td>
+                    <td :class="profitClassInv(reportData.electronic.player_diff)">{{ fmtNumSign(reportData.electronic.player_diff) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.electronic.lottery) }}</td>
                     <td>{{ fmtPct(reportData.electronic.rtp) }}</td>
-                    <td>{{ fmtNum(reportData.electronic.reverse_water_pool) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.electronic.reverse_water_pool) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -398,23 +398,23 @@
                   <tr>
                     <td class="row-label" rowspan="12">斯洛</td>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-up')">斯洛總上點</td>
-                    <td>{{ fmtNum(reportData.slot.offline.up_point) }}</td>
+                    <td class="val-income">{{ fmtIncome(reportData.slot.offline.up_point) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-down')">斯洛總下點</td>
-                    <td>{{ fmtNum(reportData.slot.offline.down_point) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.slot.offline.down_point) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-subtotal')">上下點小計</td>
-                    <td>{{ fmtNum(reportData.slot.offline.subtotal) }}</td>
+                    <td :class="profitClass(reportData.slot.offline.subtotal)">{{ fmtNumSign(reportData.slot.offline.subtotal) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-lottery')">斯洛彩金</td>
-                    <td>{{ fmtNum(reportData.slot.offline.lottery) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.slot.offline.lottery) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-profit')">總盈虧</td>
-                    <td :class="profitClass(reportData.slot.offline.total_profit)">{{ fmtNum(reportData.slot.offline.total_profit) }}</td>
+                    <td :class="profitClass(reportData.slot.offline.total_profit)">{{ fmtNumSign(reportData.slot.offline.total_profit) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-updown-rtp')">上下點RTP</td>
@@ -430,53 +430,53 @@
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-press-profit')">押得總盈虧</td>
-                    <td :class="profitClass(reportData.slot.offline.press_score_profit)">{{ fmtNum(reportData.slot.offline.press_score_profit) }}</td>
+                    <td :class="profitClassInv(reportData.slot.offline.press_score_profit)">{{ fmtNumSign(reportData.slot.offline.press_score_profit) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-press-rtp')">押得RTP</td>
                     <td>{{ fmtPct(reportData.slot.offline.press_score_rtp) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-reverse-water')">返水</td>
-                    <td>{{ fmtNum(reportData.slot.offline.reverse_water_pool) }}</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-reverse-water')">返水<span class="note-small">含未領取</span></td>
+                    <td class="val-expense">{{ fmtExpense(reportData.slot.offline.reverse_water_pool) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-children-cashback')">推廣紅利</td>
-                    <td>{{ fmtNum(reportData.slot.offline.children_cashback) }}</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-children-cashback')">推廣紅利<span class="note-small">含未領取</span></td>
+                    <td class="val-expense">{{ fmtExpense(reportData.slot.offline.children_cashback) }}</td>
                   </tr>
                   <!-- 鋼珠線下 -->
                   <tr class="section-divider">
                     <td class="row-label" rowspan="8">鋼珠</td>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-up')">鋼珠總上點</td>
-                    <td>{{ fmtNum(reportData.steel_ball.offline.up_point) }}</td>
+                    <td class="val-income">{{ fmtIncome(reportData.steel_ball.offline.up_point) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-down')">鋼珠總下點</td>
-                    <td>{{ fmtNum(reportData.steel_ball.offline.down_point) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.steel_ball.offline.down_point) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-subtotal')">上下點小計</td>
-                    <td>{{ fmtNum(reportData.steel_ball.offline.subtotal) }}</td>
+                    <td :class="profitClass(reportData.steel_ball.offline.subtotal)">{{ fmtNumSign(reportData.steel_ball.offline.subtotal) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-lottery')">鋼珠彩金</td>
-                    <td>{{ fmtNum(reportData.steel_ball.offline.lottery) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.steel_ball.offline.lottery) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-profit')">鋼珠總盈虧</td>
-                    <td :class="profitClass(reportData.steel_ball.offline.total_profit)">{{ fmtNum(reportData.steel_ball.offline.total_profit) }}</td>
+                    <td :class="profitClass(reportData.steel_ball.offline.total_profit)">{{ fmtNumSign(reportData.steel_ball.offline.total_profit) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-rtp')">RTP</td>
                     <td>{{ fmtPct(reportData.steel_ball.offline.rtp) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-reverse-water')">返水</td>
-                    <td>{{ fmtNum(reportData.steel_ball.offline.reverse_water_pool) }}</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-reverse-water')">返水<span class="note-small">含未領取</span></td>
+                    <td class="val-expense">{{ fmtExpense(reportData.steel_ball.offline.reverse_water_pool) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-children-cashback')">推廣紅利</td>
-                    <td>{{ fmtNum(reportData.steel_ball.offline.children_cashback) }}</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-children-cashback')">推廣紅利<span class="note-small">含未領取</span></td>
+                    <td class="val-expense">{{ fmtExpense(reportData.steel_ball.offline.children_cashback) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -498,23 +498,23 @@
                   <tr>
                     <td class="row-label" rowspan="12">斯洛</td>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-up')">斯洛總上點</td>
-                    <td>{{ fmtNum(reportData.slot.online.up_point) }}</td>
+                    <td class="val-income">{{ fmtIncome(reportData.slot.online.up_point) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-down')">斯洛總下點</td>
-                    <td>{{ fmtNum(reportData.slot.online.down_point) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.slot.online.down_point) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-subtotal')">上下點小計</td>
-                    <td>{{ fmtNum(reportData.slot.online.subtotal) }}</td>
+                    <td :class="profitClass(reportData.slot.online.subtotal)">{{ fmtNumSign(reportData.slot.online.subtotal) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-lottery')">斯洛彩金</td>
-                    <td>{{ fmtNum(reportData.slot.online.lottery) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.slot.online.lottery) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-profit')">總盈虧</td>
-                    <td :class="profitClass(reportData.slot.online.total_profit)">{{ fmtNum(reportData.slot.online.total_profit) }}</td>
+                    <td :class="profitClass(reportData.slot.online.total_profit)">{{ fmtNumSign(reportData.slot.online.total_profit) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-updown-rtp')">上下點RTP</td>
@@ -530,53 +530,53 @@
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-press-profit')">押得總盈虧</td>
-                    <td :class="profitClass(reportData.slot.online.press_score_profit)">{{ fmtNum(reportData.slot.online.press_score_profit) }}</td>
+                    <td :class="profitClassInv(reportData.slot.online.press_score_profit)">{{ fmtNumSign(reportData.slot.online.press_score_profit) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-press-rtp')">押得RTP</td>
                     <td>{{ fmtPct(reportData.slot.online.press_score_rtp) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-reverse-water')">返水</td>
-                    <td>{{ fmtNum(reportData.slot.online.reverse_water_pool) }}</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-reverse-water')">返水<span class="note-small">含未領取</span></td>
+                    <td class="val-expense">{{ fmtExpense(reportData.slot.online.reverse_water_pool) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-children-cashback')">推廣紅利</td>
-                    <td>{{ fmtNum(reportData.slot.online.children_cashback) }}</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-slot-children-cashback')">推廣紅利<span class="note-small">含未領取</span></td>
+                    <td class="val-expense">{{ fmtExpense(reportData.slot.online.children_cashback) }}</td>
                   </tr>
                   <!-- 鋼珠線上 -->
                   <tr class="section-divider">
                     <td class="row-label" rowspan="8">鋼珠</td>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-up')">鋼珠總上點</td>
-                    <td>{{ fmtNum(reportData.steel_ball.online.up_point) }}</td>
+                    <td class="val-income">{{ fmtIncome(reportData.steel_ball.online.up_point) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-down')">鋼珠總下點</td>
-                    <td>{{ fmtNum(reportData.steel_ball.online.down_point) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.steel_ball.online.down_point) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-subtotal')">上下點小計</td>
-                    <td>{{ fmtNum(reportData.steel_ball.online.subtotal) }}</td>
+                    <td :class="profitClass(reportData.steel_ball.online.subtotal)">{{ fmtNumSign(reportData.steel_ball.online.subtotal) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-lottery')">鋼珠彩金</td>
-                    <td>{{ fmtNum(reportData.steel_ball.online.lottery) }}</td>
+                    <td class="val-expense">{{ fmtExpense(reportData.steel_ball.online.lottery) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-profit')">鋼珠總盈虧</td>
-                    <td :class="profitClass(reportData.steel_ball.online.total_profit)">{{ fmtNum(reportData.steel_ball.online.total_profit) }}</td>
+                    <td :class="profitClass(reportData.steel_ball.online.total_profit)">{{ fmtNumSign(reportData.steel_ball.online.total_profit) }}</td>
                   </tr>
                   <tr>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-rtp')">RTP</td>
                     <td>{{ fmtPct(reportData.steel_ball.online.rtp) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-reverse-water')">返水</td>
-                    <td>{{ fmtNum(reportData.steel_ball.online.reverse_water_pool) }}</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-reverse-water')">返水<span class="note-small">含未領取</span></td>
+                    <td class="val-expense">{{ fmtExpense(reportData.steel_ball.online.reverse_water_pool) }}</td>
                   </tr>
                   <tr>
-                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-children-cashback')">推廣紅利</td>
-                    <td>{{ fmtNum(reportData.steel_ball.online.children_cashback) }}</td>
+                    <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-children-cashback')">推廣紅利<span class="note-small">含未領取</span></td>
+                    <td class="val-expense">{{ fmtExpense(reportData.steel_ball.online.children_cashback) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -1116,10 +1116,32 @@ export default {
       const n = Number(val) || 0;
       return n.toFixed(2) + '%';
     },
+    fmtIncome(val) {
+      const n = Number(val) || 0;
+      if (n === 0) return '0.00';
+      return '+' + n.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    },
+    fmtExpense(val) {
+      const n = Number(val) || 0;
+      if (n === 0) return '0.00';
+      return '-' + n.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    },
+    fmtNumSign(val) {
+      const n = Number(val) || 0;
+      if (n === 0) return '0.00';
+      const abs = Math.abs(n).toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return (n > 0 ? '+' : '-') + abs;
+    },
     profitClass(val) {
       const n = Number(val);
       if (n > 0) return 'profit-positive';
       if (n < 0) return 'profit-negative';
+      return '';
+    },
+    profitClassInv(val) {
+      const n = Number(val);
+      if (n > 0) return 'profit-negative';
+      if (n < 0) return 'profit-positive';
       return '';
     },
     handleDetailSearch() {
@@ -1310,6 +1332,11 @@ export default {
 /* ── Tab 2 profit colors ── */
 .profit-positive { color: #389e0d; font-weight: 600; }
 .profit-negative { color: #cf1322; font-weight: 600; }
+
+/* ── Tab 2 income / expense colors ── */
+.val-income  { color: #389e0d; font-weight: 600; }
+.val-expense { color: #cf1322; font-weight: 600; }
+.note-small  { display: block; font-size: 10px; font-weight: 400; color: #8c8c8c; line-height: 1.3; }
 
 /* ── Tab 2 vertical table (钢珠/斯洛) ── */
 .vertical-table { width: 100%; }
