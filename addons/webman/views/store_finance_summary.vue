@@ -272,6 +272,7 @@
                 style="width: 420px;"
                 :placeholder="['開始時間', '結束時間']"
                 :disabled="!!detailDateType"
+                :disabled-date="detailDisabledDate"
               />
 
               <a-button type="primary" :loading="detailLoading" @click="handleDetailSearch">查詢</a-button>
@@ -1163,9 +1164,21 @@ export default {
       if (n === 0) return '';
       return n < 100 ? 'profit-positive' : 'profit-negative';
     },
+    detailDisabledDate(current) {
+      if (!current) return false;
+      const cutoff = new Date();
+      cutoff.setDate(1);
+      cutoff.setMonth(cutoff.getMonth() - 2);
+      cutoff.setHours(0, 0, 0, 0);
+      return current.valueOf() < cutoff.getTime();
+    },
     handleDetailSearch() {
       if (!this.detailForm.store_id) {
         this.$message.warning('請先選擇門店');
+        return;
+      }
+      if (!this.detailDateType && (!this.detailDateRange || !this.detailDateRange[0])) {
+        this.$message.warning('請選擇時間類型或查詢時間範圍');
         return;
       }
 

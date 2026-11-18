@@ -235,6 +235,10 @@ class ChannelStoreFinanceSummaryController
             return json(['code' => 400, 'msg' => '請選擇門店']);
         }
 
+        if (empty($dateType) && (empty($start) || empty($end))) {
+            return json(['code' => 400, 'msg' => '請選擇時間類型或查詢時間範圍']);
+        }
+
         $store = AdminUser::query()
             ->where('id', $storeId)
             ->where('department_id', $admin->department_id)
