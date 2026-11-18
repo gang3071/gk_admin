@@ -585,7 +585,9 @@
           </div><!-- /v-else-if reportData -->
 
           <!-- 空状态 -->
-          <a-empty v-else-if="detailSearched" description="暫無數據" />
+          <div v-else-if="detailSearched" style="text-align: center; padding: 60px;">
+            <a-empty description="暫無數據" />
+          </div>
           </div><!-- /finance-summary -->
           </div><!-- /tab2-result-wrap -->
 
