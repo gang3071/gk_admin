@@ -104,6 +104,9 @@ class ChannelStoreFinanceSummaryController
                 // ── Tab 2：單店詳細報表（新功能）──
                 'store_options'     => $this->getDetailStoreOptions($admin->department_id),
                 'detail_search_url' => 'ex-admin/addons-webman-controller-ChannelStoreFinanceSummaryController/searchDetail',
+                // ── 頁面標題欄 ──
+                'page_title'  => '門店財務匯總 報表',
+                'breadcrumbs' => ['渠道後台', '門店財務匯總'],
             ]);
     }
 

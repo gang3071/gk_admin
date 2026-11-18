@@ -1,4 +1,19 @@
 <template>
+  <div>
+    <!-- 頁面頂部標題欄 -->
+    <div class="ex-tools">
+      <div class="ex-tools-left">
+        <span class="ex-page-title">{{ titleMain }}</span>
+        <a-divider v-if="titleSub" type="vertical" class="title-divider" />
+        <span v-if="titleSub" class="ex-page-sub">{{ titleSub }}</span>
+      </div>
+      <div class="ex-tools-right">
+        <a-breadcrumb v-if="breadcrumbs && breadcrumbs.length" class="ex-breadcrumb">
+          <a-breadcrumb-item v-for="(item, i) in breadcrumbs" :key="i">{{ item }}</a-breadcrumb-item>
+        </a-breadcrumb>
+      </div>
+    </div>
+
   <div class="page-wrap">
     <a-tabs v-model:activeKey="activeTab" type="card">
 
@@ -866,7 +881,8 @@
       </a-tab-pane>
 
     </a-tabs>
-  </div>
+  </div><!-- /page-wrap -->
+  </div><!-- /outer -->
 </template>
 
 <script>
@@ -894,6 +910,14 @@ export default {
     detail_search_url: {
       type: String,
       default: ''
+    },
+    page_title: {
+      type: String,
+      default: '門店財務匯總 報表'
+    },
+    breadcrumbs: {
+      type: Array,
+      default: () => []
     },
   },
   data() {
@@ -947,6 +971,14 @@ export default {
     };
   },
   computed: {
+    titleMain() {
+      const parts = (this.page_title || '').split(' ');
+      return parts.length > 1 ? parts.slice(0, -1).join(' ') : this.page_title;
+    },
+    titleSub() {
+      const parts = (this.page_title || '').split(' ');
+      return parts.length > 1 ? parts[parts.length - 1] : '';
+    },
     filteredStores() {
       if (!this.form.agentId) return this.stores;
       return this.stores.filter(s => s.agentId === this.form.agentId);
@@ -1219,6 +1251,23 @@ export default {
 </script>
 
 <style scoped>
+/* ── 頂部工具栏 ── */
+.ex-tools {
+  background: #fff;
+  padding: 10px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: nowrap;
+  min-height: 46px;
+}
+.ex-tools-left  { flex-shrink: 0; display: flex; align-items: center; }
+.ex-tools-right { flex-shrink: 0; display: flex; align-items: center; overflow: hidden; max-width: 60%; }
+.ex-page-title  { font-size: 14px; font-weight: 600; color: rgba(0,0,0,.85); white-space: nowrap; }
+.ex-page-sub    { font-size: 13px; color: rgba(0,0,0,.55); white-space: nowrap; }
+.title-divider  { height: 1em; margin: 0 8px; border-color: rgba(0,0,0,.2); }
+.ex-breadcrumb  { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 /* ── 整体布局：只提供外边距，不限高度，让 a-tabs 自然渲染 ── */
 .page-wrap   { padding: 16px; }
 .search-card { margin-bottom: 12px; }
