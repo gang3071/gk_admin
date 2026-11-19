@@ -11,7 +11,7 @@ return [
     'machine_info' => 'Machine information',
     'player_wallet_info' => 'Player wallet',
     'machine_data' => 'Machine data',
-    'no_player' => 'No Player (Physical Button)',
+    'no_player' => 'No Player',
     'fields' => [
         'id' => 'number',
         'game_id' => 'Game classification',

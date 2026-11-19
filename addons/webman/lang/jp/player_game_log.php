@@ -11,7 +11,7 @@ return [
     'machine_info' => 'マシン情報',
     'player_wallet_info' => 'プレイヤーウォレット',
     'machine_data' => 'マシンデータ',
-    'no_player' => 'プレイヤーなし（物理ボタン）',
+    'no_player' => 'プレイヤーなし',
     'fields' => [
         'id' => '番号',
         'game_id' => 'ゲーム分類',

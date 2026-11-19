@@ -11,7 +11,7 @@ return [
     'machine_info' => '機台資訊',
     'player_wallet_info' => '玩家錢包',
     'machine_data' => '機台數據',
-    'no_player' => '無玩家（實體按鍵）',
+    'no_player' => '無玩家',
     'fields' => [
         'id' => '編號',
         'game_id' => '遊戲分類',
