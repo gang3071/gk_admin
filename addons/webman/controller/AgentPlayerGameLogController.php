@@ -77,17 +77,9 @@ class AgentPlayerGameLogController
                 $grid->model()->where('action', $exAdminFilter['action']);
             }
             if (!empty($exAdminFilter['source_type'])) {
-                $machineSource = (int) $exAdminFilter['source_type'];
-                $machineModel  = plugin()->webman->config('database.machine_model');
-                $matchIds = $machineModel::withTrashed()->where('machine_source', $machineSource)->pluck('id')->all();
-                $grid->model()->where(function ($q) use ($matchIds, $machineSource) {
-                    $q->whereIn('machine_id', $matchIds);
-                    if ($machineSource) {
-                        $q->orWhere(function ($q2) use ($machineSource) {
-                            $q2->where('machine_id', 0)->where('source_type', $machineSource);
-                        });
-                    }
-                });
+                $machineModel = plugin()->webman->config('database.machine_model');
+                $machineIds = $machineModel::withTrashed()->where('machine_source', $exAdminFilter['source_type'])->pluck('id');
+                $grid->model()->whereIn('machine_id', $machineIds);
             }
             if (!empty($exAdminFilter['action_type'])) {
                 switch ($exAdminFilter['action_type']) {
@@ -284,7 +276,7 @@ class AgentPlayerGameLogController
                 $val,
                 PlayerGameLog $data
             ) {
-                $machineSource = $data->machine->machine_source ?? $val;
+                $machineSource = $data->machine->machine_source ?? null;
                 if ($machineSource == \addons\webman\model\Machine::MACHINE_SOURCE_OFFLINE) {
                     return Tag::create(admin_trans('machine.machine_source.offline'))->color('purple');
                 }
