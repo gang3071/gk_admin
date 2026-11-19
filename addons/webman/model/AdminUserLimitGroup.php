@@ -122,8 +122,8 @@ class AdminUserLimitGroup extends Model
                 }
             }
 
-            // 2. 清理平台限红组配置缓存（ATG/RSG/DG等平台）
-            if (in_array(strtoupper($platformCode), ['ATG', 'RSG', 'DG'])) {
+            // 2. 清理平台限红组配置缓存（ATG/ATG2/ATG3/RSG/DG等平台）
+            if (in_array(strtoupper($platformCode), ['ATG', 'ATG2', 'ATG3', 'RSG', 'DG'])) {
                 $platformLimitConfigKey = "platform_limit_configs:{$platformId}";
                 $redis->del($platformLimitConfigKey);
             }

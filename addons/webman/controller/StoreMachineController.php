@@ -759,13 +759,15 @@ class StoreMachineController
 
             $form->hidden('store_id')->value($storeId);
 
-            // 获取ATG、RSG和DG平台
-            $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
-            $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
-            $dgPlatform = GamePlatform::query()->where('code', 'DG')->where('status', 1)->first();
+            // 获取所有支持限红组的平台
+            $atgPlatform  = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
+            $atg2Platform = GamePlatform::query()->where('code', 'ATG2')->where('status', 1)->first();
+            $atg3Platform = GamePlatform::query()->where('code', 'ATG3')->where('status', 1)->first();
+            $rsgPlatform  = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
+            $dgPlatform   = GamePlatform::query()->where('code', 'DG')->where('status', 1)->first();
 
-            if (!$atgPlatform && !$rsgPlatform && !$dgPlatform) {
-                $form->push(Html::markdown('><font size=2 color="#999">暂无可用的游戏平台（ATG/RSG/DG）</font>'));
+            if (!$atgPlatform && !$atg2Platform && !$atg3Platform && !$rsgPlatform && !$dgPlatform) {
+                $form->push(Html::markdown('><font size=2 color="#999">暂无可用的游戏平台（ATG/ATG2/ATG3/RSG/DG）</font>'));
             } else {
                 // ATG平台配置
                 if ($atgPlatform) {
@@ -778,6 +780,32 @@ class StoreMachineController
                         ->options($atgOptions)
                         ->value($atgConfig ? $atgConfig->limit_group_id : null)
                         ->help('选择ATG平台的限红组，选择「不配置限红组」将清除该平台的限红配置');
+                }
+
+                // ATG2平台配置
+                if ($atg2Platform) {
+                    $form->divider()->content('ATG2 平台限红组配置');
+
+                    $atg2Config = $existingConfigs->get($atg2Platform->id);
+                    $atg2Options = ['' => '不配置限红组'] + $this->getLimitGroupOptionsForPlatform($atg2Platform->id);
+
+                    $form->select('atg2_limit_group_id', "限红组 ({$atg2Platform->name})")
+                        ->options($atg2Options)
+                        ->value($atg2Config ? $atg2Config->limit_group_id : null)
+                        ->help('选择ATG2平台的限红组，选择「不配置限红组」将清除该平台的限红配置');
+                }
+
+                // ATG3平台配置
+                if ($atg3Platform) {
+                    $form->divider()->content('ATG3 平台限红组配置');
+
+                    $atg3Config = $existingConfigs->get($atg3Platform->id);
+                    $atg3Options = ['' => '不配置限红组'] + $this->getLimitGroupOptionsForPlatform($atg3Platform->id);
+
+                    $form->select('atg3_limit_group_id', "限红组 ({$atg3Platform->name})")
+                        ->options($atg3Options)
+                        ->value($atg3Config ? $atg3Config->limit_group_id : null)
+                        ->help('选择ATG3平台的限红组，选择「不配置限红组」将清除该平台的限红配置');
                 }
 
                 // RSG平台配置
@@ -827,10 +855,12 @@ class StoreMachineController
             return message_error('店家ID不能为空');
         }
 
-        // 获取ATG、RSG和DG平台
-        $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
-        $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
-        $dgPlatform = GamePlatform::query()->where('code', 'DG')->where('status', 1)->first();
+        // 获取所有支持限红组的平台
+        $atgPlatform  = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
+        $atg2Platform = GamePlatform::query()->where('code', 'ATG2')->where('status', 1)->first();
+        $atg3Platform = GamePlatform::query()->where('code', 'ATG3')->where('status', 1)->first();
+        $rsgPlatform  = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
+        $dgPlatform   = GamePlatform::query()->where('code', 'DG')->where('status', 1)->first();
 
         DB::beginTransaction();
         try {
@@ -850,6 +880,38 @@ class StoreMachineController
                     $updatedCount++;
                 } else {
                     $errors[] = "ATG: {$result['message']}";
+                }
+            }
+
+            // 处理ATG2平台配置
+            if ($atg2Platform) {
+                $result = $this->savePlatformLimitGroup(
+                    $storeId,
+                    $atg2Platform->id,
+                    $atg2Platform->code,
+                    $data['atg2_limit_group_id'] ?? null
+                );
+
+                if ($result['success']) {
+                    $updatedCount++;
+                } else {
+                    $errors[] = "ATG2: {$result['message']}";
+                }
+            }
+
+            // 处理ATG3平台配置
+            if ($atg3Platform) {
+                $result = $this->savePlatformLimitGroup(
+                    $storeId,
+                    $atg3Platform->id,
+                    $atg3Platform->code,
+                    $data['atg3_limit_group_id'] ?? null
+                );
+
+                if ($result['success']) {
+                    $updatedCount++;
+                } else {
+                    $errors[] = "ATG3: {$result['message']}";
                 }
             }
 
