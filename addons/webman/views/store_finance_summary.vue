@@ -306,6 +306,7 @@
                     <th class="th-link" @click="scrollToDesc('desc-overview-profit')">利潤</th>
                     <th class="th-link" @click="scrollToDesc('desc-overview-lottery')">總彩金</th>
                     <th class="th-link th-rtp" @click="scrollToDesc('desc-overview-rtp')">RTP</th>
+                    <th class="th-link" @click="scrollToDesc('desc-overview-unredeemed')">未核銷</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -315,6 +316,7 @@
                     <td :class="profitClass(reportData.overview.profit)">{{ fmtNumSign(reportData.overview.profit) }}</td>
                     <td class="val-expense">{{ fmtExpense(reportData.overview.total_lottery) }}</td>
                     <td :class="['td-rtp', rtpClass(reportData.overview.rtp)]">{{ fmtPct(reportData.overview.rtp) }}</td>
+                    <td :class="profitClass(reportData.overview.unredeemed)">{{ fmtNumSign(reportData.overview.unredeemed) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -639,6 +641,15 @@
               <div class="desc-item" id="desc-overview-rtp" :class="{ 'desc-item-active': activeDescId === 'desc-overview-rtp' }">
                 <div class="desc-item-name">RTP</div>
                 <div class="desc-item-body">= 總出 ÷ 總入 × 100%<br>反映玩家對門店的資金回吐率，越高對玩家越有利。</div>
+              </div>
+              <div class="desc-item" id="desc-overview-unredeemed" :class="{ 'desc-item-active': activeDescId === 'desc-overview-unredeemed' }">
+                <div class="desc-item-name">未核銷</div>
+                <div class="desc-item-body">=（櫃台開票 + 儲值機購票 + 投鈔）−（後台核銷 + 機台核銷）<br>
+                  <b>票/鈔流入</b>：櫃台開票＝開分票、有效狀態、無玩家歸屬、來源為空或購票；儲值機購票＝開分票、來源為購票；投鈔＝玩家投幣入機台。<br>
+                  <b>已核銷</b>：後台核銷＝所有票種後台使用；機台核銷＝洗分票機台使用。<br>
+                  出票與投鈔按發生時間歸屬查詢區間，核銷按核銷時間（scanned_at）歸屬，跨期核銷會產生負數。<br>
+                  <span class="desc-source">口徑同「店家分潤報表」：ticket_record / player_delivery_record</span>
+                </div>
               </div>
 
               <a-divider style="margin:8px 0" />

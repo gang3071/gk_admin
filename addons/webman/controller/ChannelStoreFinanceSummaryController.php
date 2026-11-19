@@ -264,6 +264,7 @@ class ChannelStoreFinanceSummaryController
         }
 
         $overviewData      = $this->queryOverviewData($playerIds, $start, $end, $dateType);
+        $unredeemedData    = $this->queryUnredeemedData($playerIds, $storeId, $start, $end, $dateType);
         $welfareData       = $this->queryWelfareData($playerIds, $start, $end, $dateType);
         $couponData        = $this->queryCouponData($storeId, $start, $end, $dateType);
         $machineDelivery   = $this->queryMachineDeliveryData($playerIds, $storeId, $start, $end, $dateType);
@@ -281,7 +282,7 @@ class ChannelStoreFinanceSummaryController
         $slotPressure      = $this->querySlotPressureScoreData($playerIds, $storeId, $start, $end, $dateType);
 
         return json(['code' => 200, 'data' => $this->buildReportData(
-            $overviewData, $welfareData, $couponData, $machineDelivery,
+            $overviewData, $unredeemedData, $welfareData, $couponData, $machineDelivery,
             $electronicGame, $electronicLottery, $machineLottery, $slotPressure
         )]);
     }
@@ -428,6 +429,74 @@ class ChannelStoreFinanceSummaryController
         return [
             'total_in'  => (float)$totalIn,
             'total_out' => (float)$totalOut,
+        ];
+    }
+
+    /**
+     * 查询未核销数据：未核销 = (柜台开票 + 储值机购票 + 投钞) - (后台核销 + 机台核销)
+     *
+     * 口径与店家分润报表 ChannelStoreProfitReportController 一致：
+     * - 出票侧（柜台开票/储值机购票）按出票时间 created_at 归属；
+     * - 投钞走 player_delivery_record type=23，按 created_at 归属；
+     * - 核销侧（后台核销/机台核销）按核销时间 scanned_at 归属，跨期核销会产生负数。
+     *
+     * @return array 未核销及其分项
+     */
+    private function queryUnredeemedData(array $playerIds, int $storeId, string $start, string $end, string $dateType = ''): array
+    {
+        $purchase = TicketRecord::SOURCE_TYPE_PURCHASE;
+
+        // 出票侧：柜台开票 + 储值机购票（开分票、有效状态）
+        $ticketQuery = TicketRecord::query()
+            ->where('store_admin_id', $storeId)
+            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->whereIn('status', [
+                TicketRecord::STATUS_NORMAL,
+                TicketRecord::STATUS_BACKEND_USED,
+                TicketRecord::STATUS_MACHINE_USED,
+            ])
+            ->selectRaw("
+                COALESCE(SUM(CASE WHEN (`player_id` = 0 OR `player_id` IS NULL) AND (`source_type` IS NULL OR `source_type` = '{$purchase}') THEN `score` ELSE 0 END), 0) AS counter_ticket_amount,
+                COALESCE(SUM(CASE WHEN `source_type` = '{$purchase}' THEN `score` ELSE 0 END), 0) AS storage_ticket_purchase
+            ");
+        $this->applyCreatedAtFilter($ticketQuery, $start, $end, $dateType);
+        $ticketRow = $ticketQuery->first();
+
+        // 核销侧：后台核销（所有票种 status=2）+ 机台核销（洗分票 status=3）
+        $redeemQuery = TicketRecord::query()
+            ->where('store_admin_id', $storeId)
+            ->selectRaw("
+                COALESCE(SUM(CASE WHEN `status` = " . TicketRecord::STATUS_BACKEND_USED . " THEN `score` ELSE 0 END), 0) AS redeem_amount,
+                COALESCE(SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END), 0) AS redeem_machine_amount
+            ");
+        $this->applyTimeFilter($redeemQuery, 'scanned_at', $dateType ?: null, $start, $end);
+        $redeemRow = $redeemQuery->first();
+
+        // 投钞
+        $machinePutQuery = PlayerDeliveryRecord::query()
+            ->whereIn('player_id', $playerIds)
+            ->where('type', PlayerDeliveryRecord::TYPE_MACHINE);
+        $this->applyCreatedAtFilter($machinePutQuery, $start, $end, $dateType);
+        $machinePutPoint = (float)$machinePutQuery->sum('amount');
+
+        $counterTicket         = (float)($ticketRow->counter_ticket_amount ?? 0);
+        $storageTicketPurchase = (float)($ticketRow->storage_ticket_purchase ?? 0);
+        $redeemAmount          = (float)($redeemRow->redeem_amount ?? 0);
+        $redeemMachineAmount   = (float)($redeemRow->redeem_machine_amount ?? 0);
+
+        // 总入 = 后台开票 + 储值购票 + 投钞；总出 = 已核销（后台核销 + 机台核销）
+        $totalIn  = bcadd(bcadd((string)$counterTicket, (string)$storageTicketPurchase, 2), (string)$machinePutPoint, 2);
+        $totalOut = bcadd((string)$redeemAmount, (string)$redeemMachineAmount, 2);
+
+        return [
+            'counter_ticket_amount'   => $counterTicket,
+            'storage_ticket_purchase' => $storageTicketPurchase,
+            'machine_put_point'       => $machinePutPoint,
+            'redeem_amount'           => $redeemAmount,
+            'redeem_machine_amount'   => $redeemMachineAmount,
+            'total_in'                => (float)$totalIn,
+            'total_out'               => (float)$totalOut,
+            'unredeemed'              => (float)bcsub($totalIn, $totalOut, 2),
         ];
     }
 
@@ -682,6 +751,7 @@ class ChannelStoreFinanceSummaryController
 
     private function buildReportData(
         array $overviewData,
+        array $unredeemedData,
         array $welfareData,
         array $couponData,
         array $machineDelivery,
@@ -788,6 +858,8 @@ class ChannelStoreFinanceSummaryController
                 'profit'        => (float)$totalProfit,
                 'total_lottery' => (float)$totalLottery,
                 'rtp'           => $this->calcRtp((float)$totalOut, (float)$totalIn),
+                // 未核销 = (柜台开票 + 储值机购票 + 投钞) - (后台核销 + 机台核销)
+                'unredeemed'    => (float)($unredeemedData['unredeemed'] ?? 0),
             ],
             'welfare' => [
                 'vip_birthday'       => $vipBirthday,
@@ -891,7 +963,7 @@ class ChannelStoreFinanceSummaryController
         ];
 
         return [
-            'overview'   => ['total_in' => 0, 'total_out' => 0, 'profit' => 0, 'total_lottery' => 0, 'rtp' => 0],
+            'overview'   => ['total_in' => 0, 'total_out' => 0, 'profit' => 0, 'total_lottery' => 0, 'rtp' => 0, 'unredeemed' => 0],
             'welfare'    => ['vip_birthday' => 0, 'vip_upgrade' => 0, 'vip_daily_login' => 0, 'activity_give' => 0, 'experience_coupon' => 0, 'welfare_coupon' => 0, 'lottery_ticket' => 0, 'reverse_water_pool' => 0, 'children_cashback' => 0, 'subtotal' => 0],
             'electronic' => ['total_bet' => 0, 'total_win' => 0, 'player_diff' => 0, 'lottery' => 0, 'rtp' => 0, 'reverse_water_pool' => 0],
             'steel_ball' => [
