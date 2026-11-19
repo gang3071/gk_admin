@@ -11,7 +11,7 @@ return [
     'machine_info' => '機台資訊',
     'player_wallet_info' => '玩家錢包',
     'machine_data' => '機台數據',
-    'no_player' => '無玩家（實體按鍵）',
+    'no_player' => '無玩家',
     'fields' => [
         'id' => '編號',
         'game_id' => '遊戲分類',
@@ -77,8 +77,8 @@ return [
         PlayerGameLog::ACTION_DOWN => '下分',
     ],
     'source_type' => [
-        PlayerGameLog::SOURCE_TYPE_ONLINE => '線上系統',
-        PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON => '線下實體按鍵',
+        PlayerGameLog::SOURCE_TYPE_ONLINE => '線上機台',
+        PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON => '線下機台',
     ],
     'ctrl_log'       => '控制日誌',
     'ctrl_log_title' => '機台控制日誌',

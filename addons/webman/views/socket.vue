@@ -57,11 +57,6 @@
       </a-skeleton>
     </div>
   </a-drawer>
-  <audio controls="controls" hidden muted src="/audio/activity_examine.mp3" ref="activity_examine_audio"></audio>
-  <audio controls="controls" hidden muted src="/audio/lottery_examine.mp3" ref="lottery_examine_audio"></audio>
-  <audio controls="controls" hidden muted src="/audio/recharge_examine.mp3" ref="recharge_examine_audio"></audio>
-  <audio controls="controls" hidden muted src="/audio/withdraw_examine.mp3" ref="withdraw_examine_audio"></audio>
-  <audio controls="controls" hidden muted src="/audio/dish_order.mp3" ref="dish_order_audio"></audio>
 </template>
 <style>
 .action_content {
@@ -339,8 +334,18 @@ export default {
         // 使用管理员预先生成的语音文件undefined
         this.addToVoiceQueue(levelConfig.url);
       } else if (levelConfig?.text) {
-        // 还未生成语音文件时，降级用浏览器TTS播报文字
+        // 还未生成语音文件时，降级用浏览器TTS，包一个 blob 入队让其走队列
         const utterance = new SpeechSynthesisUtterance(levelConfig.text);
+        // TTS 无法直接入队，标记占位先暂停队列后播报
+        this.isPlayingVoice = true;
+        utterance.onend = () => {
+          this.isPlayingVoice = false;
+          this.playNextVoice();
+        };
+        utterance.onerror = () => {
+          this.isPlayingVoice = false;
+          this.playNextVoice();
+        };
         window.speechSynthesis.speak(utterance);
       }
     },
@@ -371,7 +376,7 @@ export default {
       });
 
       // 語音播報
-      this.startPlay('dish_order');
+      this.addToVoiceQueue('/audio/dish_order.mp3');
     },
 
     /**
@@ -405,27 +410,27 @@ export default {
       // 创建音频元素
       const audio = new Audio(voiceUrl);
 
-      // 播报结束后，等待3秒再播报下一个
-      audio.onended = () => {
-        setTimeout(() => {
-          this.playNextVoice();
-        }, 3000); // 间隔3秒
+      // 防止 onerror 与 play().catch 同时触发导致队列推进两次
+      let advanced = false;
+      const advance = (delay) => {
+        if (advanced) return;
+        advanced = true;
+        setTimeout(() => this.playNextVoice(), delay);
       };
+
+      // 播报结束后，等待3秒再播报下一个
+      audio.onended = () => advance(3000);
 
       // 播报失败，直接播报下一个
       audio.onerror = (error) => {
         console.error('语音播报失败:', error);
-        setTimeout(() => {
-          this.playNextVoice();
-        }, 1000); // 失败后1秒播报下一个
+        advance(1000);
       };
 
       // 开始播放
       audio.play().catch((error) => {
         console.error('播放语音失败:', error);
-        setTimeout(() => {
-          this.playNextVoice();
-        }, 1000);
+        advance(1000);
       });
     },
 
@@ -450,8 +455,7 @@ export default {
               title = messages[lang].message.player_create_withdraw_order;
               router = '/ex-admin/addons-webman-controller-ChannelWithdrawRecordController/examineList';
               params = content.tradeno;
-              // 语言播报
-              that.startPlay('withdraw_examine');
+              that.addToVoiceQueue('/audio/withdraw_examine.mp3');
               that.openNotification(title, router, description, params);
             }
             break;
@@ -460,8 +464,7 @@ export default {
               title = messages[lang].message.player_examine_recharge_order;
               router = '/ex-admin/addons-webman-controller-ChannelRechargeRecordController/examineList';
               params = content.tradeno;
-              // 语言播报
-              that.startPlay('recharge_examine');
+              that.addToVoiceQueue('/audio/recharge_examine.mp3');
               that.openNotification(title, router, description, params);
             }
             break;
@@ -473,8 +476,7 @@ export default {
                 router = '/ex-admin/addons-webman-controller-ChannelPlayerActivityRecordController/examine';
               }
               params = content.id;
-              // 语言播报
-              that.startPlay('activity_examine');
+              that.addToVoiceQueue('/audio/activity_examine.mp3');
               that.openNotification(title, router, description, params);
             }
             break;
@@ -486,8 +488,7 @@ export default {
                 router = '/ex-admin/addons-webman-controller-ChannelPlayerLotteryRecordController/auditList';
               }
               params = content.id;
-              // 语言播报
-              that.startPlayLottery();
+              that.addToVoiceQueue('/audio/lottery_examine.mp3');
               that.openNotification(title, router, description, params);
             }
             break;
@@ -546,25 +547,10 @@ export default {
         },
       });
     },
-    async startPlay(v) {
-      this.$nextTick(() => {
-        this.$refs[`${v}_audio`].muted = false;
-        this.$refs[`${v}_audio`].currentTime = 0;
-        this.$refs[`${v}_audio`].play();
-      })
-    },
-    async startPlayLottery() {
-      this.$nextTick(() => {
-        this.$refs.lottery_examine_audio.muted = false;
-        this.$refs.lottery_examine_audio.currentTime = 0;
-        this.$refs.lottery_examine_audio.play();
-      })
-    },
     startPlayVoiceBroadcast(base64, mime) {
       try {
         const src = `data:${mime || 'audio/wav'};base64,${base64}`;
-        const audio = new Audio(src);
-        audio.play().catch(() => {});
+        this.addToVoiceQueue(src);
       } catch (e) {}
     },
     showModal() {
