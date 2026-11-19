@@ -78,8 +78,8 @@ return [
         PlayerGameLog::ACTION_DOWN => 'Lower Score',
     ],
     'source_type' => [
-        PlayerGameLog::SOURCE_TYPE_ONLINE => 'Online System',
-        PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON => 'Physical Button',
+        PlayerGameLog::SOURCE_TYPE_ONLINE => 'Online Machine',
+        PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON => 'Offline Machine',
     ],
     'ctrl_log'       => 'Control Log',
     'ctrl_log_title' => 'Machine Control Log',

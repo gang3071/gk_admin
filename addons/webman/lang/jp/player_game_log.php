@@ -77,8 +77,8 @@ return [
         PlayerGameLog::ACTION_DOWN => '下分',
     ],
     'source_type' => [
-        PlayerGameLog::SOURCE_TYPE_ONLINE => 'オンラインシステム',
-        PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON => '物理ボタン',
+        PlayerGameLog::SOURCE_TYPE_ONLINE => 'オンライン機台',
+        PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON => 'オフライン機台',
     ],
     'ctrl_log'       => '制御ログ',
     'ctrl_log_title' => 'マシン制御ログ',

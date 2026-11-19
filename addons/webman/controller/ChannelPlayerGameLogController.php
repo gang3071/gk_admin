@@ -43,7 +43,7 @@ class ChannelPlayerGameLogController
             // 修复后：只加载必要的关联，并严格限制字段
             $grid->model()->with([
                 'player:id,uuid,name,department_id,store_admin_id',  // 只加载需要的字段
-                'machine:id,code,label_id,producer_id',       // 只加载需要的字段（name 通过 machineLabel 访问器获取）
+                'machine:id,code,label_id,producer_id,machine_source', // 只加载需要的字段（name 通过 machineLabel 访问器获取）
                 'machine.machineLabel:id,name',                // 嵌套加载但限制字段
                 'machine.producer:id,name',                    // 嵌套加载但限制字段
             ]);
@@ -239,15 +239,15 @@ class ChannelPlayerGameLogController
                         return '';
                 }
             })->align('center');
-            $grid->column('source_type', admin_trans('player_game_log.fields.source_type'))->display(function (
+            $grid->column('source_type', admin_trans('machine.fields.machine_source'))->display(function (
                 $val,
                 PlayerGameLog $data
             ) {
-                if ($val == PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON) {
-                    return Tag::create(admin_trans('player_game_log.source_type.' . $val))->color('#ff6b00');
-                } else {
-                    return Tag::create(admin_trans('player_game_log.source_type.' . $val))->color('#52c41a');
+                $machineSource = $data->machine->machine_source ?? null;
+                if ($machineSource == \addons\webman\model\Machine::MACHINE_SOURCE_OFFLINE) {
+                    return Tag::create(admin_trans('machine.machine_source.offline'))->color('purple');
                 }
+                return Tag::create(admin_trans('machine.machine_source.online'))->color('blue');
             })->align('center');
             $grid->column('chip_amount',
                 admin_trans('player_game_log.fields.chip_amount'))->sortable()->align('center');
@@ -337,10 +337,10 @@ class ChannelPlayerGameLogController
                     ->showSearch()
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
-                    ->placeholder(admin_trans('player_game_log.fields.source_type'))
+                    ->placeholder(admin_trans('machine.fields.machine_source'))
                     ->options([
-                        PlayerGameLog::SOURCE_TYPE_ONLINE => admin_trans('player_game_log.source_type.' . PlayerGameLog::SOURCE_TYPE_ONLINE),
-                        PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON => admin_trans('player_game_log.source_type.' . PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON)
+                        \addons\webman\model\Machine::MACHINE_SOURCE_ONLINE => admin_trans('machine.machine_source.online'),
+                        \addons\webman\model\Machine::MACHINE_SOURCE_OFFLINE => admin_trans('machine.machine_source.offline'),
                     ]);
                 SelectGroup::create();
                 $filter->in()->cascaderSingle('machine.cate_id')
@@ -426,7 +426,10 @@ class ChannelPlayerGameLogController
             $query->where('action', $exAdminFilter['action']);
         }
         if (!empty($exAdminFilter['source_type'])) {
-            $query->where('source_type', $exAdminFilter['source_type']);
+            $machineSource = $exAdminFilter['source_type'];
+            $query->whereHas('machine', function ($query) use ($machineSource) {
+                $query->where('machine_source', $machineSource);
+            });
         }
         if (!empty($exAdminFilter['action_type'])) {
             switch ($exAdminFilter['action_type']) {
