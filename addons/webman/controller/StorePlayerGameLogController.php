@@ -76,7 +76,11 @@ class StorePlayerGameLogController
                 $grid->model()->where('action', $exAdminFilter['action']);
             }
             if (!empty($exAdminFilter['source_type'])) {
-                $grid->model()->where('source_type', $exAdminFilter['source_type']);
+                $machineModel = plugin()->webman->config('database.machine_model');
+                $machineIds = $machineModel::withTrashed()
+                    ->where('machine_source', $exAdminFilter['source_type'])
+                    ->pluck('id');
+                $grid->model()->whereIn('machine_id', $machineIds);
             }
             if (!empty($exAdminFilter['action_type'])) {
                 switch ($exAdminFilter['action_type']) {
