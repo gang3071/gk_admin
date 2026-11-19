@@ -263,8 +263,7 @@ class ChannelStoreFinanceSummaryController
             return json(['code' => 200, 'data' => $this->buildEmptyData()]);
         }
 
-        $overviewData      = $this->queryOverviewData($playerIds, $start, $end, $dateType);
-        $unredeemedData    = $this->queryUnredeemedData($playerIds, $storeId, $start, $end, $dateType);
+        $overviewData      = $this->queryOverviewData($playerIds, $storeId, $start, $end, $dateType);
         $welfareData       = $this->queryWelfareData($playerIds, $start, $end, $dateType);
         $couponData        = $this->queryCouponData($storeId, $start, $end, $dateType);
         $machineDelivery   = $this->queryMachineDeliveryData($playerIds, $storeId, $start, $end, $dateType);
@@ -282,7 +281,7 @@ class ChannelStoreFinanceSummaryController
         $slotPressure      = $this->querySlotPressureScoreData($playerIds, $storeId, $start, $end, $dateType);
 
         return json(['code' => 200, 'data' => $this->buildReportData(
-            $overviewData, $unredeemedData, $welfareData, $couponData, $machineDelivery,
+            $overviewData, $welfareData, $couponData, $machineDelivery,
             $electronicGame, $electronicLottery, $machineLottery, $slotPressure
         )]);
     }
@@ -397,106 +396,81 @@ class ChannelStoreFinanceSummaryController
     // ================================================================
 
     /**
-     * 查询总入/总出数据：总入=投钞(type=23)+充值(type=6)，总出=提现(type=7)
-     * @return array ['total_in' => float, 'total_out' => float]
+     * 查询總覽数据，口径与店家分润报表 ChannelStoreProfitReportController 完全一致：
+     * - 总入 = 开分 + 开票
+     *   开分 = 人工开分(type=6 source=artificial_recharge) + 储值机储值(type=23 source=storage_recharge)
+     *   开票 = 开分票出票额（ticket_type=1、有效状态、含玩家票与柜台/购票票）
+     * - 总出 = 洗分 + 核销
+     *   洗分 = type=7 source=channel_withdrawal；核销 = 所有票种 status=2 后台使用
+     * - 未核销 = 出卷 - 后台核销 - 机台核销 + 柜台核销 - 已拆分/已合并
+     *   出卷 = type=7 source=ticket_redeem（洗分出票）
+     *
+     * 时间归属：出票/出卷/拆并按 created_at，核销按 scanned_at（核销时间）。
+     *
+     * @return array ['total_in' => float, 'total_out' => float, 'unredeemed' => float]
      */
-    private function queryOverviewData(array $playerIds, string $start, string $end, string $dateType = ''): array
+    private function queryOverviewData(array $playerIds, int $storeId, string $start, string $end, string $dateType = ''): array
     {
-        $query = PlayerDeliveryRecord::query()
+        // 钱包侧：开分 / 洗分 / 出卷
+        $deliveryQuery = PlayerDeliveryRecord::query()
             ->whereIn('player_id', $playerIds)
-            ->whereIn('type', [
-                PlayerDeliveryRecord::TYPE_MACHINE,    // 23 投钞
-                PlayerDeliveryRecord::TYPE_RECHARGE,   // 6  充值/开分
-                PlayerDeliveryRecord::TYPE_WITHDRAWAL, // 7  提现/洗分
-            ])
-            ->selectRaw('`type`, COALESCE(SUM(`amount`), 0) as total')
-            ->groupBy('type');
-
-        $this->applyCreatedAtFilter($query, $start, $end, $dateType);
-
-        $byType = [];
-        foreach ($query->get() as $row) {
-            $byType[(int)$row->type] = (float)$row->total;
-        }
-
-        $totalIn = bcadd(
-            (string)($byType[PlayerDeliveryRecord::TYPE_MACHINE]   ?? 0.0),
-            (string)($byType[PlayerDeliveryRecord::TYPE_RECHARGE]  ?? 0.0),
-            2
-        );
-        $totalOut = (string)($byType[PlayerDeliveryRecord::TYPE_WITHDRAWAL] ?? 0.0);
-
-        return [
-            'total_in'  => (float)$totalIn,
-            'total_out' => (float)$totalOut,
-        ];
-    }
-
-    /**
-     * 查询未核销数据：未核销 = (柜台开票 + 储值机购票 + 投钞) - (后台核销 + 机台核销)
-     *
-     * 口径与店家分润报表 ChannelStoreProfitReportController 一致：
-     * - 出票侧（柜台开票/储值机购票）按出票时间 created_at 归属；
-     * - 投钞走 player_delivery_record type=23，按 created_at 归属；
-     * - 核销侧（后台核销/机台核销）按核销时间 scanned_at 归属，跨期核销会产生负数。
-     *
-     * @return array 未核销及其分项
-     */
-    private function queryUnredeemedData(array $playerIds, int $storeId, string $start, string $end, string $dateType = ''): array
-    {
-        $purchase = TicketRecord::SOURCE_TYPE_PURCHASE;
-
-        // 出票侧：柜台开票 + 储值机购票（开分票、有效状态）
-        $ticketQuery = TicketRecord::query()
-            ->where('store_admin_id', $storeId)
-            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
-            ->whereIn('status', [
-                TicketRecord::STATUS_NORMAL,
-                TicketRecord::STATUS_BACKEND_USED,
-                TicketRecord::STATUS_MACHINE_USED,
-            ])
             ->selectRaw("
-                COALESCE(SUM(CASE WHEN (`player_id` = 0 OR `player_id` IS NULL) AND (`source_type` IS NULL OR `source_type` = '{$purchase}') THEN `score` ELSE 0 END), 0) AS counter_ticket_amount,
-                COALESCE(SUM(CASE WHEN `source_type` = '{$purchase}' THEN `score` ELSE 0 END), 0) AS storage_ticket_purchase
+                COALESCE(SUM(CASE WHEN (`type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " AND `source` = 'artificial_recharge') OR (`type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " AND `source` = 'storage_recharge') THEN `amount` ELSE 0 END), 0) AS open_score_amount,
+                COALESCE(SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `source` = 'channel_withdrawal' THEN `amount` ELSE 0 END), 0) AS channel_withdrawal_amount,
+                COALESCE(SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `source` = 'ticket_redeem' THEN `amount` ELSE 0 END), 0) AS ticket_redeem_amount
             ");
-        $this->applyCreatedAtFilter($ticketQuery, $start, $end, $dateType);
-        $ticketRow = $ticketQuery->first();
+        $this->applyCreatedAtFilter($deliveryQuery, $start, $end, $dateType);
+        $deliveryRow = $deliveryQuery->first();
 
-        // 核销侧：后台核销（所有票种 status=2）+ 机台核销（洗分票 status=3）
+        // 出票侧：开票 + 已拆分/已合并（按出票时间 created_at）
+        $issueQuery = TicketRecord::query()
+            ->where('store_admin_id', $storeId)
+            ->selectRaw("
+                COALESCE(SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` IN (" . TicketRecord::STATUS_NORMAL . "," . TicketRecord::STATUS_BACKEND_USED . "," . TicketRecord::STATUS_MACHINE_USED . ") AND ((`player_id` > 0) OR ((`player_id` = 0 OR `player_id` IS NULL) AND (`source_type` IS NULL OR `source_type` = '" . TicketRecord::SOURCE_TYPE_PURCHASE . "'))) THEN `score` ELSE 0 END), 0) AS ticket_open_score_amount,
+                COALESCE(SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` IN (" . TicketRecord::STATUS_SPLIT . "," . TicketRecord::STATUS_MERGED . ") THEN `score` ELSE 0 END), 0) AS split_merged_amount
+            ");
+        $this->applyCreatedAtFilter($issueQuery, $start, $end, $dateType);
+        $issueRow = $issueQuery->first();
+
+        // 核销侧：后台核销 + 机台核销 + 柜台核销（按核销时间 scanned_at）
         $redeemQuery = TicketRecord::query()
             ->where('store_admin_id', $storeId)
             ->selectRaw("
                 COALESCE(SUM(CASE WHEN `status` = " . TicketRecord::STATUS_BACKEND_USED . " THEN `score` ELSE 0 END), 0) AS redeem_amount,
-                COALESCE(SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END), 0) AS redeem_machine_amount
+                COALESCE(SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END), 0) AS redeem_machine_amount,
+                COALESCE(SUM(CASE WHEN (`ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` = " . TicketRecord::STATUS_BACKEND_USED . ") OR (`ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_BACKEND_USED . " AND (`player_id` = 0 OR `player_id` IS NULL)) THEN `score` ELSE 0 END), 0) AS counter_redeem_amount
             ");
         $this->applyTimeFilter($redeemQuery, 'scanned_at', $dateType ?: null, $start, $end);
         $redeemRow = $redeemQuery->first();
 
-        // 投钞
-        $machinePutQuery = PlayerDeliveryRecord::query()
-            ->whereIn('player_id', $playerIds)
-            ->where('type', PlayerDeliveryRecord::TYPE_MACHINE);
-        $this->applyCreatedAtFilter($machinePutQuery, $start, $end, $dateType);
-        $machinePutPoint = (float)$machinePutQuery->sum('amount');
-
-        $counterTicket         = (float)($ticketRow->counter_ticket_amount ?? 0);
-        $storageTicketPurchase = (float)($ticketRow->storage_ticket_purchase ?? 0);
+        $openScoreAmount       = (float)($deliveryRow->open_score_amount ?? 0);
+        $channelWithdrawal     = (float)($deliveryRow->channel_withdrawal_amount ?? 0);
+        $ticketRedeemAmount    = (float)($deliveryRow->ticket_redeem_amount ?? 0);
+        $ticketOpenScoreAmount = (float)($issueRow->ticket_open_score_amount ?? 0);
+        $splitMergedAmount     = (float)($issueRow->split_merged_amount ?? 0);
         $redeemAmount          = (float)($redeemRow->redeem_amount ?? 0);
         $redeemMachineAmount   = (float)($redeemRow->redeem_machine_amount ?? 0);
+        $counterRedeemAmount   = (float)($redeemRow->counter_redeem_amount ?? 0);
 
-        // 总入 = 后台开票 + 储值购票 + 投钞；总出 = 已核销（后台核销 + 机台核销）
-        $totalIn  = bcadd(bcadd((string)$counterTicket, (string)$storageTicketPurchase, 2), (string)$machinePutPoint, 2);
-        $totalOut = bcadd((string)$redeemAmount, (string)$redeemMachineAmount, 2);
+        // 总入 = 开分 + 开票；总出 = 洗分 + 核销
+        $totalIn  = bcadd((string)$openScoreAmount, (string)$ticketOpenScoreAmount, 2);
+        $totalOut = bcadd((string)$channelWithdrawal, (string)$redeemAmount, 2);
+
+        // 未核销 = 出卷 - 后台核销 - 机台核销 + 柜台核销 - 已拆分/已合并
+        $unredeemed = bcsub(
+            bcadd(
+                bcsub((string)$ticketRedeemAmount, bcadd((string)$redeemAmount, (string)$redeemMachineAmount, 2), 2),
+                (string)$counterRedeemAmount,
+                2
+            ),
+            (string)$splitMergedAmount,
+            2
+        );
 
         return [
-            'counter_ticket_amount'   => $counterTicket,
-            'storage_ticket_purchase' => $storageTicketPurchase,
-            'machine_put_point'       => $machinePutPoint,
-            'redeem_amount'           => $redeemAmount,
-            'redeem_machine_amount'   => $redeemMachineAmount,
-            'total_in'                => (float)$totalIn,
-            'total_out'               => (float)$totalOut,
-            'unredeemed'              => (float)bcsub($totalIn, $totalOut, 2),
+            'total_in'   => (float)$totalIn,
+            'total_out'  => (float)$totalOut,
+            'unredeemed' => (float)$unredeemed,
         ];
     }
 
@@ -729,7 +703,6 @@ class ChannelStoreFinanceSummaryController
 
     private function buildReportData(
         array $overviewData,
-        array $unredeemedData,
         array $welfareData,
         array $couponData,
         array $machineDelivery,
@@ -787,7 +760,7 @@ class ChannelStoreFinanceSummaryController
         $slotOfflinePressProfit = bcsub((string)$slotOfflinePressure, (string)$slotOfflineScore, 2);
         $slotOnlinePressProfit  = bcsub((string)$slotOnlinePressure, (string)$slotOnlineScore, 2);
 
-        // --- 總覽：总入=投钞(type=23)+充值(type=6)，总出=提现(type=7) ---
+        // --- 總覽：总入=开分+开票，总出=洗分+核销（店家分润报表口径） ---
         $totalIn  = (string)($overviewData['total_in']  ?? 0.0);
         $totalOut = (string)($overviewData['total_out'] ?? 0.0);
 
@@ -836,8 +809,8 @@ class ChannelStoreFinanceSummaryController
                 'profit'        => (float)$totalProfit,
                 'total_lottery' => (float)$totalLottery,
                 'rtp'           => $this->calcRtp((float)$totalOut, (float)$totalIn),
-                // 未核销 = (柜台开票 + 储值机购票 + 投钞) - (后台核销 + 机台核销)
-                'unredeemed'    => (float)($unredeemedData['unredeemed'] ?? 0),
+                // 未核销 = 出卷 - 后台核销 - 机台核销 + 柜台核销 - 已拆分/已合并
+                'unredeemed'    => (float)($overviewData['unredeemed'] ?? 0),
             ],
             'welfare' => [
                 'vip_birthday'       => $vipBirthday,

@@ -611,21 +611,22 @@
               <!-- 一、總覽 -->
               <div class="tab2-desc-block" id="desc-overview">
                 <div class="tab2-desc-block-title">一、總覽</div>
-                <div class="tab2-desc-text">彙總門店查詢期間錢包資金的流入與流出。</div>
+                <div class="tab2-desc-text">彙總門店查詢期間的資金流入與流出，口徑與「店家分潤報表」一致。</div>
               </div>
               <div class="desc-item" id="desc-overview-total-in" :class="{ 'desc-item-active': activeDescId === 'desc-overview-total-in' }">
                 <div class="desc-item-name">總入</div>
-                <div class="desc-item-body">= 投鈔(type=23) + 充值/開分(type=6)<br>
-                  <b>投鈔</b>：玩家向實體機台投入現金，機台硬件讀取後由 gk_work 寫入錢包，資金進機台錢箱。<br>
-                  <b>充值</b>：玩家透過 App 提交開分申請，核准後掃碼完成，錢包扣款並對應機台上點。<br>
-                  <span class="desc-source">來源：player_delivery_record type IN (23, 6)</span>
+                <div class="desc-item-body">= 開分 + 開票（同「店家分潤報表」總收入）<br>
+                  <b>開分</b>：人工開分（type=6 source=artificial_recharge）＋儲值機儲值（type=23 source=storage_recharge）。<br>
+                  <b>開票</b>：開分票出票額，含玩家票與櫃台/購票票（有效狀態），按出票時間歸屬。<br>
+                  <span class="desc-source">來源：player_delivery_record / ticket_record</span>
                 </div>
               </div>
               <div class="desc-item" id="desc-overview-total-out" :class="{ 'desc-item-active': activeDescId === 'desc-overview-total-out' }">
                 <div class="desc-item-name">總出</div>
-                <div class="desc-item-body">= 提現/洗分(type=7)<br>
-                  玩家在 App 發起洗分申請，錢包扣款並生成洗分券，門店線下現金兌現。<br>
-                  <span class="desc-source">來源：player_delivery_record type=7</span>
+                <div class="desc-item-body">= 洗分 + 核銷（同「店家分潤報表」總支出）<br>
+                  <b>洗分</b>：type=7 source=channel_withdrawal，玩家錢包洗分。<br>
+                  <b>核銷</b>：所有票種後台使用（status=2），按核銷時間歸屬。<br>
+                  <span class="desc-source">來源：player_delivery_record / ticket_record</span>
                 </div>
               </div>
               <div class="desc-item" id="desc-overview-profit" :class="{ 'desc-item-active': activeDescId === 'desc-overview-profit' }">
@@ -640,11 +641,12 @@
               </div>
               <div class="desc-item" id="desc-overview-unredeemed" :class="{ 'desc-item-active': activeDescId === 'desc-overview-unredeemed' }">
                 <div class="desc-item-name">未核銷</div>
-                <div class="desc-item-body">=（櫃台開票 + 儲值機購票 + 投鈔）−（後台核銷 + 機台核銷）<br>
-                  <b>票/鈔流入</b>：櫃台開票＝開分票、有效狀態、無玩家歸屬、來源為空或購票；儲值機購票＝開分票、來源為購票；投鈔＝玩家投幣入機台。<br>
-                  <b>已核銷</b>：後台核銷＝所有票種後台使用；機台核銷＝洗分票機台使用。<br>
-                  出票與投鈔按發生時間歸屬查詢區間，核銷按核銷時間（scanned_at）歸屬，跨期核銷會產生負數。<br>
-                  <span class="desc-source">口徑同「店家分潤報表」：ticket_record / player_delivery_record</span>
+                <div class="desc-item-body">= 出卷 − 後台核銷 − 機台核銷 + 櫃台核銷 − 已拆分/已合併（同「店家分潤報表」未核銷）<br>
+                  <b>出卷</b>：洗分出票（type=7 source=ticket_redeem），按出票時間歸屬。<br>
+                  <b>後台核銷</b>：所有票種後台使用（status=2）；<b>機台核銷</b>：洗分票機台使用（status=3）；<b>櫃台核銷</b>：開分票後台核銷＋無玩家歸屬的洗分票後台核銷，按核銷時間歸屬。<br>
+                  <b>已拆分/已合併</b>：被拆分或合併替代的原洗分票金額。<br>
+                  跨期核銷會產生負數。<br>
+                  <span class="desc-source">來源：player_delivery_record / ticket_record</span>
                 </div>
               </div>
               <div class="desc-item" id="desc-overview-rtp" :class="{ 'desc-item-active': activeDescId === 'desc-overview-rtp' }">
