@@ -406,7 +406,7 @@
                 <tbody>
                   <!-- 斯洛線下 -->
                   <tr>
-                    <td class="row-label" rowspan="12">斯洛</td>
+                    <td class="row-label" rowspan="12">斯洛<br><span class="source-tag source-tag--offline">線下</span></td>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-up')">斯洛總上點</td>
                     <td class="val-income">{{ fmtIncome(reportData.slot.offline.up_point) }}</td>
                   </tr>
@@ -456,7 +456,7 @@
                   </tr>
                   <!-- 鋼珠線下 -->
                   <tr class="section-divider">
-                    <td class="row-label" rowspan="8">鋼珠</td>
+                    <td class="row-label" rowspan="8">鋼珠<br><span class="source-tag source-tag--offline">線下</span></td>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-up')">鋼珠總上點</td>
                     <td class="val-income">{{ fmtIncome(reportData.steel_ball.offline.up_point) }}</td>
                   </tr>
@@ -506,7 +506,7 @@
                 <tbody>
                   <!-- 斯洛線上 -->
                   <tr>
-                    <td class="row-label" rowspan="12">斯洛</td>
+                    <td class="row-label" rowspan="12">斯洛<br><span class="source-tag source-tag--online">線上</span></td>
                     <td class="item-label th-link" @click="scrollToDesc('desc-slot-up')">斯洛總上點</td>
                     <td class="val-income">{{ fmtIncome(reportData.slot.online.up_point) }}</td>
                   </tr>
@@ -556,7 +556,7 @@
                   </tr>
                   <!-- 鋼珠線上 -->
                   <tr class="section-divider">
-                    <td class="row-label" rowspan="8">鋼珠</td>
+                    <td class="row-label" rowspan="8">鋼珠<br><span class="source-tag source-tag--online">線上</span></td>
                     <td class="item-label th-link" @click="scrollToDesc('desc-steel-ball-up')">鋼珠總上點</td>
                     <td class="val-income">{{ fmtIncome(reportData.steel_ball.online.up_point) }}</td>
                   </tr>
@@ -1358,6 +1358,17 @@ export default {
   background-color: #f0f5ff;
   color: #1d39c4;
 }
+.source-tag {
+  display: inline-block;
+  margin-top: 3px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.source-tag--offline { background: #fff7e6; border: 1px solid #ffd591; color: #d46b08; }
+.source-tag--online  { background: #f0f5ff; border: 1px solid #adc6ff; color: #1d39c4; }
 .subtotal-col {
   font-weight: 600;
   background-color: #f6ffed;
