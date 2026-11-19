@@ -305,8 +305,8 @@
                     <th class="th-link" @click="scrollToDesc('desc-overview-total-out')">總出</th>
                     <th class="th-link" @click="scrollToDesc('desc-overview-profit')">利潤</th>
                     <th class="th-link" @click="scrollToDesc('desc-overview-lottery')">總彩金</th>
-                    <th class="th-link th-rtp" @click="scrollToDesc('desc-overview-rtp')">RTP</th>
                     <th class="th-link" @click="scrollToDesc('desc-overview-unredeemed')">未核銷</th>
+                    <th class="th-link th-rtp" @click="scrollToDesc('desc-overview-rtp')">RTP</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -315,8 +315,8 @@
                     <td class="val-expense">{{ fmtExpense(reportData.overview.total_out) }}</td>
                     <td :class="profitClass(reportData.overview.profit)">{{ fmtNumSign(reportData.overview.profit) }}</td>
                     <td class="val-expense">{{ fmtExpense(reportData.overview.total_lottery) }}</td>
-                    <td :class="['td-rtp', rtpClass(reportData.overview.rtp)]">{{ fmtPct(reportData.overview.rtp) }}</td>
                     <td :class="profitClass(reportData.overview.unredeemed)">{{ fmtNumSign(reportData.overview.unredeemed) }}</td>
+                    <td :class="['td-rtp', rtpClass(reportData.overview.rtp)]">{{ fmtPct(reportData.overview.rtp) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -638,10 +638,6 @@
                   <span class="desc-source">來源：player_lottery_record status=COMPLETE</span>
                 </div>
               </div>
-              <div class="desc-item" id="desc-overview-rtp" :class="{ 'desc-item-active': activeDescId === 'desc-overview-rtp' }">
-                <div class="desc-item-name">RTP</div>
-                <div class="desc-item-body">= 總出 ÷ 總入 × 100%<br>反映玩家對門店的資金回吐率，越高對玩家越有利。</div>
-              </div>
               <div class="desc-item" id="desc-overview-unredeemed" :class="{ 'desc-item-active': activeDescId === 'desc-overview-unredeemed' }">
                 <div class="desc-item-name">未核銷</div>
                 <div class="desc-item-body">=（櫃台開票 + 儲值機購票 + 投鈔）−（後台核銷 + 機台核銷）<br>
@@ -650,6 +646,10 @@
                   出票與投鈔按發生時間歸屬查詢區間，核銷按核銷時間（scanned_at）歸屬，跨期核銷會產生負數。<br>
                   <span class="desc-source">口徑同「店家分潤報表」：ticket_record / player_delivery_record</span>
                 </div>
+              </div>
+              <div class="desc-item" id="desc-overview-rtp" :class="{ 'desc-item-active': activeDescId === 'desc-overview-rtp' }">
+                <div class="desc-item-name">RTP</div>
+                <div class="desc-item-body">= 總出 ÷ 總入 × 100%<br>反映玩家對門店的資金回吐率，越高對玩家越有利。</div>
               </div>
 
               <a-divider style="margin:8px 0" />
