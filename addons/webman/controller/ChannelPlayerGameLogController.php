@@ -243,7 +243,7 @@ class ChannelPlayerGameLogController
                 $val,
                 PlayerGameLog $data
             ) {
-                $machineSource = $data->machine->machine_source ?? null;
+                $machineSource = $data->machine->machine_source ?? $val;
                 if ($machineSource == \addons\webman\model\Machine::MACHINE_SOURCE_OFFLINE) {
                     return Tag::create(admin_trans('machine.machine_source.offline'))->color('purple');
                 }
@@ -426,10 +426,7 @@ class ChannelPlayerGameLogController
             $query->where('action', $exAdminFilter['action']);
         }
         if (!empty($exAdminFilter['source_type'])) {
-            $machineSource = $exAdminFilter['source_type'];
-            $query->whereHas('machine', function ($query) use ($machineSource) {
-                $query->where('machine_source', $machineSource);
-            });
+            $query->where('source_type', $exAdminFilter['source_type']);
         }
         if (!empty($exAdminFilter['action_type'])) {
             switch ($exAdminFilter['action_type']) {

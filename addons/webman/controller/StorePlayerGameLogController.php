@@ -76,10 +76,7 @@ class StorePlayerGameLogController
                 $grid->model()->where('action', $exAdminFilter['action']);
             }
             if (!empty($exAdminFilter['source_type'])) {
-                $machineSource = $exAdminFilter['source_type'];
-                $grid->model()->whereHas('machine', function ($query) use ($machineSource) {
-                    $query->where('machine_source', $machineSource);
-                });
+                $grid->model()->where('source_type', $exAdminFilter['source_type']);
             }
             if (!empty($exAdminFilter['action_type'])) {
                 switch ($exAdminFilter['action_type']) {
@@ -269,7 +266,7 @@ class StorePlayerGameLogController
                 $val,
                 PlayerGameLog $data
             ) {
-                $machineSource = $data->machine->machine_source ?? null;
+                $machineSource = $data->machine->machine_source ?? $val;
                 if ($machineSource == \addons\webman\model\Machine::MACHINE_SOURCE_OFFLINE) {
                     return Tag::create(admin_trans('machine.machine_source.offline'))->color('purple');
                 }

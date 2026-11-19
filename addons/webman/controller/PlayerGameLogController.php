@@ -243,7 +243,8 @@ class PlayerGameLogController
                 $val,
                 PlayerGameLog $data
             ) {
-                $machineSource = $data->machine->machine_source ?? null;
+                // 优先用机台的 machine_source，无机台时降级用 source_type（值相同：1=线上 2=线下）
+                $machineSource = $data->machine->machine_source ?? $val;
                 if ($machineSource == \addons\webman\model\Machine::MACHINE_SOURCE_OFFLINE) {
                     return Tag::create(admin_trans('machine.machine_source.offline'))->color('purple');
                 }
@@ -876,10 +877,7 @@ class PlayerGameLogController
             $query->where('action', $exAdminFilter['action']);
         }
         if (!empty($exAdminFilter['source_type'])) {
-            $machineSource = $exAdminFilter['source_type'];
-            $query->whereHas('machine', function ($query) use ($machineSource) {
-                $query->where('machine_source', $machineSource);
-            });
+            $query->where('source_type', $exAdminFilter['source_type']);
         }
         if (!empty($exAdminFilter['action_type'])) {
             switch ($exAdminFilter['action_type']) {
