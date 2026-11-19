@@ -788,11 +788,11 @@ class StoreMachineController
                     $noConfigLabel = admin_trans('store_machine.limit_group_form.no_config');
                     $options = ['' => $noConfigLabel] + $this->getLimitGroupOptionsForPlatform($platform->id);
 
-                    $form->divider()->content(admin_trans('store_machine.limit_group_form.section_header', ['code' => $code]));
-                    $form->select($fieldKey, admin_trans('store_machine.limit_group_form.field_label', ['name' => $platform->name]))
+                    $form->divider()->content(strtr(admin_trans('store_machine.limit_group_form.section_header'), ['{code}' => $code]));
+                    $form->select($fieldKey, strtr(admin_trans('store_machine.limit_group_form.field_label'), ['{name}' => $platform->name]))
                         ->options($options)
                         ->value($existingConfig ? $existingConfig->limit_group_id : null)
-                        ->help(admin_trans('store_machine.limit_group_form.help', ['code' => $code]));
+                        ->help(strtr(admin_trans('store_machine.limit_group_form.help'), ['{code}' => $code]));
                 }
             }
         });
