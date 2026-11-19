@@ -277,7 +277,7 @@ class ChannelStoreFinanceSummaryController
         }
         $electronicGame    = $this->queryElectronicGameData($playerIds, $eStart, $end, $dateType);
         $electronicLottery = $this->queryElectronicLotteryData($playerIds, $eStart, $end, $dateType);
-        $machineLottery    = $this->queryMachineLotteryData($playerIds, $start, $end, $dateType);
+        $machineLottery    = $this->queryMachineLotteryData($playerIds, $storeId, $start, $end, $dateType);
         $slotPressure      = $this->querySlotPressureScoreData($playerIds, $storeId, $start, $end, $dateType);
 
         return json(['code' => 200, 'data' => $this->buildReportData(
@@ -511,9 +511,16 @@ class ChannelStoreFinanceSummaryController
             ->pluck('machine_id')
             ->toArray();
 
+        // 以 channel_machine 歸屬判斷線下（優先於品類設定的 machine_source）
+        $sourceExpr = "IF(cm.machine_id IS NOT NULL, 2, COALESCE(mc.machine_source, 1))";
+
         $query = Db::table("{$pglTable} as pgl")
             ->join("{$machTable} as m", 'pgl.machine_id', '=', 'm.id')
             ->leftJoin("{$cateTable} as mc", 'm.cate_id', '=', 'mc.id')
+            ->leftJoin("{$cmTable} as cm", function ($join) use ($storeId) {
+                $join->on('m.id', '=', 'cm.machine_id')
+                     ->where('cm.store_admin_id', '=', $storeId);
+            })
             ->where('pgl.machine_id', '>', 0)
             ->whereIn('m.type', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])
             ->where(function ($q) use ($playerIds, $offlineMachineIds) {
@@ -522,12 +529,12 @@ class ChannelStoreFinanceSummaryController
                     $q->orWhereIn('pgl.machine_id', $offlineMachineIds);
                 }
             })
-            ->selectRaw("m.type AS game_type, COALESCE(mc.machine_source, 2) AS machine_source,
+            ->selectRaw("m.type AS game_type, {$sourceExpr} AS machine_source,
                          SUM(CASE WHEN pgl.action = {$openAction} THEN ABS(pgl.game_amount) ELSE 0 END) AS total_open,
                          SUM(CASE WHEN pgl.action <> {$openAction} THEN ABS(pgl.game_amount) ELSE 0 END) AS total_wash,
                          COALESCE(SUM(pgl.cashback_amount), 0) AS cashback_amount,
                          COALESCE(SUM(pgl.parent_cashback_amount), 0) AS parent_cashback_amount")
-            ->groupBy('m.type', 'mc.machine_source');
+            ->groupByRaw("m.type, {$sourceExpr}");
 
         $this->applyTimeFilter($query, 'pgl.created_at', $dateType ?: null, $start, $end);
 
@@ -580,21 +587,28 @@ class ChannelStoreFinanceSummaryController
      * 查询实体机台彩金数据，按 game_type 和 machine_source 分组
      * @return array [game_type][machine_source] => float
      */
-    private function queryMachineLotteryData(array $playerIds, string $start, string $end, string $dateType = ''): array
+    private function queryMachineLotteryData(array $playerIds, int $storeId, string $start, string $end, string $dateType = ''): array
     {
         $plrTable  = plugin()->webman->config('database.player_lottery_record_table') ?? 'player_lottery_record';
         $machTable = plugin()->webman->config('database.machine_table');
         $cateTable = plugin()->webman->config('database.machine_category_table');
+        $cmTable   = plugin()->webman->config('database.channel_machine_table');
+
+        $sourceExpr = "IF(cm.machine_id IS NOT NULL, 2, COALESCE(mc.machine_source, 1))";
 
         $query = Db::table("{$plrTable} as plr")
             ->join("{$machTable} as m", 'plr.machine_id', '=', 'm.id')
-            ->join("{$cateTable} as mc", 'm.cate_id', '=', 'mc.id')
+            ->leftJoin("{$cateTable} as mc", 'm.cate_id', '=', 'mc.id')
+            ->leftJoin("{$cmTable} as cm", function ($join) use ($storeId) {
+                $join->on('m.id', '=', 'cm.machine_id')
+                     ->where('cm.store_admin_id', '=', $storeId);
+            })
             ->whereIn('plr.player_id', $playerIds)
             ->where('plr.status', PlayerLotteryRecord::STATUS_COMPLETE)
             ->whereIn('plr.game_type', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])
             ->where('plr.machine_id', '>', 0)
-            ->selectRaw('plr.game_type, mc.machine_source, SUM(plr.amount) as total_amount')
-            ->groupBy('plr.game_type', 'mc.machine_source');
+            ->selectRaw("plr.game_type, {$sourceExpr} AS machine_source, SUM(plr.amount) as total_amount")
+            ->groupByRaw("plr.game_type, {$sourceExpr}");
 
         $this->applyTimeFilter($query, 'plr.created_at', $dateType ?: null, $start, $end);
 
@@ -627,9 +641,15 @@ class ChannelStoreFinanceSummaryController
             ->pluck('machine_id')
             ->toArray();
 
+        $sourceExpr = "IF(cm.machine_id IS NOT NULL, 2, COALESCE(mc.machine_source, 1))";
+
         $query = Db::table("{$pglTable} as pgl")
             ->join("{$machTable} as m", 'pgl.machine_id', '=', 'm.id')
             ->leftJoin("{$cateTable} as mc", 'm.cate_id', '=', 'mc.id')
+            ->leftJoin("{$cmTable} as cm", function ($join) use ($storeId) {
+                $join->on('m.id', '=', 'cm.machine_id')
+                     ->where('cm.store_admin_id', '=', $storeId);
+            })
             ->where('pgl.machine_id', '>', 0)
             ->where('m.type', GameType::TYPE_SLOT)
             ->where(function ($q) use ($playerIds, $offlineMachineIds) {
@@ -638,8 +658,8 @@ class ChannelStoreFinanceSummaryController
                     $q->orWhereIn('pgl.machine_id', $offlineMachineIds);
                 }
             })
-            ->selectRaw('COALESCE(mc.machine_source, 2) AS machine_source, COALESCE(SUM(pgl.pressure), 0) as total_pressure, COALESCE(SUM(pgl.score), 0) as total_score')
-            ->groupBy('mc.machine_source');
+            ->selectRaw("{$sourceExpr} AS machine_source, COALESCE(SUM(pgl.pressure), 0) as total_pressure, COALESCE(SUM(pgl.score), 0) as total_score")
+            ->groupByRaw($sourceExpr);
 
         $this->applyTimeFilter($query, 'pgl.created_at', $dateType ?: null, $start, $end);
 
