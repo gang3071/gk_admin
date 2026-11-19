@@ -749,7 +749,7 @@ class StoreMachineController
             ->keyBy('platform_id');
 
         return Form::create([], function (Form $form) use ($storeId, $existingConfigs) {
-            $form->title('限红组配置');
+            $form->title(admin_trans('store_machine.limit_group_form.title'));
 
             // 显式设置提交URL
             $form->url(admin_url([
@@ -777,7 +777,7 @@ class StoreMachineController
             ];
 
             if ($platforms->isEmpty()) {
-                $form->push(Html::markdown('><font size=2 color="#999">暂无可用的游戏平台（ATG/ATG2/ATG3/RSG/DG）</font>'));
+                $form->push(Html::markdown('><font size=2 color="#999">' . admin_trans('store_machine.limit_group_form.no_platform') . '</font>'));
             } else {
                 foreach ($supportedCodes as $code) {
                     $platform = $platforms->get($code);
@@ -785,13 +785,14 @@ class StoreMachineController
 
                     $fieldKey = $fieldMap[$code];
                     $existingConfig = $existingConfigs->get($platform->id);
-                    $options = ['' => '不配置限红组'] + $this->getLimitGroupOptionsForPlatform($platform->id);
+                    $noConfigLabel = admin_trans('store_machine.limit_group_form.no_config');
+                    $options = ['' => $noConfigLabel] + $this->getLimitGroupOptionsForPlatform($platform->id);
 
-                    $form->divider()->content("{$code} 平台限红组配置");
-                    $form->select($fieldKey, "限红组 ({$platform->name})")
+                    $form->divider()->content(admin_trans('store_machine.limit_group_form.section_header', ['code' => $code]));
+                    $form->select($fieldKey, admin_trans('store_machine.limit_group_form.field_label', ['name' => $platform->name]))
                         ->options($options)
                         ->value($existingConfig ? $existingConfig->limit_group_id : null)
-                        ->help("选择{$code}平台的限红组，选择「不配置限红组」将清除该平台的限红配置");
+                        ->help(admin_trans('store_machine.limit_group_form.help', ['code' => $code]));
                 }
             }
         });

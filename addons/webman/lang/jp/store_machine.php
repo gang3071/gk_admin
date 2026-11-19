@@ -112,6 +112,16 @@ return [
         'activity_config' => 'アクティビティ設定',
     ],
 
+    // リミットグループ設定フォーム
+    'limit_group_form' => [
+        'title'          => 'リミットグループ設定',
+        'no_platform'    => '利用可能なゲームプラットフォームがありません（ATG/ATG2/ATG3/RSG/DG）',
+        'section_header' => ':code プラットフォームのリミットグループ設定',
+        'field_label'    => 'リミットグループ (:name)',
+        'no_config'      => 'リミットグループなし',
+        'help'           => ':code プラットフォームのリミットグループを選択。「リミットグループなし」を選ぶと設定が削除されます',
+    ],
+
     // アクティビティ設定
     'activity_config' => [
         'title' => 'アクティビティ設定',
