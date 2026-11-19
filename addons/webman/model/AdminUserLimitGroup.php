@@ -122,11 +122,8 @@ class AdminUserLimitGroup extends Model
                 }
             }
 
-            // 2. 清理平台限红组配置缓存（ATG/ATG2/ATG3/RSG/DG等平台）
-            if (in_array(strtoupper($platformCode), ['ATG', 'ATG2', 'ATG3', 'RSG', 'DG'])) {
-                $platformLimitConfigKey = "platform_limit_configs:{$platformId}";
-                $redis->del($platformLimitConfigKey);
-            }
+            // 2. 清理平台限红组配置缓存（del对不存在的key是no-op，无需按平台code过滤）
+            $redis->del("platform_limit_configs:{$platformId}");
 
             \support\Log::info('店家限红组缓存已清理', [
                 'admin_user_id' => $adminUserId,
