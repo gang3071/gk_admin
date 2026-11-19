@@ -877,7 +877,19 @@ class PlayerGameLogController
             $query->where('action', $exAdminFilter['action']);
         }
         if (!empty($exAdminFilter['source_type'])) {
-            $query->where('source_type', $exAdminFilter['source_type']);
+            $machineSource = (int) $exAdminFilter['source_type'];
+            $machineModel  = plugin()->webman->config('database.machine_model');
+            $matchIds = $machineModel::withTrashed()->where('machine_source', $machineSource)->pluck('id')->all();
+            $query->where(function ($q) use ($matchIds, $machineSource) {
+                // 有机台：按机台的 machine_source 过滤
+                $q->whereIn('machine_id', $matchIds);
+                // 无机台（machine_id=0）：降级用 source_type
+                if ($machineSource) {
+                    $q->orWhere(function ($q2) use ($machineSource) {
+                        $q2->where('machine_id', 0)->where('source_type', $machineSource);
+                    });
+                }
+            });
         }
         if (!empty($exAdminFilter['action_type'])) {
             switch ($exAdminFilter['action_type']) {
