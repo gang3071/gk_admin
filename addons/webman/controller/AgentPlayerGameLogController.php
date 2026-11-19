@@ -76,9 +76,9 @@ class AgentPlayerGameLogController
             if (!empty($exAdminFilter['action'])) {
                 $grid->model()->where('action', $exAdminFilter['action']);
             }
-            if (!empty($exAdminFilter['source_type'])) {
+            if (!empty($exAdminFilter['machine_source_filter'])) {
                 $machineModel = plugin()->webman->config('database.machine_model');
-                $machineIds = $machineModel::withTrashed()->where('machine_source', $exAdminFilter['source_type'])->pluck('id');
+                $machineIds = $machineModel::withTrashed()->where('machine_source', $exAdminFilter['machine_source_filter'])->pluck('id');
                 $grid->model()->whereIn('machine_id', $machineIds);
             }
             if (!empty($exAdminFilter['action_type'])) {
@@ -355,7 +355,7 @@ class AgentPlayerGameLogController
                         'admin' => admin_trans('player_game_log.type.admin'),
                         'player' => admin_trans('player_game_log.type.player')
                     ]);
-                $filter->eq()->select('source_type')
+                $filter->eq()->select('machine_source_filter')
                     ->showSearch()
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
