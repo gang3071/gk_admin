@@ -116,10 +116,10 @@ return [
     'limit_group_form' => [
         'title'          => 'Limit Group Config',
         'no_platform'    => 'No available platforms (ATG/ATG2/ATG3/RSG/DG)',
-        'section_header' => ':code Platform Limit Group Config',
-        'field_label'    => 'Limit Group (:name)',
+        'section_header' => '{code} Platform Limit Group Config',
+        'field_label'    => 'Limit Group ({name})',
         'no_config'      => 'No limit group',
-        'help'           => 'Select the limit group for :code platform. Choosing "No limit group" will clear the config.',
+        'help'           => 'Select the limit group for {code} platform. Choosing "No limit group" will clear the config.',
     ],
 
     // Activity Configuration
