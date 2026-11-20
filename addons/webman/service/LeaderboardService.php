@@ -452,8 +452,9 @@ class LeaderboardService
      * Upsert 名次並刪除掉出排行的玩家
      *
      * 策略（無空窗期）：
-     *  1. upsert 新名次：有則更新 rank/score/prize_amount，無則 insert；保留 grant_status 不重置
-     *  2. 刪除不在新名次的玩家（已掉出排行）
+     *  1. upsert 排名欄位（rank/score/store_admin_id）；prize_amount 只對未領獎的 entry 更新，
+     *     已 CLAIMABLE/ISSUED 的 entry 保留原 prize_amount，避免領獎金額與通知不符
+     *  2. 有新名次：刪除掉出排行的玩家；無新名次：清空此期全部 entries
      *  3. 更新 leaderboard 統計（entry_count / settle_at）
      *
      * @param int         $leaderboardId
@@ -463,22 +464,35 @@ class LeaderboardService
      */
     private static function replaceEntries(int $leaderboardId, array $rows, string $ts, ?string $settleAt = null): void
     {
-        // 1. 先 upsert：讀者看到的始終是有資料的狀態
         if (!empty($rows)) {
+            // 1a. 先 upsert 排名欄位，不含 prize_amount（保護已領獎 entry 的原始金額）
             LeaderboardEntry::upsert(
                 $rows,
                 ['leaderboard_id', 'player_id'],
-                ['rank', 'store_admin_id', 'score', 'prize_amount', 'updated_at']
+                ['rank', 'store_admin_id', 'score', 'updated_at']
             );
-        }
 
-        // 2. 刪除掉出排行的舊 entries
-        $keepIds = array_column($rows, 'player_id');
-        $delQuery = LeaderboardEntry::query()->where('leaderboard_id', $leaderboardId);
-        if (!empty($keepIds)) {
-            $delQuery->whereNotIn('player_id', $keepIds);
+            // 1b. 按 prize_amount 分組，只更新尚未領獎（UNISSUED）的 entry
+            $groups = collect($rows)->groupBy('prize_amount');
+            foreach ($groups as $prizeAmount => $group) {
+                LeaderboardEntry::query()
+                    ->where('leaderboard_id', $leaderboardId)
+                    ->whereIn('player_id', $group->pluck('player_id')->all())
+                    ->where('grant_status', LeaderboardEntry::GRANT_STATUS_UNISSUED)
+                    ->update(['prize_amount' => $prizeAmount, 'updated_at' => $ts]);
+            }
+
+            // 2a. 只刪除不在新名次的玩家
+            LeaderboardEntry::query()
+                ->where('leaderboard_id', $leaderboardId)
+                ->whereNotIn('player_id', array_column($rows, 'player_id'))
+                ->delete();
+        } else {
+            // 2b. 無人達標：清空此期全部 entries
+            LeaderboardEntry::query()
+                ->where('leaderboard_id', $leaderboardId)
+                ->delete();
         }
-        $delQuery->delete();
 
         // 3. 更新 leaderboard 統計
         $update = ['entry_count' => count($rows), 'updated_at' => $ts];
