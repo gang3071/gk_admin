@@ -112,6 +112,7 @@ class ChannelVipLevelController
             $grid->column('birthday_bonus', admin_trans('vip_level.fields.birthday_bonus'))->align('center');
             $grid->column('upgrade_bonus', admin_trans('vip_level.fields.upgrade_bonus'))->align('center');
             $grid->column('daily_login_bonus', admin_trans('vip_level.fields.daily_login_bonus'))->align('center');
+            $grid->column('daily_login_bonus_bet_amount', admin_trans('vip_level.fields.daily_login_bonus_bet_amount'))->align('center');
             $grid->column('high_setting_machine_play_num', admin_trans('vip_level.fields.high_setting_machine_play_num'))->align('center');
             $grid->column('sort', admin_trans('vip_level.fields.sort'))->sortable()->width(80)->align('center');
 

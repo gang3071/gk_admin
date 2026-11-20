@@ -63,6 +63,18 @@ class ChannelMachineReportController
                 })
             ->get()
             ->toArray();
+        // RTP 栏目：随行注入计算值（公式与 ChannelStoreFinanceSummaryController 一致）
+        // 押得RTP = 得分 ÷ 押分（仅斯洛有押分机制）；上下點RTP = 下點 ÷ 上點（斯洛/钢珠）
+        foreach ($list as &$row) {
+            $machineType = (int)($row['machine']['type'] ?? 0);
+            $row['press_score_rtp'] = $machineType === GameType::TYPE_SLOT
+                ? $this->calcRtp((float)($row['total_score'] ?? 0), (float)($row['total_pressure'] ?? 0))
+                : null;
+            $row['up_down_rtp'] = in_array($machineType, [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL], true)
+                ? $this->calcRtp((float)($row['wash_amount'] ?? 0), (float)($row['open_amount'] ?? 0))
+                : null;
+        }
+        unset($row);
         $storeOptions = $this->storeOptions();
         // 线下机台绑定的门店（channel_machine.store_admin_id），只查当前页机台
         $channelMachineModel = plugin()->webman->config('database.channel_machine_model');
@@ -166,6 +178,12 @@ class ChannelMachineReportController
             $grid->column('total_diff', admin_trans('machine_report.fields.diff'))->sortable()->display(function ($val
             ) {
                 return floatval($val);
+            })->align('center');
+            $grid->column('press_score_rtp', admin_trans('machine_report.fields.press_score_rtp'))->display(function ($val) {
+                return $val === null ? '-' : number_format((float)$val, 2) . '%';
+            })->align('center');
+            $grid->column('up_down_rtp', admin_trans('machine_report.fields.up_down_rtp'))->display(function ($val) {
+                return $val === null ? '-' : number_format((float)$val, 2) . '%';
             })->align('center');
             $grid->column('total_turn_point',
                 admin_trans('machine_report.fields.turn_point'))->sortable()->display(function ($val) {
@@ -276,6 +294,22 @@ class ChannelMachineReportController
             $grid->attr('is_mongo_total', $total);
             $grid->attr('mongo_model', $list);
         });
+    }
+
+    /**
+     * RTP = 分子 ÷ 分母 × 100%（分母 <= 0 时为 0）
+     * 与 ChannelStoreFinanceSummaryController::calcRtp 同算法
+     * @param float $dividend
+     * @param float $divisor
+     * @return float
+     */
+    private function calcRtp(float $dividend, float $divisor): float
+    {
+        if ($divisor <= 0) {
+            return 0.0;
+        }
+
+        return round($dividend / $divisor * 100, 2);
     }
 
     /**

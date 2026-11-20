@@ -16,6 +16,7 @@ return [
     'platform'                => '厂商平台',
     'store'                   => '所属店家',
     'total_win'               => '总赢分',
+    'rtp'                     => 'RTP',
     'player_win_loss_tip'     => '正数：庄家赢（玩家输）；负数：庄家亏（玩家赢）',
     'stats' => [
         'panel_header'    => '查看统计数据',

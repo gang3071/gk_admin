@@ -22,6 +22,8 @@ return [
         'score' => 'score',
         'turn_point' => 'Number of turns',
         'diff' => 'Bet on profits and losses',
+        'press_score_rtp' => 'Bet RTP',
+        'up_down_rtp' => 'Up/Down RTP',
         'data_type' => 'Data types',
     ],
     'date_type' => [

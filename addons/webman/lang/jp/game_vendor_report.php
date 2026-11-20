@@ -16,6 +16,7 @@ return [
     'platform'                => 'ベンダープラットフォーム',
     'store'                   => '所属店舗',
     'total_win'               => '総獲得スコア',
+    'rtp'                     => 'RTP',
     'player_win_loss_tip'     => 'プラス：胴元利益（プレイヤー負け）；マイナス：胴元損失（プレイヤー勝ち）',
     'stats' => [
         'panel_header'    => '統計データを表示',
