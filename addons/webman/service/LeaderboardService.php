@@ -576,37 +576,49 @@ class LeaderboardService
     }
 
     /**
-     * 排行榜計分子查詢（遊戲記錄已結算＋未結算投注 + 上下分報表打碼量）
+     * 以 CTE 預先按玩家聚合分數（每人一行），供全站榜 / 店內榜共用
      *
-     * @return string
+     * 使用 CTE 的好處：
+     *  - UNION ALL 兩表分別 GROUP BY 後再合計，結果每人只有 1 行
+     *  - 後續 JOIN player 和 ROW_NUMBER() 處理的都是已聚合的小集合
+     *  - 避免外層查詢再做一次 GROUP BY + SUM
+     *
+     * @return string  CTE 片段（WITH player_scores AS (...)）
      */
-    private static function scoreSubquery(): string
+    private static function scoreCte(): string
     {
-        return "SELECT r.player_id, SUM(r.bet) AS score
-                FROM play_game_record r
-                WHERE r.created_at >= ? AND r.created_at < ?
-                  AND r.settlement_status IN (0, 1)
-                GROUP BY r.player_id
-                UNION ALL
-                SELECT g.player_id, SUM(g.chip_amount) AS score
-                FROM player_game_log g
-                WHERE g.created_at >= ? AND g.created_at < ?
-                GROUP BY g.player_id";
+        return "WITH player_scores AS (
+                    SELECT player_id, SUM(score) AS score
+                    FROM (
+                        SELECT r.player_id, SUM(r.bet) AS score
+                        FROM play_game_record r
+                        WHERE r.created_at >= ? AND r.created_at < ?
+                          AND r.settlement_status IN (0, 1)
+                        GROUP BY r.player_id
+                        UNION ALL
+                        SELECT g.player_id, SUM(g.chip_amount) AS score
+                        FROM player_game_log g
+                        WHERE g.created_at >= ? AND g.created_at < ?
+                        GROUP BY g.player_id
+                    ) sub
+                    GROUP BY player_id
+                    HAVING score > 0
+                )";
     }
 
     /**
      * 全站排行（取前 N）
+     * CTE 預聚合後 JOIN player，不需要外層 GROUP BY
      */
     private static function queryOverall(Carbon $start, Carbon $end): array
     {
-        $sql = "SELECT t.player_id, p.store_admin_id, SUM(t.score) AS score
-                FROM (" . self::scoreSubquery() . ") t
-                JOIN player p ON p.id = t.player_id
+        $sql = self::scoreCte() . "
+                SELECT ps.player_id, p.store_admin_id, ps.score
+                FROM player_scores ps
+                JOIN player p ON p.id = ps.player_id
                     AND p.deleted_at IS NULL
                     AND p.store_admin_id > 0
-                GROUP BY t.player_id, p.store_admin_id
-                HAVING SUM(t.score) > 0
-                ORDER BY score DESC, t.player_id ASC
+                ORDER BY ps.score DESC, ps.player_id ASC
                 LIMIT " . self::SETTLE_TOP;
 
         return Db::select($sql, self::scoreBindings($start, $end));
@@ -614,28 +626,27 @@ class LeaderboardService
 
     /**
      * 店內排行（每間店各自取前 N）
+     * CTE 預聚合後每人只有 1 行，ROW_NUMBER() 工作集最小
      */
     private static function queryByStore(Carbon $start, Carbon $end): array
     {
-        // 先在子查詢聚合分數，JOIN player 過濾無效玩家，再做視窗排名
-        $sql = "SELECT * FROM (
-                    SELECT p.store_admin_id, t.player_id, SUM(t.score) AS score,
-                           ROW_NUMBER() OVER (PARTITION BY p.store_admin_id ORDER BY SUM(t.score) DESC, t.player_id ASC) AS rn
-                    FROM (" . self::scoreSubquery() . ") t
-                    JOIN player p ON p.id = t.player_id
+        $sql = self::scoreCte() . "
+                SELECT store_admin_id, player_id, score, rn FROM (
+                    SELECT p.store_admin_id, ps.player_id, ps.score,
+                           ROW_NUMBER() OVER (PARTITION BY p.store_admin_id ORDER BY ps.score DESC, ps.player_id ASC) AS rn
+                    FROM player_scores ps
+                    JOIN player p ON p.id = ps.player_id
                         AND p.deleted_at IS NULL
                         AND p.store_admin_id > 0
-                    GROUP BY p.store_admin_id, t.player_id
-                    HAVING SUM(t.score) > 0
-                ) t2
-                WHERE t2.rn <= " . self::SETTLE_TOP . "
-                ORDER BY t2.store_admin_id ASC, t2.rn ASC";
+                ) ranked
+                WHERE rn <= " . self::SETTLE_TOP . "
+                ORDER BY store_admin_id ASC, rn ASC";
 
         return Db::select($sql, self::scoreBindings($start, $end));
     }
 
     /**
-     * 計分子查詢的綁定參數
+     * 計分 CTE 的綁定參數（start, end 各兩次，對應 play_game_record + player_game_log）
      *
      * @param Carbon $start
      * @param Carbon $end
@@ -665,23 +676,27 @@ class LeaderboardService
     }
 
     /**
-     * 鋼珠計分子查詢（以 machine_id IN 替代 JOIN machine，省一次關聯）
+     * 鋼珠計分 CTE（以 machine_id IN 替代 JOIN machine，省一次關聯）
+     * machine_id 為整數，直接內嵌 IN 清單，無 SQL 注入風險
      *
      * @param int[] $machineIds
+     * @return string CTE 片段（WITH steel_ball_scores AS (...)）
      */
-    private static function steelBallScoreSubquery(array $machineIds): string
+    private static function steelBallScoreCte(array $machineIds): string
     {
-        $in = implode(',', $machineIds);
-        return "SELECT r.player_id, SUM(r.lottery_win) AS score
-                FROM machine_lottery_record r
-                WHERE r.created_at >= ? AND r.created_at < ?
-                  AND r.machine_id IN ({$in})
-                  AND r.lottery_win > 0
-                GROUP BY r.player_id";
+        $in = implode(',', array_map('intval', $machineIds));
+        return "WITH steel_ball_scores AS (
+                    SELECT r.player_id, SUM(r.lottery_win) AS score
+                    FROM machine_lottery_record r
+                    WHERE r.created_at >= ? AND r.created_at < ?
+                      AND r.machine_id IN ({$in})
+                      AND r.lottery_win > 0
+                    GROUP BY r.player_id
+                )";
     }
 
     /**
-     * 鋼珠計分子查詢的綁定參數（start, end 各一次）
+     * 鋼珠計分 CTE 的綁定參數（start, end 各一次）
      */
     private static function steelBallScoreBindings(Carbon $start, Carbon $end): array
     {
@@ -693,6 +708,7 @@ class LeaderboardService
 
     /**
      * 鋼珠全站排行（取前 N）
+     * CTE 預聚合後每人一行，無需外層 GROUP BY
      */
     private static function queryOverallSteelBall(Carbon $start, Carbon $end): array
     {
@@ -701,14 +717,13 @@ class LeaderboardService
             return [];
         }
 
-        $sql = "SELECT t.player_id, p.store_admin_id, SUM(t.score) AS score
-                FROM (" . self::steelBallScoreSubquery($machineIds) . ") t
-                JOIN player p ON p.id = t.player_id
+        $sql = self::steelBallScoreCte($machineIds) . "
+                SELECT sbs.player_id, p.store_admin_id, sbs.score
+                FROM steel_ball_scores sbs
+                JOIN player p ON p.id = sbs.player_id
                     AND p.deleted_at IS NULL
                     AND p.store_admin_id > 0
-                GROUP BY t.player_id, p.store_admin_id
-                HAVING SUM(t.score) > 0
-                ORDER BY score DESC, t.player_id ASC
+                ORDER BY sbs.score DESC, sbs.player_id ASC
                 LIMIT " . self::SETTLE_TOP;
 
         return Db::select($sql, self::steelBallScoreBindings($start, $end));
@@ -716,6 +731,7 @@ class LeaderboardService
 
     /**
      * 鋼珠店內排行（每間店各自取前 N）
+     * CTE 預聚合後每人一行，ROW_NUMBER() 工作集最小
      */
     private static function queryByStoreSteelBall(Carbon $start, Carbon $end): array
     {
@@ -724,18 +740,17 @@ class LeaderboardService
             return [];
         }
 
-        $sql = "SELECT * FROM (
-                    SELECT p.store_admin_id, t.player_id, SUM(t.score) AS score,
-                           ROW_NUMBER() OVER (PARTITION BY p.store_admin_id ORDER BY SUM(t.score) DESC, t.player_id ASC) AS rn
-                    FROM (" . self::steelBallScoreSubquery($machineIds) . ") t
-                    JOIN player p ON p.id = t.player_id
+        $sql = self::steelBallScoreCte($machineIds) . "
+                SELECT store_admin_id, player_id, score, rn FROM (
+                    SELECT p.store_admin_id, sbs.player_id, sbs.score,
+                           ROW_NUMBER() OVER (PARTITION BY p.store_admin_id ORDER BY sbs.score DESC, sbs.player_id ASC) AS rn
+                    FROM steel_ball_scores sbs
+                    JOIN player p ON p.id = sbs.player_id
                         AND p.deleted_at IS NULL
                         AND p.store_admin_id > 0
-                    GROUP BY p.store_admin_id, t.player_id
-                    HAVING SUM(t.score) > 0
-                ) t2
-                WHERE t2.rn <= " . self::SETTLE_TOP . "
-                ORDER BY t2.store_admin_id ASC, t2.rn ASC";
+                ) ranked
+                WHERE rn <= " . self::SETTLE_TOP . "
+                ORDER BY store_admin_id ASC, rn ASC";
 
         return Db::select($sql, self::steelBallScoreBindings($start, $end));
     }
@@ -743,7 +758,13 @@ class LeaderboardService
     /**
      * VIP 總榜排行（依 VIP 等級、同等級比分數，取前 N）
      *
-     * 沒有打碼量的 VIP 也會列入，分數為 0
+     * 沒有打碼量的 VIP 也會列入，分數為 0：
+     *  - scoreCte() 以 HAVING > 0 過濾有分玩家
+     *  - LEFT JOIN 後無分數的 VIP 仍出現（ps.score IS NULL → COALESCE 0）
+     *  - 無 GROUP BY：player 為主表（每人一行），CTE ≤1 行/人，LEFT JOIN 保持一行
+     *
+     * 注意：CTE 物化為臨時表，player_id 無額外索引；LEFT JOIN 依賴 MySQL 8.0.18+
+     * 的 hash join（預設啟用），低於此版本需評估 VIP 玩家數 × CTE 行數的效能。
      *
      * @param Carbon $start
      * @param Carbon $end
@@ -751,14 +772,14 @@ class LeaderboardService
      */
     private static function queryVip(Carbon $start, Carbon $end): array
     {
-        $sql = "SELECT p.id AS player_id, p.store_admin_id, COALESCE(SUM(t.score), 0) AS score
+        $sql = self::scoreCte() . "
+                SELECT p.id AS player_id, p.store_admin_id, COALESCE(ps.score, 0) AS score
                 FROM player p
                 JOIN vip_level vl ON vl.id = p.vip_level_id
-                LEFT JOIN (" . self::scoreSubquery() . ") t ON t.player_id = p.id
+                LEFT JOIN player_scores ps ON ps.player_id = p.id
                 WHERE vl.sort >= ?
                   AND p.status = 1 AND p.deleted_at IS NULL AND p.store_admin_id > 0
-                GROUP BY p.id
-                ORDER BY vl.sort DESC, COALESCE(SUM(t.score), 0) DESC, p.id ASC
+                ORDER BY vl.sort DESC, COALESCE(ps.score, 0) DESC, p.id ASC
                 LIMIT " . self::VIP_TOP;
 
         $bindings = array_merge(self::scoreBindings($start, $end), [self::VIP_MIN_LEVEL]);
