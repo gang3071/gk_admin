@@ -10,6 +10,7 @@ use addons\webman\model\SystemSetting;
 use Carbon\Carbon;
 use support\Db;
 use support\Log;
+use Throwable;
 
 /**
  * 排行榜服務
@@ -398,7 +399,7 @@ class LeaderboardService
                 if (self::grantOne($entry, $now)) {
                     $result['notified']++;
                 }
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 $result['failed']++;
                 Log::channel('leaderboard')->error('[排行榜發獎] 單筆發放失敗', [
                     'entry_id'  => $entry->id,
@@ -457,10 +458,11 @@ class LeaderboardService
      *  2. 有新名次：刪除掉出排行的玩家；無新名次：清空此期全部 entries
      *  3. 更新 leaderboard 統計（entry_count / settle_at）
      *
-     * @param int         $leaderboardId
-     * @param array       $rows      buildEntries / buildVipEntries 的結果
-     * @param string      $ts        操作時間戳
-     * @param string|null $settleAt  定案時傳入，null 表示只是刷新當期
+     * @param int $leaderboardId
+     * @param array $rows buildEntries / buildVipEntries 的結果
+     * @param string $ts 操作時間戳
+     * @param string|null $settleAt 定案時傳入，null 表示只是刷新當期
+     * @throws Throwable
      */
     private static function replaceEntries(int $leaderboardId, array $rows, string $ts, ?string $settleAt = null): void
     {
@@ -469,7 +471,7 @@ class LeaderboardService
         try {
             if (!empty($rows)) {
                 // 1a. 先 upsert 排名欄位，不含 prize_amount（保護已領獎 entry 的原始金額）
-                LeaderboardEntry::upsert(
+                LeaderboardEntry::query()->upsert(
                     $rows,
                     ['leaderboard_id', 'player_id'],
                     ['rank', 'store_admin_id', 'score', 'updated_at']
@@ -505,7 +507,7 @@ class LeaderboardService
             Leaderboard::query()->where('id', $leaderboardId)->update($update);
 
             Db::commit();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Db::rollBack();
             throw $e;
         }
@@ -612,12 +614,15 @@ class LeaderboardService
      */
     private static function queryByStore(Carbon $start, Carbon $end): array
     {
+        // 先在子查詢聚合分數，JOIN player 過濾無效玩家，再做視窗排名
         $sql = "SELECT * FROM (
                     SELECT p.store_admin_id, t.player_id, SUM(t.score) AS score,
                            ROW_NUMBER() OVER (PARTITION BY p.store_admin_id ORDER BY SUM(t.score) DESC, t.player_id ASC) AS rn
-                    FROM player p
-                    JOIN (" . self::scoreSubquery() . ") t ON t.player_id = p.id
-                    GROUP BY p.id, t.player_id
+                    FROM (" . self::scoreSubquery() . ") t
+                    JOIN player p ON p.id = t.player_id
+                        AND p.deleted_at IS NULL
+                        AND p.store_admin_id > 0
+                    GROUP BY p.store_admin_id, t.player_id
                     HAVING SUM(t.score) > 0
                 ) t2
                 WHERE t2.rn <= " . self::SETTLE_TOP . "
@@ -694,9 +699,11 @@ class LeaderboardService
         $sql = "SELECT * FROM (
                     SELECT p.store_admin_id, t.player_id, SUM(t.score) AS score,
                            ROW_NUMBER() OVER (PARTITION BY p.store_admin_id ORDER BY SUM(t.score) DESC, t.player_id ASC) AS rn
-                    FROM player p
-                    JOIN (" . self::steelBallScoreSubquery() . ") t ON t.player_id = p.id
-                    GROUP BY p.id, t.player_id
+                    FROM (" . self::steelBallScoreSubquery() . ") t
+                    JOIN player p ON p.id = t.player_id
+                        AND p.deleted_at IS NULL
+                        AND p.store_admin_id > 0
+                    GROUP BY p.store_admin_id, t.player_id
                     HAVING SUM(t.score) > 0
                 ) t2
                 WHERE t2.rn <= " . self::SETTLE_TOP . "
