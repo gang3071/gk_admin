@@ -4,6 +4,7 @@ namespace addons\webman\service;
 
 use addons\webman\model\Leaderboard;
 use addons\webman\model\LeaderboardEntry;
+use addons\webman\model\Machine;
 use addons\webman\model\Notice;
 use addons\webman\model\Player;
 use addons\webman\model\SystemSetting;
@@ -599,8 +600,10 @@ class LeaderboardService
     private static function queryOverall(Carbon $start, Carbon $end): array
     {
         $sql = "SELECT t.player_id, p.store_admin_id, SUM(t.score) AS score
-                FROM player p
-                JOIN (" . self::scoreSubquery() . ") t ON t.player_id = p.id
+                FROM (" . self::scoreSubquery() . ") t
+                JOIN player p ON p.id = t.player_id
+                    AND p.deleted_at IS NULL
+                    AND p.store_admin_id > 0
                 GROUP BY t.player_id, p.store_admin_id
                 HAVING SUM(t.score) > 0
                 ORDER BY score DESC, t.player_id ASC
@@ -651,15 +654,28 @@ class LeaderboardService
     // ========================================
 
     /**
-     * 鋼珠計分子查詢（machine_lottery_record JOIN machine，過濾 type=2 鋼珠機）
+     * 取鋼珠機台 ID 列表（type=2），供查詢使用
+     * machine 數量少且穩定，直接用 IN 替代 JOIN，讓 MySQL 命中覆蓋索引
+     *
+     * @return int[]
      */
-    private static function steelBallScoreSubquery(): string
+    private static function steelBallMachineIds(): array
     {
+        return Machine::query()->where('type', 2)->pluck('id')->all();
+    }
+
+    /**
+     * 鋼珠計分子查詢（以 machine_id IN 替代 JOIN machine，省一次關聯）
+     *
+     * @param int[] $machineIds
+     */
+    private static function steelBallScoreSubquery(array $machineIds): string
+    {
+        $in = implode(',', $machineIds);
         return "SELECT r.player_id, SUM(r.lottery_win) AS score
                 FROM machine_lottery_record r
-                JOIN machine m ON m.id = r.machine_id
                 WHERE r.created_at >= ? AND r.created_at < ?
-                  AND m.type = 2
+                  AND r.machine_id IN ({$in})
                   AND r.lottery_win > 0
                 GROUP BY r.player_id";
     }
@@ -680,9 +696,16 @@ class LeaderboardService
      */
     private static function queryOverallSteelBall(Carbon $start, Carbon $end): array
     {
+        $machineIds = self::steelBallMachineIds();
+        if (empty($machineIds)) {
+            return [];
+        }
+
         $sql = "SELECT t.player_id, p.store_admin_id, SUM(t.score) AS score
-                FROM player p
-                JOIN (" . self::steelBallScoreSubquery() . ") t ON t.player_id = p.id
+                FROM (" . self::steelBallScoreSubquery($machineIds) . ") t
+                JOIN player p ON p.id = t.player_id
+                    AND p.deleted_at IS NULL
+                    AND p.store_admin_id > 0
                 GROUP BY t.player_id, p.store_admin_id
                 HAVING SUM(t.score) > 0
                 ORDER BY score DESC, t.player_id ASC
@@ -696,10 +719,15 @@ class LeaderboardService
      */
     private static function queryByStoreSteelBall(Carbon $start, Carbon $end): array
     {
+        $machineIds = self::steelBallMachineIds();
+        if (empty($machineIds)) {
+            return [];
+        }
+
         $sql = "SELECT * FROM (
                     SELECT p.store_admin_id, t.player_id, SUM(t.score) AS score,
                            ROW_NUMBER() OVER (PARTITION BY p.store_admin_id ORDER BY SUM(t.score) DESC, t.player_id ASC) AS rn
-                    FROM (" . self::steelBallScoreSubquery() . ") t
+                    FROM (" . self::steelBallScoreSubquery($machineIds) . ") t
                     JOIN player p ON p.id = t.player_id
                         AND p.deleted_at IS NULL
                         AND p.store_admin_id > 0
@@ -730,7 +758,7 @@ class LeaderboardService
                 WHERE vl.sort >= ?
                   AND p.status = 1 AND p.deleted_at IS NULL AND p.store_admin_id > 0
                 GROUP BY p.id
-                ORDER BY MAX(vl.sort) DESC, COALESCE(SUM(t.score), 0) DESC, p.id ASC
+                ORDER BY vl.sort DESC, COALESCE(SUM(t.score), 0) DESC, p.id ASC
                 LIMIT " . self::VIP_TOP;
 
         $bindings = array_merge(self::scoreBindings($start, $end), [self::VIP_MIN_LEVEL]);
