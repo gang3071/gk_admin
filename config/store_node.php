@@ -120,6 +120,25 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-StorePlayerController/bindPromoter',
                 'title' => '綁定推廣員',
             ],
+            // 排行榜
+            [
+                'id' => 'addons\webman\controller\StoreLeaderboardController\index',
+                'pid' => 'addons\webman\controller\StorePlayerController\index',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreLeaderboardController/index',
+                'title' => '排行榜',
+            ],
+            [
+                'id' => 'addons\webman\controller\StoreLeaderboardController\grantOne',
+                'pid' => 'addons\webman\controller\StoreLeaderboardController\index',
+                'action' => 'grantOne',
+                'method' => 'post',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreLeaderboardController/grantOne',
+                'title' => '手動派發獎勵',
+            ],
             // ── 積分操作（StorePlayerPointsController）──
             [
                 'id' => 'addons\webman\controller\StorePlayerPointsController\index',
@@ -165,145 +184,6 @@ return [
                 'group' => 'store',
                 'url' => 'ex-admin/addons-webman-controller-StorePlayerPointsController/unfreezePoints',
                 'title' => '解凍積分',
-            ],
-        ]
-    ],
-
-    // ========== 玩家管理 ==========
-    [
-        'id' => 'addons\webman\controller\ChannelPlayerController-',
-        'pid' => 0,
-        'url' => '',
-        'group' => 'store',
-        'title' => '玩家管理',
-        'children' => [
-            // 玩家列表
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\index',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/index',
-                'title' => '设备列表',
-            ],
-            // 添加玩家
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\form-post',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'form',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/form',
-                'title' => '添加玩家',
-            ],
-            // 修改玩家
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\form-put',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'form',
-                'method' => 'put',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/form',
-                'title' => '修改玩家',
-            ],
-            // 玩家钱包
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\playerWallet',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'playerWallet',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/playerWallet',
-                'title' => '玩家钱包',
-            ],
-            // 人工充值
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\artificialRecharge',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'artificialRecharge',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/artificialRecharge',
-                'title' => '人工充值',
-            ],
-            // 人工提现
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\artificialWithdrawal',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'artificialWithdrawal',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/artificialWithdrawal',
-                'title' => '人工提现',
-            ],
-            // 全部下分
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\withdrawAmountAll',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'withdrawAmountAll',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/withdrawAmountAll',
-                'title' => '全部下分',
-            ],
-            // 下分
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\withdrawAmount',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'withdrawAmount',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/withdrawAmount',
-                'title' => '下分',
-            ],
-            // 上分
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\depositAmount',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'depositAmount',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/depositAmount',
-                'title' => '上分',
-            ],
-            // 玩家银行卡
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\playerBank',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'playerBank',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/playerBank',
-                'title' => '银行卡管理',
-            ],
-            // 玩家游戏钱包
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\playerGameWallet',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'playerGameWallet',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/playerGameWallet',
-                'title' => '游戏钱包',
-            ],
-            [
-                'id' => 'addons\webman\controller\StoreLeaderboardController\index',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreLeaderboardController/index',
-                'title' => '排行榜',
-            ],
-            [
-                'id' => 'addons\webman\controller\StoreLeaderboardController\grantOne',
-                'pid' => 'addons\webman\controller\StoreLeaderboardController\index',
-                'action' => 'grantOne',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreLeaderboardController/grantOne',
-                'title' => '手動派發獎勵',
             ],
         ]
     ],
