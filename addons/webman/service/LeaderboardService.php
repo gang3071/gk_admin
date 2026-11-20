@@ -464,42 +464,45 @@ class LeaderboardService
      */
     private static function replaceEntries(int $leaderboardId, array $rows, string $ts, ?string $settleAt = null): void
     {
-        if (!empty($rows)) {
-            // 1a. 先 upsert 排名欄位，不含 prize_amount（保護已領獎 entry 的原始金額）
-            LeaderboardEntry::upsert(
-                $rows,
-                ['leaderboard_id', 'player_id'],
-                ['rank', 'store_admin_id', 'score', 'updated_at']
-            );
+        // buildEntries() 已在事務外完成計算，事務只包裹 DB 寫入，鎖時間極短
+        Db::transaction(function () use ($leaderboardId, $rows, $ts, $settleAt) {
+            if (!empty($rows)) {
+                // 1a. 先 upsert 排名欄位，不含 prize_amount（保護已領獎 entry 的原始金額）
+                LeaderboardEntry::upsert(
+                    $rows,
+                    ['leaderboard_id', 'player_id'],
+                    ['rank', 'store_admin_id', 'score', 'updated_at']
+                );
 
-            // 1b. 按 prize_amount 分組，只更新尚未領獎（UNISSUED）的 entry
-            $groups = collect($rows)->groupBy('prize_amount');
-            foreach ($groups as $prizeAmount => $group) {
+                // 1b. 按 prize_amount 分組，只更新尚未領獎（UNISSUED）的 entry
+                $groups = collect($rows)->groupBy('prize_amount');
+                foreach ($groups as $prizeAmount => $group) {
+                    LeaderboardEntry::query()
+                        ->where('leaderboard_id', $leaderboardId)
+                        ->whereIn('player_id', $group->pluck('player_id')->all())
+                        ->where('grant_status', LeaderboardEntry::GRANT_STATUS_UNISSUED)
+                        ->update(['prize_amount' => $prizeAmount, 'updated_at' => $ts]);
+                }
+
+                // 2a. 只刪除不在新名次的玩家
                 LeaderboardEntry::query()
                     ->where('leaderboard_id', $leaderboardId)
-                    ->whereIn('player_id', $group->pluck('player_id')->all())
-                    ->where('grant_status', LeaderboardEntry::GRANT_STATUS_UNISSUED)
-                    ->update(['prize_amount' => $prizeAmount, 'updated_at' => $ts]);
+                    ->whereNotIn('player_id', array_column($rows, 'player_id'))
+                    ->delete();
+            } else {
+                // 2b. 無人達標：清空此期全部 entries
+                LeaderboardEntry::query()
+                    ->where('leaderboard_id', $leaderboardId)
+                    ->delete();
             }
 
-            // 2a. 只刪除不在新名次的玩家
-            LeaderboardEntry::query()
-                ->where('leaderboard_id', $leaderboardId)
-                ->whereNotIn('player_id', array_column($rows, 'player_id'))
-                ->delete();
-        } else {
-            // 2b. 無人達標：清空此期全部 entries
-            LeaderboardEntry::query()
-                ->where('leaderboard_id', $leaderboardId)
-                ->delete();
-        }
-
-        // 3. 更新 leaderboard 統計
-        $update = ['entry_count' => count($rows), 'updated_at' => $ts];
-        if ($settleAt !== null) {
-            $update['settle_at'] = $settleAt;
-        }
-        Leaderboard::query()->where('id', $leaderboardId)->update($update);
+            // 3. 更新 leaderboard 統計
+            $update = ['entry_count' => count($rows), 'updated_at' => $ts];
+            if ($settleAt !== null) {
+                $update['settle_at'] = $settleAt;
+            }
+            Leaderboard::query()->where('id', $leaderboardId)->update($update);
+        });
     }
 
     /**
