@@ -234,6 +234,13 @@ class ChannelVipLevelController
                 ->style(['width' => '100%'])
                 ->help(admin_trans('vip_level.help.daily_login_bonus'));
 
+            $form->number('daily_login_bonus_bet_amount', admin_trans('vip_level.fields.daily_login_bonus_bet_amount'))
+                ->min(0)
+                ->step(0.01)
+                ->default(0)
+                ->style(['width' => '100%'])
+                ->help(admin_trans('vip_level.help.daily_login_bonus_bet_amount'));
+
             $form->number('high_setting_machine_play_num', admin_trans('vip_level.fields.high_setting_machine_play_num'))
                 ->min(0)
                 ->default(0)
