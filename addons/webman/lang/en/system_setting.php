@@ -70,7 +70,8 @@ return [
     'master' => 'Total configuration',
     'points' => 'points',
     'balls' => 'balls',
-    'disabled' => 'Disabled',
+    'disabled'     => 'Disabled',
+    'annotate_btn' => 'Config Notes',
     // VIP Welcome Voice
     'vip_welcome_voice' => [
         'title' => 'VIP Welcome Voice Configuration',
