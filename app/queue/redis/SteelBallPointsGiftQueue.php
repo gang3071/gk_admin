@@ -2,6 +2,7 @@
 
 namespace app\queue\redis;
 
+use addons\webman\model\Machine;
 use addons\webman\model\PlayerPointsRecord;
 use addons\webman\model\StoreSetting;
 use addons\webman\service\PlayerPointsService;
@@ -35,11 +36,27 @@ class SteelBallPointsGiftQueue implements Consumer
             return;
         }
 
-        $points = (int)$setting->num;
+        $basePoints = (int)$setting->num;
 
-        if ($points <= 0) {
+        if ($basePoints <= 0) {
             return;
         }
+
+        // 依機台比值換算：floor(配置值 * odds_x / odds_y)
+        // 1:1→原值, 1:2→減半, 2:1→加倍；機台不存在或未配置比值則不送
+        $machine = $machineId > 0 ? Machine::withTrashed()->find($machineId) : null;
+        $oddsX   = (float)($machine->odds_x ?? 0);
+        $oddsY   = (float)($machine->odds_y ?? 0);
+
+        if (!$machine || $oddsX <= 0 || $oddsY <= 0) {
+            Log::warning('SteelBallPointsGiftQueue: 機台不存在或未配置比值，跳過積分贈送', [
+                'player_id'  => $playerId,
+                'machine_id' => $machineId,
+            ]);
+            return;
+        }
+
+        $points = (int)floor($basePoints * $oddsX / $oddsY);
 
         try {
             PlayerPointsService::addPoints(
@@ -55,6 +72,8 @@ class SteelBallPointsGiftQueue implements Consumer
                 'machine_id'    => $machineId,
                 'department_id' => $departmentId,
                 'score'         => $score,
+                'base_points'   => $basePoints,
+                'odds'          => "{$oddsX}:{$oddsY}",
                 'points'        => $points,
             ]);
         } catch (\Throwable $e) {
