@@ -178,17 +178,8 @@ class LeaderboardService
             ]);
         }
 
-        // 覆蓋名次：先刪同榜舊名次再重塞（同一 leaderboard_id，unique 不衝突）
-        LeaderboardEntry::query()->where('leaderboard_id', $leaderboardId)->delete();
         $rows = self::buildEntries($leaderboardId, $setting, $start, $end);
-        if (!empty($rows)) {
-            LeaderboardEntry::query()->insert($rows);
-        }
-
-        Leaderboard::query()->where('id', $leaderboardId)->update([
-            'entry_count' => count($rows),
-            'updated_at'  => $ts,
-        ]);
+        self::replaceEntries($leaderboardId, $rows, $ts);
 
         return count($rows);
     }
@@ -225,17 +216,8 @@ class LeaderboardService
             $end = Carbon::parse($lb->end_at);
 
             // 以定案的期間重算最終名次
-            LeaderboardEntry::query()->where('leaderboard_id', $lb->id)->delete();
             $rows = self::buildEntries((int) $lb->id, $setting, $start, $end);
-            if (!empty($rows)) {
-                LeaderboardEntry::query()->insert($rows);
-            }
-
-            Leaderboard::query()->where('id', $lb->id)->update([
-                'entry_count' => count($rows),
-                'settle_at'   => $ts,
-                'updated_at'  => $ts,
-            ]);
+            self::replaceEntries((int) $lb->id, $rows, $ts, $ts);
 
             $count++;
         }
@@ -314,16 +296,8 @@ class LeaderboardService
             ]);
         }
 
-        LeaderboardEntry::query()->where('leaderboard_id', $leaderboardId)->delete();
         $rows = self::buildVipEntries($leaderboardId, $start, $end);
-        if (!empty($rows)) {
-            LeaderboardEntry::query()->insert($rows);
-        }
-
-        Leaderboard::query()->where('id', $leaderboardId)->update([
-            'entry_count' => count($rows),
-            'updated_at'  => $ts,
-        ]);
+        self::replaceEntries($leaderboardId, $rows, $ts);
 
         return count($rows);
     }
@@ -382,17 +356,8 @@ class LeaderboardService
             $start = Carbon::parse($lb->start_at);
             $end = Carbon::parse($lb->end_at);
 
-            LeaderboardEntry::query()->where('leaderboard_id', $lb->id)->delete();
             $rows = self::buildVipEntries((int) $lb->id, $start, $end);
-            if (!empty($rows)) {
-                LeaderboardEntry::query()->insert($rows);
-            }
-
-            Leaderboard::query()->where('id', $lb->id)->update([
-                'entry_count' => count($rows),
-                'settle_at'   => $ts,
-                'updated_at'  => $ts,
-            ]);
+            self::replaceEntries((int) $lb->id, $rows, $ts, $ts);
 
             $count++;
         }
@@ -481,6 +446,46 @@ class LeaderboardService
             ];
         }
         return $result;
+    }
+
+    /**
+     * Upsert 名次並刪除掉出排行的玩家
+     *
+     * 策略（無空窗期）：
+     *  1. upsert 新名次：有則更新 rank/score/prize_amount，無則 insert；保留 grant_status 不重置
+     *  2. 刪除不在新名次的玩家（已掉出排行）
+     *  3. 更新 leaderboard 統計（entry_count / settle_at）
+     *
+     * @param int         $leaderboardId
+     * @param array       $rows      buildEntries / buildVipEntries 的結果
+     * @param string      $ts        操作時間戳
+     * @param string|null $settleAt  定案時傳入，null 表示只是刷新當期
+     */
+    private static function replaceEntries(int $leaderboardId, array $rows, string $ts, ?string $settleAt = null): void
+    {
+        // 1. 先 upsert：讀者看到的始終是有資料的狀態
+        if (!empty($rows)) {
+            LeaderboardEntry::upsert(
+                $rows,
+                ['leaderboard_id', 'player_id'],
+                ['rank', 'store_admin_id', 'score', 'prize_amount', 'updated_at']
+            );
+        }
+
+        // 2. 刪除掉出排行的舊 entries
+        $keepIds = array_column($rows, 'player_id');
+        $delQuery = LeaderboardEntry::query()->where('leaderboard_id', $leaderboardId);
+        if (!empty($keepIds)) {
+            $delQuery->whereNotIn('player_id', $keepIds);
+        }
+        $delQuery->delete();
+
+        // 3. 更新 leaderboard 統計
+        $update = ['entry_count' => count($rows), 'updated_at' => $ts];
+        if ($settleAt !== null) {
+            $update['settle_at'] = $settleAt;
+        }
+        Leaderboard::query()->where('id', $leaderboardId)->update($update);
     }
 
     /**
