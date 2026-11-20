@@ -153,4 +153,10 @@ return [
         'hash_key' => env('KT_HASH_KEY'),
         'agent' => env('KT_AGENT'),
     ],
+    'GK' => [
+        'api_domain' => env('GK_API_DOMAIN'),
+        'website' => env('GK_WEBSITE'),
+        'uppername' => env('GK_UPPERNAME'),
+        'key' => env('GK_KEY'),
+    ],
 ];
