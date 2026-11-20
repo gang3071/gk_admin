@@ -780,7 +780,7 @@ class StoreMachineController
             ->keyBy('platform_id');
 
         return Form::create([], function (Form $form) use ($storeId, $existingConfigs) {
-            $form->title('限红组配置');
+            $form->title(admin_trans('store_machine.limit_group_form.title'));
 
             // 显式设置提交URL
             $form->url(admin_url([
@@ -790,51 +790,40 @@ class StoreMachineController
 
             $form->hidden('store_id')->value($storeId);
 
-            // 获取ATG、RSG和DG平台
-            $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
-            $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
-            $dgPlatform = GamePlatform::query()->where('code', 'DG')->where('status', 1)->first();
+            // 一次查询所有支持限红组的平台（顺序即表单显示顺序）
+            $supportedCodes = ['ATG', 'ATG2', 'ATG3', 'RSG', 'DG'];
+            $platforms = GamePlatform::query()
+                ->whereIn('code', $supportedCodes)
+                ->where('status', 1)
+                ->get()
+                ->keyBy('code');
 
-            if (!$atgPlatform && !$rsgPlatform && !$dgPlatform) {
-                $form->push(Html::markdown('><font size=2 color="#999">暂无可用的游戏平台（ATG/RSG/DG）</font>'));
+            // 字段名映射：平台code => 表单字段名
+            $fieldMap = [
+                'ATG'  => 'atg_limit_group_id',
+                'ATG2' => 'atg2_limit_group_id',
+                'ATG3' => 'atg3_limit_group_id',
+                'RSG'  => 'rsg_limit_group_id',
+                'DG'   => 'dg_limit_group_id',
+            ];
+
+            if ($platforms->isEmpty()) {
+                $form->push(Html::markdown('><font size=2 color="#999">' . admin_trans('store_machine.limit_group_form.no_platform') . '</font>'));
             } else {
-                // ATG平台配置
-                if ($atgPlatform) {
-                    $form->divider()->content('ATG 平台限红组配置');
+                foreach ($supportedCodes as $code) {
+                    $platform = $platforms->get($code);
+                    if (!$platform) continue;
 
-                    $atgConfig = $existingConfigs->get($atgPlatform->id);
-                    $atgOptions = ['' => '不配置限红组'] + $this->getLimitGroupOptionsForPlatform($atgPlatform->id);
+                    $fieldKey = $fieldMap[$code];
+                    $existingConfig = $existingConfigs->get($platform->id);
+                    $noConfigLabel = admin_trans('store_machine.limit_group_form.no_config');
+                    $options = ['' => $noConfigLabel] + $this->getLimitGroupOptionsForPlatform($platform->id);
 
-                    $form->select('atg_limit_group_id', "限红组 ({$atgPlatform->name})")
-                        ->options($atgOptions)
-                        ->value($atgConfig ? $atgConfig->limit_group_id : null)
-                        ->help('选择ATG平台的限红组，选择「不配置限红组」将清除该平台的限红配置');
-                }
-
-                // RSG平台配置
-                if ($rsgPlatform) {
-                    $form->divider()->content('RSG 平台限红组配置');
-
-                    $rsgConfig = $existingConfigs->get($rsgPlatform->id);
-                    $rsgOptions = ['' => '不配置限红组'] + $this->getLimitGroupOptionsForPlatform($rsgPlatform->id);
-
-                    $form->select('rsg_limit_group_id', "限红组 ({$rsgPlatform->name})")
-                        ->options($rsgOptions)
-                        ->value($rsgConfig ? $rsgConfig->limit_group_id : null)
-                        ->help('选择RSG平台的限红组，选择「不配置限红组」将清除该平台的限红配置');
-                }
-
-                // DG平台配置
-                if ($dgPlatform) {
-                    $form->divider()->content('DG 平台限红组配置');
-
-                    $dgConfig = $existingConfigs->get($dgPlatform->id);
-                    $dgOptions = ['' => '不配置限红组'] + $this->getLimitGroupOptionsForPlatform($dgPlatform->id);
-
-                    $form->select('dg_limit_group_id', "限红组 ({$dgPlatform->name})")
-                        ->options($dgOptions)
-                        ->value($dgConfig ? $dgConfig->limit_group_id : null)
-                        ->help('选择DG平台的限红组，选择「不配置限红组」将清除该平台的限红配置');
+                    $form->divider()->content(strtr(admin_trans('store_machine.limit_group_form.section_header'), ['{code}' => $code]));
+                    $form->select($fieldKey, strtr(admin_trans('store_machine.limit_group_form.field_label'), ['{name}' => $platform->name]))
+                        ->options($options)
+                        ->value($existingConfig ? $existingConfig->limit_group_id : null)
+                        ->help(strtr(admin_trans('store_machine.limit_group_form.help'), ['{code}' => $code]));
                 }
             }
         });
@@ -858,61 +847,46 @@ class StoreMachineController
             return message_error('店家ID不能为空');
         }
 
-        // 获取ATG、RSG和DG平台
-        $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
-        $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
-        $dgPlatform = GamePlatform::query()->where('code', 'DG')->where('status', 1)->first();
+        // 一次查询所有支持限红组的平台
+        $fieldMap = [
+            'ATG'  => 'atg_limit_group_id',
+            'ATG2' => 'atg2_limit_group_id',
+            'ATG3' => 'atg3_limit_group_id',
+            'RSG'  => 'rsg_limit_group_id',
+            'DG'   => 'dg_limit_group_id',
+        ];
+        $platforms = GamePlatform::query()
+            ->whereIn('code', array_keys($fieldMap))
+            ->where('status', 1)
+            ->get()
+            ->keyBy('code');
 
         DB::beginTransaction();
         try {
             $updatedCount = 0;
             $errors = [];
 
-            // 处理ATG平台配置
-            if ($atgPlatform) {
-                $result = $this->savePlatformLimitGroup(
-                    $storeId,
-                    $atgPlatform->id,
-                    $atgPlatform->code,
-                    $data['atg_limit_group_id'] ?? null
-                );
-
-                if ($result['success']) {
-                    $updatedCount++;
-                } else {
-                    $errors[] = "ATG: {$result['message']}";
+            foreach ($fieldMap as $code => $fieldKey) {
+                $platform = $platforms->get($code);
+                // 平台不存在或表单中未提交该字段（平台渲染时为停用状态）时跳过，
+                // 避免对用户未看到的字段执行静默删除。
+                if (!$platform || !array_key_exists($fieldKey, $data)) {
+                    continue;
                 }
-            }
 
-            // 处理RSG平台配置
-            if ($rsgPlatform) {
                 $result = $this->savePlatformLimitGroup(
                     $storeId,
-                    $rsgPlatform->id,
-                    $rsgPlatform->code,
-                    $data['rsg_limit_group_id'] ?? null
+                    $platform->id,
+                    $platform->code,
+                    $data[$fieldKey]
                 );
 
                 if ($result['success']) {
-                    $updatedCount++;
+                    if ($result['message'] !== '无需操作') {
+                        $updatedCount++;
+                    }
                 } else {
-                    $errors[] = "RSG: {$result['message']}";
-                }
-            }
-
-            // 处理DG平台配置
-            if ($dgPlatform) {
-                $result = $this->savePlatformLimitGroup(
-                    $storeId,
-                    $dgPlatform->id,
-                    $dgPlatform->code,
-                    $data['dg_limit_group_id'] ?? null
-                );
-
-                if ($result['success']) {
-                    $updatedCount++;
-                } else {
-                    $errors[] = "DG: {$result['message']}";
+                    $errors[] = "{$code}: {$result['message']}";
                 }
             }
 

@@ -425,6 +425,11 @@ class ChannelPlayerGameLogController
         if (!empty($exAdminFilter['action'])) {
             $query->where('action', $exAdminFilter['action']);
         }
+        if (!empty($exAdminFilter['machine']['machine_source'] ?? null)) {
+            $machineModel = plugin()->webman->config('database.machine_model');
+            $machineIds = $machineModel::withTrashed()->where('machine_source', $exAdminFilter['machine']['machine_source'])->pluck('id');
+            $query->whereIn('machine_id', $machineIds);
+        }
         if (!empty($exAdminFilter['action_type'])) {
             switch ($exAdminFilter['action_type']) {
                 case 'admin':

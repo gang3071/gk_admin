@@ -112,6 +112,16 @@ return [
         'activity_config' => '活動配置',
     ],
 
+    // 限紅組配置表單
+    'limit_group_form' => [
+        'title'          => '限紅組配置',
+        'no_platform'    => '暫無可用的遊戲平台（ATG/ATG2/ATG3/RSG/DG）',
+        'section_header' => '{code} 平台限紅組配置',
+        'field_label'    => '限紅組 ({name})',
+        'no_config'      => '不配置限紅組',
+        'help'           => '選擇 {code} 平台的限紅組，選擇「不配置限紅組」將清除該平台的限紅配置',
+    ],
+
     // 活動配置
     'activity_config' => [
         'title' => '活動配置',
