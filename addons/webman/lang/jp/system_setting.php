@@ -70,7 +70,8 @@ return [
     'master' => '全体構成',
     'points' => 'ポイント',
     'balls' => '玉',
-    'disabled' => '無効',
+    'disabled'     => '無効',
+    'annotate_btn' => '設定説明',
     // VIPウェルカム音声
     'vip_welcome_voice' => [
         'title' => 'VIPウェルカム音声設定',
