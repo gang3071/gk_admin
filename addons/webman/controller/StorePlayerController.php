@@ -1397,6 +1397,8 @@ class StorePlayerController
 
     /**
      * 钱包操作
+     * @auth true
+     * @group store
      * @param $data
      * @return Msg
      */
@@ -1674,6 +1676,8 @@ class StorePlayerController
 
     /**
      * 玩家详情
+     * @auth true
+     * @group store
      * @param $player_id
      * @return Detail
      */

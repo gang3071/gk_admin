@@ -60,6 +60,66 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-StorePlayerController/getBetStatisticsData',
                 'title' => '获取打码统计数据',
             ],
+            // 編輯玩家
+            [
+                'id' => 'addons\webman\controller\StorePlayerController\form',
+                'pid' => 'addons\webman\controller\StorePlayerController\index',
+                'action' => 'form',
+                'method' => '',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StorePlayerController/form',
+                'title' => '編輯玩家',
+            ],
+            // 儲存玩家
+            [
+                'id' => 'addons\webman\controller\StorePlayerController\store',
+                'pid' => 'addons\webman\controller\StorePlayerController\index',
+                'action' => 'store',
+                'method' => '',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StorePlayerController/store',
+                'title' => '儲存玩家',
+            ],
+            // 查看玩家詳情
+            [
+                'id' => 'addons\webman\controller\StorePlayerController\viewForm',
+                'pid' => 'addons\webman\controller\StorePlayerController\index',
+                'action' => 'viewForm',
+                'method' => '',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StorePlayerController/viewForm',
+                'title' => '查看玩家詳情',
+            ],
+            // 玩家詳情頁
+            [
+                'id' => 'addons\webman\controller\StorePlayerController\playerInfo',
+                'pid' => 'addons\webman\controller\StorePlayerController\index',
+                'action' => 'playerInfo',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StorePlayerController/playerInfo',
+                'title' => '玩家資訊',
+            ],
+            // 活動贈點（玩家錢包）
+            [
+                'id' => 'addons\webman\controller\StorePlayerController\playerWallet',
+                'pid' => 'addons\webman\controller\StorePlayerController\index',
+                'action' => 'playerWallet',
+                'method' => '',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StorePlayerController/playerWallet',
+                'title' => '活動贈點',
+            ],
+            // 綁定推廣員
+            [
+                'id' => 'addons\webman\controller\StorePlayerController\bindPromoter',
+                'pid' => 'addons\webman\controller\StorePlayerController\index',
+                'action' => 'bindPromoter',
+                'method' => '',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StorePlayerController/bindPromoter',
+                'title' => '綁定推廣員',
+            ],
             // ── 積分操作（StorePlayerPointsController）──
             [
                 'id' => 'addons\webman\controller\StorePlayerPointsController\index',
