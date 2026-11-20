@@ -216,6 +216,12 @@ class ChannelVipLevelController
                 ->style(['width' => '100%'])
                 ->help(admin_trans('vip_level.help.children_cashback_ratio'));
 
+            $form->number('children_points_ratio', admin_trans('vip_level.fields.children_points_ratio'))
+                ->min(0)
+                ->step(0.01)
+                ->style(['width' => '100%'])
+                ->help(admin_trans('vip_level.help.children_points_ratio'));
+
             $form->number('birthday_bonus', admin_trans('vip_level.fields.birthday_bonus'))
                 ->min(0)
                 ->step(0.01)
