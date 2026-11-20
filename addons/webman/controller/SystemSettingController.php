@@ -59,7 +59,7 @@ class SystemSettingController
             $grid->autoHeight();
             $grid->bordered(true);
             $grid->model()->where('department_id', $id);
-            $annotateUrl = admin_url(['addons-webman-controller-SystemSettingController', 'annotate']);
+            $annotateUrl = '#/' . admin_url(['addons-webman-controller-SystemSettingController', 'annotate']);
             $grid->toolBar()->push(
                 Html::create()->content(
                     '<a href="' . $annotateUrl . '" class="ant-btn ant-btn-default" style="margin-right:8px;">' .
@@ -411,7 +411,7 @@ class SystemSettingController
             ->attr('ex_admin_title', admin_trans('system_setting.title'))
             ->attr('channels', $channels)
             ->attr('data_url', admin_url(['addons-webman-controller-SystemSettingController', 'settingData']))
-            ->attr('grid_url', admin_url(['addons-webman-controller-SystemSettingController', 'index']));
+            ->attr('grid_url', '#/' . admin_url(['addons-webman-controller-SystemSettingController', 'index']));
     }
 
     /**
