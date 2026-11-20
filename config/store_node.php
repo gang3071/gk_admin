@@ -29,177 +29,162 @@ return [
         'url' => '',
         'group' => 'store',
         'title' => '玩家管理',
-        'children' => [
-            // 玩家列表
-            [
-                'id' => 'addons\webman\controller\StorePlayerController\index',
-                'pid' => 'addons\webman\controller\StorePlayerController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StorePlayerController/index',
-                'title' => '玩家列表',
-            ],
-            // 打码统计
-            [
-                'id' => 'addons\webman\controller\StorePlayerController\betStatistics',
-                'pid' => 'addons\webman\controller\StorePlayerController\index',
-                'action' => 'betStatistics',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StorePlayerController/betStatistics',
-                'title' => '打码统计',
-            ],
-            // 获取打码统计数据
-            [
-                'id' => 'addons\webman\controller\StorePlayerController\getBetStatisticsData',
-                'pid' => 'addons\webman\controller\StorePlayerController\index',
-                'action' => 'getBetStatisticsData',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StorePlayerController/getBetStatisticsData',
-                'title' => '获取打码统计数据',
-            ],
-        ]
+        'children' => [],
     ],
-
-    // ========== 玩家管理 ==========
+    // 玩家列表
     [
-        'id' => 'addons\webman\controller\ChannelPlayerController-',
-        'pid' => 0,
-        'url' => '',
+        'id' => 'addons\webman\controller\StorePlayerController\index',
+        'pid' => 'addons\webman\controller\StorePlayerController-',
+        'action' => 'index',
+        'method' => 'get',
         'group' => 'store',
-        'title' => '玩家管理',
-        'children' => [
-            // 玩家列表
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\index',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/index',
-                'title' => '设备列表',
-            ],
-            // 添加玩家
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\form-post',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'form',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/form',
-                'title' => '添加玩家',
-            ],
-            // 修改玩家
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\form-put',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'form',
-                'method' => 'put',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/form',
-                'title' => '修改玩家',
-            ],
-            // 玩家钱包
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\playerWallet',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'playerWallet',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/playerWallet',
-                'title' => '玩家钱包',
-            ],
-            // 人工充值
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\artificialRecharge',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'artificialRecharge',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/artificialRecharge',
-                'title' => '人工充值',
-            ],
-            // 人工提现
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\artificialWithdrawal',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'artificialWithdrawal',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/artificialWithdrawal',
-                'title' => '人工提现',
-            ],
-            // 全部下分
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\withdrawAmountAll',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'withdrawAmountAll',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/withdrawAmountAll',
-                'title' => '全部下分',
-            ],
-            // 下分
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\withdrawAmount',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'withdrawAmount',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/withdrawAmount',
-                'title' => '下分',
-            ],
-            // 上分
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\depositAmount',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'depositAmount',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/depositAmount',
-                'title' => '上分',
-            ],
-            // 玩家银行卡
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\playerBank',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'playerBank',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/playerBank',
-                'title' => '银行卡管理',
-            ],
-            // 玩家游戏钱包
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerController\playerGameWallet',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'playerGameWallet',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/playerGameWallet',
-                'title' => '游戏钱包',
-            ],
-            [
-                'id' => 'addons\webman\controller\StoreLeaderboardController\index',
-                'pid' => 'addons\webman\controller\ChannelPlayerController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreLeaderboardController/index',
-                'title' => '排行榜',
-            ],
-            [
-                'id' => 'addons\webman\controller\StoreLeaderboardController\grantOne',
-                'pid' => 'addons\webman\controller\StoreLeaderboardController\index',
-                'action' => 'grantOne',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreLeaderboardController/grantOne',
-                'title' => '手動派發獎勵',
-            ],
-        ]
+        'url' => 'ex-admin/addons-webman-controller-StorePlayerController/index',
+        'title' => '玩家列表',
+    ],
+    // 打码统计
+    [
+        'id' => 'addons\webman\controller\StorePlayerController\betStatistics',
+        'pid' => 'addons\webman\controller\StorePlayerController\index',
+        'action' => 'betStatistics',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayerController/betStatistics',
+        'title' => '打码统计',
+    ],
+    // 获取打码统计数据
+    [
+        'id' => 'addons\webman\controller\StorePlayerController\getBetStatisticsData',
+        'pid' => 'addons\webman\controller\StorePlayerController\index',
+        'action' => 'getBetStatisticsData',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayerController/getBetStatisticsData',
+        'title' => '获取打码统计数据',
+    ],
+    // 編輯玩家
+    [
+        'id' => 'addons\webman\controller\StorePlayerController\form',
+        'pid' => 'addons\webman\controller\StorePlayerController\index',
+        'action' => 'form',
+        'method' => '',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayerController/form',
+        'title' => '編輯玩家',
+    ],
+    // 儲存玩家
+    [
+        'id' => 'addons\webman\controller\StorePlayerController\store',
+        'pid' => 'addons\webman\controller\StorePlayerController\index',
+        'action' => 'store',
+        'method' => '',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayerController/store',
+        'title' => '儲存玩家',
+    ],
+    // 查看玩家詳情
+    [
+        'id' => 'addons\webman\controller\StorePlayerController\viewForm',
+        'pid' => 'addons\webman\controller\StorePlayerController\index',
+        'action' => 'viewForm',
+        'method' => '',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayerController/viewForm',
+        'title' => '查看玩家詳情',
+    ],
+    // 玩家詳情頁
+    [
+        'id' => 'addons\webman\controller\StorePlayerController\playerInfo',
+        'pid' => 'addons\webman\controller\StorePlayerController\index',
+        'action' => 'playerInfo',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayerController/playerInfo',
+        'title' => '玩家資訊',
+    ],
+    // 活動贈點（玩家錢包）
+    [
+        'id' => 'addons\webman\controller\StorePlayerController\playerWallet',
+        'pid' => 'addons\webman\controller\StorePlayerController\index',
+        'action' => 'playerWallet',
+        'method' => '',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayerController/playerWallet',
+        'title' => '活動贈點',
+    ],
+    // 綁定推廣員
+    [
+        'id' => 'addons\webman\controller\StorePlayerController\bindPromoter',
+        'pid' => 'addons\webman\controller\StorePlayerController\index',
+        'action' => 'bindPromoter',
+        'method' => '',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayerController/bindPromoter',
+        'title' => '綁定推廣員',
+    ],
+    // 排行榜
+    [
+        'id' => 'addons\webman\controller\StoreLeaderboardController\index',
+        'pid' => 'addons\webman\controller\StorePlayerController\index',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreLeaderboardController/index',
+        'title' => '排行榜',
+    ],
+    [
+        'id' => 'addons\webman\controller\StoreLeaderboardController\grantOne',
+        'pid' => 'addons\webman\controller\StoreLeaderboardController\index',
+        'action' => 'grantOne',
+        'method' => 'post',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreLeaderboardController/grantOne',
+        'title' => '手動派發獎勵',
+    ],
+    // ── 積分操作（StorePlayerPointsController）──
+    [
+        'id' => 'addons\webman\controller\StorePlayerPointsController\index',
+        'pid' => 'addons\webman\controller\StorePlayerController\index',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayerPointsController/index',
+        'title' => '查看積分記錄',
+    ],
+    [
+        'id' => 'addons\webman\controller\StorePlayerPointsController\addPoints',
+        'pid' => 'addons\webman\controller\StorePlayerController\index',
+        'action' => 'addPoints',
+        'method' => '',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayerPointsController/addPoints',
+        'title' => '增加積分',
+    ],
+    [
+        'id' => 'addons\webman\controller\StorePlayerPointsController\deductPoints',
+        'pid' => 'addons\webman\controller\StorePlayerController\index',
+        'action' => 'deductPoints',
+        'method' => '',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayerPointsController/deductPoints',
+        'title' => '扣除積分',
+    ],
+    [
+        'id' => 'addons\webman\controller\StorePlayerPointsController\freezePoints',
+        'pid' => 'addons\webman\controller\StorePlayerController\index',
+        'action' => 'freezePoints',
+        'method' => '',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayerPointsController/freezePoints',
+        'title' => '凍結積分',
+    ],
+    [
+        'id' => 'addons\webman\controller\StorePlayerPointsController\unfreezePoints',
+        'pid' => 'addons\webman\controller\StorePlayerController\index',
+        'action' => 'unfreezePoints',
+        'method' => '',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayerPointsController/unfreezePoints',
+        'title' => '解凍積分',
     ],
 
     // ========== 账变记录 ==========
@@ -209,17 +194,16 @@ return [
         'url' => '',
         'group' => 'store',
         'title' => '账变记录',
-        'children' => [
-            [
-                'id' => 'addons\webman\controller\StorePlayerDeliveryRecordController\index',
-                'pid' => 'addons\webman\controller\StorePlayerDeliveryRecordController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StorePlayerDeliveryRecordController/index',
-                'title' => '账变记录',
-            ],
-        ]
+        'children' => [],
+    ],
+    [
+        'id' => 'addons\webman\controller\StorePlayerDeliveryRecordController\index',
+        'pid' => 'addons\webman\controller\StorePlayerDeliveryRecordController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayerDeliveryRecordController/index',
+        'title' => '账变记录',
     ],
 
     // ========== 游戏记录 ==========
@@ -229,44 +213,43 @@ return [
         'url' => '',
         'group' => 'store',
         'title' => '游戏记录',
-        'children' => [
-            [
-                'id' => 'addons\webman\controller\StorePlayGameRecordController\index',
-                'pid' => 'addons\webman\controller\StorePlayGameRecordController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StorePlayGameRecordController/index',
-                'title' => '游戏记录',
-            ],
-            [
-                'id' => 'addons\webman\controller\StorePlayGameRecordController\replay',
-                'pid' => 'addons\webman\controller\StorePlayGameRecordController\index',
-                'action' => 'replay',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StorePlayGameRecordController/replay',
-                'title' => '游戏回放',
-            ],
-            [
-                'id' => 'addons\webman\controller\StoreGameVendorReportController\index',
-                'pid' => 'addons\webman\controller\StorePlayGameRecordController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreGameVendorReportController/index',
-                'title' => '厂商数据',
-            ],
-            [
-                'id' => 'addons\webman\controller\StoreGameVendorReportController\vendorData',
-                'pid' => 'addons\webman\controller\StoreGameVendorReportController\index',
-                'action' => 'vendorData',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreGameVendorReportController/vendorData',
-                'title' => '查询厂商数据',
-            ],
-        ]
+        'children' => [],
+    ],
+    [
+        'id' => 'addons\webman\controller\StorePlayGameRecordController\index',
+        'pid' => 'addons\webman\controller\StorePlayGameRecordController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayGameRecordController/index',
+        'title' => '游戏记录',
+    ],
+    [
+        'id' => 'addons\webman\controller\StorePlayGameRecordController\replay',
+        'pid' => 'addons\webman\controller\StorePlayGameRecordController\index',
+        'action' => 'replay',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayGameRecordController/replay',
+        'title' => '游戏回放',
+    ],
+    [
+        'id' => 'addons\webman\controller\StoreGameVendorReportController\index',
+        'pid' => 'addons\webman\controller\StorePlayGameRecordController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreGameVendorReportController/index',
+        'title' => '厂商数据',
+    ],
+    [
+        'id' => 'addons\webman\controller\StoreGameVendorReportController\vendorData',
+        'pid' => 'addons\webman\controller\StoreGameVendorReportController\index',
+        'action' => 'vendorData',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreGameVendorReportController/vendorData',
+        'title' => '查询厂商数据',
     ],
 
     // ========== 充值记录 ==========
@@ -276,17 +259,16 @@ return [
         'url' => '',
         'group' => 'store',
         'title' => '充值记录',
-        'children' => [
-            [
-                'id' => 'addons\webman\controller\StorePlayerRechargeRecordController\index',
-                'pid' => 'addons\webman\controller\StorePlayerRechargeRecordController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StorePlayerRechargeRecordController/index',
-                'title' => '充值记录',
-            ],
-        ]
+        'children' => [],
+    ],
+    [
+        'id' => 'addons\webman\controller\StorePlayerRechargeRecordController\index',
+        'pid' => 'addons\webman\controller\StorePlayerRechargeRecordController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayerRechargeRecordController/index',
+        'title' => '充值记录',
     ],
 
     // ========== 提现记录 ==========
@@ -296,17 +278,16 @@ return [
         'url' => '',
         'group' => 'store',
         'title' => '提现记录',
-        'children' => [
-            [
-                'id' => 'addons\webman\controller\StorePlayerWithdrawRecordController\index',
-                'pid' => 'addons\webman\controller\StorePlayerWithdrawRecordController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StorePlayerWithdrawRecordController/index',
-                'title' => '提现记录',
-            ],
-        ]
+        'children' => [],
+    ],
+    [
+        'id' => 'addons\webman\controller\StorePlayerWithdrawRecordController\index',
+        'pid' => 'addons\webman\controller\StorePlayerWithdrawRecordController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayerWithdrawRecordController/index',
+        'title' => '提现记录',
     ],
 
     // ========== 财务报表 ==========
@@ -316,17 +297,16 @@ return [
         'url' => '',
         'group' => 'store',
         'title' => '财务报表',
-        'children' => [
-            [
-                'id' => 'addons\webman\controller\ChannelPlayerReportController\index',
-                'pid' => 'addons\webman\controller\ChannelPlayerReportController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerReportController/index',
-                'title' => '玩家报表',
-            ],
-        ]
+        'children' => [],
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelPlayerReportController\index',
+        'pid' => 'addons\webman\controller\ChannelPlayerReportController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-ChannelPlayerReportController/index',
+        'title' => '玩家报表',
     ],
 
     // ========== 上下分报表 ==========
@@ -336,17 +316,16 @@ return [
         'url' => '',
         'group' => 'store',
         'title' => '报表中心',
-        'children' => [
-            [
-                'id' => 'addons\webman\controller\StorePlayerGameLogController\index',
-                'pid' => 'addons\webman\controller\StorePlayerGameLogController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StorePlayerGameLogController/index',
-                'title' => '上下分报表',
-            ],
-        ]
+        'children' => [],
+    ],
+    [
+        'id' => 'addons\webman\controller\StorePlayerGameLogController\index',
+        'pid' => 'addons\webman\controller\StorePlayerGameLogController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StorePlayerGameLogController/index',
+        'title' => '上下分报表',
     ],
 
     // ========== 彩金管理 ==========
@@ -356,18 +335,17 @@ return [
         'url' => '',
         'group' => 'store',
         'title' => '彩金管理',
-        'children' => [
-            // 彩金领取记录
-            [
-                'id' => 'addons\webman\controller\StoreLotteryController\index',
-                'pid' => 'addons\webman\controller\StoreLotteryController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreLotteryController/index',
-                'title' => '彩金领取记录',
-            ],
-        ]
+        'children' => [],
+    ],
+    // 彩金领取记录
+    [
+        'id' => 'addons\webman\controller\StoreLotteryController\index',
+        'pid' => 'addons\webman\controller\StoreLotteryController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreLotteryController/index',
+        'title' => '彩金领取记录',
     ],
 
     // ========== 摸奖券管理 ==========
@@ -377,48 +355,47 @@ return [
         'url' => '',
         'group' => 'store',
         'title' => '摸奖券管理',
-        'children' => [
-            // 摸奖券活动列表
-            [
-                'id' => 'addons\webman\controller\StoreLotteryTicketActivityController\index',
-                'pid' => 'addons\webman\controller\StoreLotteryTicketActivityController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreLotteryTicketActivityController/index',
-                'title' => '摸奖券活动',
-            ],
-            // 查看活动详情
-            [
-                'id' => 'addons\webman\controller\StoreLotteryTicketActivityController\getActivityDetail',
-                'pid' => 'addons\webman\controller\StoreLotteryTicketActivityController\index',
-                'action' => 'getActivityDetail',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreLotteryTicketActivityController/getActivityDetail',
-                'title' => '查看活动详情',
-            ],
-            // 摸奖券列表
-            [
-                'id' => 'addons\webman\controller\StoreLotteryTicketController\index',
-                'pid' => 'addons\webman\controller\StoreLotteryTicketActivityController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreLotteryTicketController/index',
-                'title' => '摸奖券列表',
-            ],
-            // 中奖记录列表
-            [
-                'id' => 'addons\webman\controller\StoreLotteryTicketRecordController\index',
-                'pid' => 'addons\webman\controller\StoreLotteryTicketActivityController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreLotteryTicketRecordController/index',
-                'title' => '中奖记录',
-            ],
-        ]
+        'children' => [],
+    ],
+    // 摸奖券活动列表
+    [
+        'id' => 'addons\webman\controller\StoreLotteryTicketActivityController\index',
+        'pid' => 'addons\webman\controller\StoreLotteryTicketActivityController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreLotteryTicketActivityController/index',
+        'title' => '摸奖券活动',
+    ],
+    // 查看活动详情
+    [
+        'id' => 'addons\webman\controller\StoreLotteryTicketActivityController\getActivityDetail',
+        'pid' => 'addons\webman\controller\StoreLotteryTicketActivityController\index',
+        'action' => 'getActivityDetail',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreLotteryTicketActivityController/getActivityDetail',
+        'title' => '查看活动详情',
+    ],
+    // 摸奖券列表
+    [
+        'id' => 'addons\webman\controller\StoreLotteryTicketController\index',
+        'pid' => 'addons\webman\controller\StoreLotteryTicketActivityController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreLotteryTicketController/index',
+        'title' => '摸奖券列表',
+    ],
+    // 中奖记录列表
+    [
+        'id' => 'addons\webman\controller\StoreLotteryTicketRecordController\index',
+        'pid' => 'addons\webman\controller\StoreLotteryTicketActivityController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreLotteryTicketRecordController/index',
+        'title' => '中奖记录',
     ],
 
     // ========== 充值满赠管理 ==========
@@ -428,87 +405,86 @@ return [
         'url' => '',
         'group' => 'store',
         'title' => '充值满赠管理',
-        'children' => [
-            // 充值满赠活动列表（仅查看）
-            [
-                'id' => 'addons\webman\controller\StoreDepositBonusActivityController\index',
-                'pid' => 'addons\webman\controller\StoreDepositBonusActivityController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreDepositBonusActivityController/index',
-                'title' => '充值满赠活动',
-            ],
-            // 活动详情
-            [
-                'id' => 'addons\webman\controller\StoreDepositBonusActivityController\detail',
-                'pid' => 'addons\webman\controller\StoreDepositBonusActivityController\index',
-                'action' => 'detail',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreDepositBonusActivityController/detail',
-                'title' => '充值满赠活动详情',
-            ],
-            // 充值满赠订单列表
-            [
-                'id' => 'addons\webman\controller\StoreDepositBonusOrderController\index',
-                'pid' => 'addons\webman\controller\StoreDepositBonusActivityController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreDepositBonusOrderController/index',
-                'title' => '充值满赠订单',
-            ],
-            // 生成订单表单
-            [
-                'id' => 'addons\webman\controller\StoreDepositBonusOrderController\form-post',
-                'pid' => 'addons\webman\controller\StoreDepositBonusOrderController\index',
-                'action' => 'form',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreDepositBonusOrderController/form',
-                'title' => '生成充值满赠订单',
-            ],
-            [
-                'id' => 'addons\webman\controller\StoreDepositBonusOrderController\form-get',
-                'pid' => 'addons\webman\controller\StoreDepositBonusOrderController\index',
-                'action' => 'form',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreDepositBonusOrderController/form',
-                'title' => '充值满赠订单表单',
-            ],
-            // 订单详情
-            [
-                'id' => 'addons\webman\controller\StoreDepositBonusOrderController\detail',
-                'pid' => 'addons\webman\controller\StoreDepositBonusOrderController\index',
-                'action' => 'detail',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreDepositBonusOrderController/detail',
-                'title' => '充值满赠订单详情',
-            ],
-            // 打码量任务列表
-            [
-                'id' => 'addons\webman\controller\StoreDepositBonusTaskController\index',
-                'pid' => 'addons\webman\controller\StoreDepositBonusActivityController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreDepositBonusTaskController/index',
-                'title' => '打码量任务',
-            ],
-            // 打码量任务详情
-            [
-                'id' => 'addons\webman\controller\StoreDepositBonusTaskController\detail',
-                'pid' => 'addons\webman\controller\StoreDepositBonusTaskController\index',
-                'action' => 'detail',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreDepositBonusTaskController/detail',
-                'title' => '打码量任务详情',
-            ],
-        ]
+        'children' => [],
+    ],
+    // 充值满赠活动列表（仅查看）
+    [
+        'id' => 'addons\webman\controller\StoreDepositBonusActivityController\index',
+        'pid' => 'addons\webman\controller\StoreDepositBonusActivityController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreDepositBonusActivityController/index',
+        'title' => '充值满赠活动',
+    ],
+    // 活动详情
+    [
+        'id' => 'addons\webman\controller\StoreDepositBonusActivityController\detail',
+        'pid' => 'addons\webman\controller\StoreDepositBonusActivityController\index',
+        'action' => 'detail',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreDepositBonusActivityController/detail',
+        'title' => '充值满赠活动详情',
+    ],
+    // 充值满赠订单列表
+    [
+        'id' => 'addons\webman\controller\StoreDepositBonusOrderController\index',
+        'pid' => 'addons\webman\controller\StoreDepositBonusActivityController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreDepositBonusOrderController/index',
+        'title' => '充值满赠订单',
+    ],
+    // 生成订单表单
+    [
+        'id' => 'addons\webman\controller\StoreDepositBonusOrderController\form-post',
+        'pid' => 'addons\webman\controller\StoreDepositBonusOrderController\index',
+        'action' => 'form',
+        'method' => 'post',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreDepositBonusOrderController/form',
+        'title' => '生成充值满赠订单',
+    ],
+    [
+        'id' => 'addons\webman\controller\StoreDepositBonusOrderController\form-get',
+        'pid' => 'addons\webman\controller\StoreDepositBonusOrderController\index',
+        'action' => 'form',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreDepositBonusOrderController/form',
+        'title' => '充值满赠订单表单',
+    ],
+    // 订单详情
+    [
+        'id' => 'addons\webman\controller\StoreDepositBonusOrderController\detail',
+        'pid' => 'addons\webman\controller\StoreDepositBonusOrderController\index',
+        'action' => 'detail',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreDepositBonusOrderController/detail',
+        'title' => '充值满赠订单详情',
+    ],
+    // 打码量任务列表
+    [
+        'id' => 'addons\webman\controller\StoreDepositBonusTaskController\index',
+        'pid' => 'addons\webman\controller\StoreDepositBonusActivityController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreDepositBonusTaskController/index',
+        'title' => '打码量任务',
+    ],
+    // 打码量任务详情
+    [
+        'id' => 'addons\webman\controller\StoreDepositBonusTaskController\detail',
+        'pid' => 'addons\webman\controller\StoreDepositBonusTaskController\index',
+        'action' => 'detail',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreDepositBonusTaskController/detail',
+        'title' => '打码量任务详情',
     ],
 
     // ========== 个人中心 ==========
@@ -593,38 +569,37 @@ return [
         'url' => '',
         'group' => 'store',
         'title' => '交班记录',
-        'children' => [
-            // 记录列表
-            [
-                'id' => 'addons\webman\controller\StoreShiftHandoverRecordController\index',
-                'pid' => 'addons\webman\controller\StoreShiftHandoverRecordController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/index',
-                'title' => '记录列表',
-            ],
-            // 查看设备明细
-            [
-                'id' => 'addons\webman\controller\StoreShiftHandoverRecordController\deviceDetails',
-                'pid' => 'addons\webman\controller\StoreShiftHandoverRecordController\index',
-                'action' => 'deviceDetails',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/deviceDetails',
-                'title' => '查看设备明细',
-            ],
-            // 导出交班记录
-            [
-                'id' => 'addons\webman\controller\StoreShiftHandoverRecordController\export',
-                'pid' => 'addons\webman\controller\StoreShiftHandoverRecordController\index',
-                'action' => 'export',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/export',
-                'title' => '导出交班记录',
-            ],
-        ]
+        'children' => [],
+    ],
+    // 记录列表
+    [
+        'id' => 'addons\webman\controller\StoreShiftHandoverRecordController\index',
+        'pid' => 'addons\webman\controller\StoreShiftHandoverRecordController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/index',
+        'title' => '记录列表',
+    ],
+    // 查看设备明细
+    [
+        'id' => 'addons\webman\controller\StoreShiftHandoverRecordController\deviceDetails',
+        'pid' => 'addons\webman\controller\StoreShiftHandoverRecordController\index',
+        'action' => 'deviceDetails',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/deviceDetails',
+        'title' => '查看设备明细',
+    ],
+    // 导出交班记录
+    [
+        'id' => 'addons\webman\controller\StoreShiftHandoverRecordController\export',
+        'pid' => 'addons\webman\controller\StoreShiftHandoverRecordController\index',
+        'action' => 'export',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/export',
+        'title' => '导出交班记录',
     ],
 
     // ========== 店家系统配置 ==========
@@ -634,37 +609,36 @@ return [
         'url' => '',
         'group' => 'store',
         'title' => '店家系统配置',
-        'children' => [
-            // 配置列表
-            [
-                'id' => 'addons\webman\controller\StoreSettingController\index',
-                'pid' => 'addons\webman\controller\StoreSettingController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreSettingController/index',
-                'title' => '配置列表',
-            ],
-            // 编辑营业时间
-            [
-                'id' => 'addons\webman\controller\StoreSettingController\editBusinessHours-get',
-                'pid' => 'addons\webman\controller\StoreSettingController\index',
-                'action' => 'editBusinessHours',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreSettingController/editBusinessHours',
-                'title' => '编辑营业时间',
-            ],
-            [
-                'id' => 'addons\webman\controller\StoreSettingController\editBusinessHours-post',
-                'pid' => 'addons\webman\controller\StoreSettingController\index',
-                'action' => 'editBusinessHours',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreSettingController/editBusinessHours',
-                'title' => '保存营业时间',
-            ],
-        ]
+        'children' => [],
+    ],
+    // 配置列表
+    [
+        'id' => 'addons\webman\controller\StoreSettingController\index',
+        'pid' => 'addons\webman\controller\StoreSettingController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreSettingController/index',
+        'title' => '配置列表',
+    ],
+    // 编辑营业时间
+    [
+        'id' => 'addons\webman\controller\StoreSettingController\editBusinessHours-get',
+        'pid' => 'addons\webman\controller\StoreSettingController\index',
+        'action' => 'editBusinessHours',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreSettingController/editBusinessHours',
+        'title' => '编辑营业时间',
+    ],
+    [
+        'id' => 'addons\webman\controller\StoreSettingController\editBusinessHours-post',
+        'pid' => 'addons\webman\controller\StoreSettingController\index',
+        'action' => 'editBusinessHours',
+        'method' => 'post',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreSettingController/editBusinessHours',
+        'title' => '保存营业时间',
     ],
 
     // ========== 店家开分配置 ==========
@@ -674,57 +648,56 @@ return [
         'url' => '',
         'group' => 'store',
         'title' => '店家开分配置',
-        'children' => [
-            // 配置列表
-            [
-                'id' => 'addons\webman\controller\ChannelOpenScoreSettingController\index',
-                'pid' => 'addons\webman\controller\ChannelOpenScoreSettingController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelOpenScoreSettingController/index',
-                'title' => '配置列表',
-            ],
-            // 添加配置
-            [
-                'id' => 'addons\webman\controller\ChannelOpenScoreSettingController\form-get',
-                'pid' => 'addons\webman\controller\ChannelOpenScoreSettingController\index',
-                'action' => 'form',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelOpenScoreSettingController/form',
-                'title' => '添加配置',
-            ],
-            [
-                'id' => 'addons\webman\controller\ChannelOpenScoreSettingController\form-post',
-                'pid' => 'addons\webman\controller\ChannelOpenScoreSettingController\index',
-                'action' => 'form',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelOpenScoreSettingController/form',
-                'title' => '保存配置',
-            ],
-            // 编辑配置
-            [
-                'id' => 'addons\webman\controller\ChannelOpenScoreSettingController\form-put',
-                'pid' => 'addons\webman\controller\ChannelOpenScoreSettingController\index',
-                'action' => 'form',
-                'method' => 'put',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelOpenScoreSettingController/form',
-                'title' => '编辑配置',
-            ],
-            // 删除配置
-            [
-                'id' => 'addons\webman\controller\ChannelOpenScoreSettingController\form-delete',
-                'pid' => 'addons\webman\controller\ChannelOpenScoreSettingController\index',
-                'action' => 'form',
-                'method' => 'delete',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelOpenScoreSettingController/form',
-                'title' => '删除配置',
-            ],
-        ]
+        'children' => [],
+    ],
+    // 配置列表
+    [
+        'id' => 'addons\webman\controller\ChannelOpenScoreSettingController\index',
+        'pid' => 'addons\webman\controller\ChannelOpenScoreSettingController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-ChannelOpenScoreSettingController/index',
+        'title' => '配置列表',
+    ],
+    // 添加配置
+    [
+        'id' => 'addons\webman\controller\ChannelOpenScoreSettingController\form-get',
+        'pid' => 'addons\webman\controller\ChannelOpenScoreSettingController\index',
+        'action' => 'form',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-ChannelOpenScoreSettingController/form',
+        'title' => '添加配置',
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelOpenScoreSettingController\form-post',
+        'pid' => 'addons\webman\controller\ChannelOpenScoreSettingController\index',
+        'action' => 'form',
+        'method' => 'post',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-ChannelOpenScoreSettingController/form',
+        'title' => '保存配置',
+    ],
+    // 编辑配置
+    [
+        'id' => 'addons\webman\controller\ChannelOpenScoreSettingController\form-put',
+        'pid' => 'addons\webman\controller\ChannelOpenScoreSettingController\index',
+        'action' => 'form',
+        'method' => 'put',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-ChannelOpenScoreSettingController/form',
+        'title' => '编辑配置',
+    ],
+    // 删除配置
+    [
+        'id' => 'addons\webman\controller\ChannelOpenScoreSettingController\form-delete',
+        'pid' => 'addons\webman\controller\ChannelOpenScoreSettingController\index',
+        'action' => 'form',
+        'method' => 'delete',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-ChannelOpenScoreSettingController/form',
+        'title' => '删除配置',
     ],
 
     // ========== 储值机购分配置 ==========
@@ -734,57 +707,56 @@ return [
         'url' => '',
         'group' => 'store',
         'title' => '储值机购分配置',
-        'children' => [
-            // 配置列表
-            [
-                'id' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\index',
-                'pid' => 'addons\webman\controller\ChannelPurchaseScoreSettingController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPurchaseScoreSettingController/index',
-                'title' => '配置列表',
-            ],
-            // 添加配置
-            [
-                'id' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\form-get',
-                'pid' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\index',
-                'action' => 'form',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPurchaseScoreSettingController/form',
-                'title' => '添加配置',
-            ],
-            [
-                'id' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\form-post',
-                'pid' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\index',
-                'action' => 'form',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPurchaseScoreSettingController/form',
-                'title' => '保存配置',
-            ],
-            // 编辑配置
-            [
-                'id' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\form-put',
-                'pid' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\index',
-                'action' => 'form',
-                'method' => 'put',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPurchaseScoreSettingController/form',
-                'title' => '编辑配置',
-            ],
-            // 删除配置
-            [
-                'id' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\form-delete',
-                'pid' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\index',
-                'action' => 'form',
-                'method' => 'delete',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPurchaseScoreSettingController/form',
-                'title' => '删除配置',
-            ],
-        ]
+        'children' => [],
+    ],
+    // 配置列表
+    [
+        'id' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\index',
+        'pid' => 'addons\webman\controller\ChannelPurchaseScoreSettingController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-ChannelPurchaseScoreSettingController/index',
+        'title' => '配置列表',
+    ],
+    // 添加配置
+    [
+        'id' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\form-get',
+        'pid' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\index',
+        'action' => 'form',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-ChannelPurchaseScoreSettingController/form',
+        'title' => '添加配置',
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\form-post',
+        'pid' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\index',
+        'action' => 'form',
+        'method' => 'post',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-ChannelPurchaseScoreSettingController/form',
+        'title' => '保存配置',
+    ],
+    // 编辑配置
+    [
+        'id' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\form-put',
+        'pid' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\index',
+        'action' => 'form',
+        'method' => 'put',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-ChannelPurchaseScoreSettingController/form',
+        'title' => '编辑配置',
+    ],
+    // 删除配置
+    [
+        'id' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\form-delete',
+        'pid' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\index',
+        'action' => 'form',
+        'method' => 'delete',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-ChannelPurchaseScoreSettingController/form',
+        'title' => '删除配置',
     ],
 
     // ========== 出票记录 ==========
@@ -794,48 +766,47 @@ return [
         'url' => '',
         'group' => 'store',
         'title' => '出票记录',
-        'children' => [
-            // 记录列表
-            [
-                'id' => 'addons\webman\controller\StoreTicketRecordController\index',
-                'pid' => 'addons\webman\controller\StoreTicketRecordController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/index',
-                'title' => '记录列表',
-            ],
-            // 记录详情
-            [
-                'id' => 'addons\webman\controller\StoreTicketRecordController\detail',
-                'pid' => 'addons\webman\controller\StoreTicketRecordController\index',
-                'action' => 'detail',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/detail',
-                'title' => '记录详情',
-            ],
-            // 通知客戶端 GV1 已掃描
-            [
-                'id' => 'addons\webman\controller\StoreTicketRecordController\notifyDepositScanned',
-                'pid' => 'addons\webman\controller\StoreTicketRecordController\index',
-                'action' => 'notifyDepositScanned',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/notifyDepositScanned',
-                'title' => '寄存碼掃描通知',
-            ],
-            // 點數寄存碼核銷
-            [
-                'id' => 'addons\webman\controller\StoreTicketRecordController\redeemDepositCode',
-                'pid' => 'addons\webman\controller\StoreTicketRecordController\index',
-                'action' => 'redeemDepositCode',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/redeemDepositCode',
-                'title' => '點數寄存碼核銷',
-            ],
-        ]
+        'children' => [],
+    ],
+    // 记录列表
+    [
+        'id' => 'addons\webman\controller\StoreTicketRecordController\index',
+        'pid' => 'addons\webman\controller\StoreTicketRecordController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/index',
+        'title' => '记录列表',
+    ],
+    // 记录详情
+    [
+        'id' => 'addons\webman\controller\StoreTicketRecordController\detail',
+        'pid' => 'addons\webman\controller\StoreTicketRecordController\index',
+        'action' => 'detail',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/detail',
+        'title' => '记录详情',
+    ],
+    // 通知客戶端 GV1 已掃描
+    [
+        'id' => 'addons\webman\controller\StoreTicketRecordController\notifyDepositScanned',
+        'pid' => 'addons\webman\controller\StoreTicketRecordController\index',
+        'action' => 'notifyDepositScanned',
+        'method' => 'post',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/notifyDepositScanned',
+        'title' => '寄存碼掃描通知',
+    ],
+    // 點數寄存碼核銷
+    [
+        'id' => 'addons\webman\controller\StoreTicketRecordController\redeemDepositCode',
+        'pid' => 'addons\webman\controller\StoreTicketRecordController\index',
+        'action' => 'redeemDepositCode',
+        'method' => 'post',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/redeemDepositCode',
+        'title' => '點數寄存碼核銷',
     ],
 
     // ========== 核销记录 ==========
@@ -845,77 +816,76 @@ return [
         'url' => '',
         'group' => 'store',
         'title' => '核销记录',
-        'children' => [
-            // 记录列表
-            [
-                'id' => 'addons\webman\controller\StoreTicketRedeemController\index',
-                'pid' => 'addons\webman\controller\StoreTicketRedeemController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/index',
-                'title' => '记录列表',
-            ],
-            // 记录详情
-            [
-                'id' => 'addons\webman\controller\StoreTicketRedeemController\detail',
-                'pid' => 'addons\webman\controller\StoreTicketRedeemController\index',
-                'action' => 'detail',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/detail',
-                'title' => '记录详情',
-            ],
-            // 核销操作
-            [
-                'id' => 'addons\webman\controller\StoreTicketRedeemController\redeemRecord',
-                'pid' => 'addons\webman\controller\StoreTicketRedeemController\index',
-                'action' => 'redeemRecord',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/redeemRecord',
-                'title' => '核销操作',
-            ],
-            // 扫码核销页面
-            [
-                'id' => 'addons\webman\controller\StoreTicketRedeemController\scanRedeem',
-                'pid' => 'addons\webman\controller\StoreTicketRedeemController\index',
-                'action' => 'scanRedeem',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/scanRedeem',
-                'title' => '扫码核销',
-            ],
-            // 根据二维码查询记录
-            [
-                'id' => 'addons\webman\controller\StoreTicketRedeemController\getRecordByQrCode',
-                'pid' => 'addons\webman\controller\StoreTicketRedeemController\index',
-                'action' => 'getRecordByQrCode',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/getRecordByQrCode',
-                'title' => '查询记录',
-            ],
-            // 根据ID核销记录
-            [
-                'id' => 'addons\webman\controller\StoreTicketRedeemController\redeemById',
-                'pid' => 'addons\webman\controller\StoreTicketRedeemController\index',
-                'action' => 'redeemById',
-                'method' => 'post',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/redeemById',
-                'title' => '核销记录',
-            ],
-            [
-                'id' => 'addons\webman\controller\StoreTicketRedeemController\scanRedeemModal',
-                'pid' => 'addons\webman\controller\StoreTicketRedeemController\index',
-                'action' => 'scanRedeemModal',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/scanRedeemModal',
-                'title' => '寄存碼核銷',
-            ],
-        ]
+        'children' => [],
+    ],
+    // 记录列表
+    [
+        'id' => 'addons\webman\controller\StoreTicketRedeemController\index',
+        'pid' => 'addons\webman\controller\StoreTicketRedeemController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/index',
+        'title' => '记录列表',
+    ],
+    // 记录详情
+    [
+        'id' => 'addons\webman\controller\StoreTicketRedeemController\detail',
+        'pid' => 'addons\webman\controller\StoreTicketRedeemController\index',
+        'action' => 'detail',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/detail',
+        'title' => '记录详情',
+    ],
+    // 核销操作
+    [
+        'id' => 'addons\webman\controller\StoreTicketRedeemController\redeemRecord',
+        'pid' => 'addons\webman\controller\StoreTicketRedeemController\index',
+        'action' => 'redeemRecord',
+        'method' => 'post',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/redeemRecord',
+        'title' => '核销操作',
+    ],
+    // 扫码核销页面
+    [
+        'id' => 'addons\webman\controller\StoreTicketRedeemController\scanRedeem',
+        'pid' => 'addons\webman\controller\StoreTicketRedeemController\index',
+        'action' => 'scanRedeem',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/scanRedeem',
+        'title' => '扫码核销',
+    ],
+    // 根据二维码查询记录
+    [
+        'id' => 'addons\webman\controller\StoreTicketRedeemController\getRecordByQrCode',
+        'pid' => 'addons\webman\controller\StoreTicketRedeemController\index',
+        'action' => 'getRecordByQrCode',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/getRecordByQrCode',
+        'title' => '查询记录',
+    ],
+    // 根据ID核销记录
+    [
+        'id' => 'addons\webman\controller\StoreTicketRedeemController\redeemById',
+        'pid' => 'addons\webman\controller\StoreTicketRedeemController\index',
+        'action' => 'redeemById',
+        'method' => 'post',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/redeemById',
+        'title' => '核销记录',
+    ],
+    [
+        'id' => 'addons\webman\controller\StoreTicketRedeemController\scanRedeemModal',
+        'pid' => 'addons\webman\controller\StoreTicketRedeemController\index',
+        'action' => 'scanRedeemModal',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/scanRedeemModal',
+        'title' => '寄存碼核銷',
     ],
 
     // ========== 线下机台管理 ==========
@@ -925,38 +895,37 @@ return [
         'url' => '',
         'group' => 'store',
         'title' => '线下机台',
-        'children' => [
-            // 机台列表
-            [
-                'id' => 'addons\webman\controller\StoreOfflineMachineController\index',
-                'pid' => 'addons\webman\controller\StoreOfflineMachineController-',
-                'action' => 'index',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreOfflineMachineController/index',
-                'title' => '机台列表',
-            ],
-            // 机台资讯
-            [
-                'id' => 'addons\webman\controller\StoreOfflineMachineController\infoList',
-                'pid' => 'addons\webman\controller\StoreOfflineMachineController-',
-                'action' => 'infoList',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreOfflineMachineController/infoList',
-                'title' => '机台资讯',
-            ],
-            // 踢出玩家
-            [
-                'id' => 'addons\webman\controller\StoreOfflineMachineController\kickPlayer',
-                'pid' => 'addons\webman\controller\StoreOfflineMachineController\infoList',
-                'action' => 'kickPlayer',
-                'method' => '',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreOfflineMachineController/kickPlayer',
-                'title' => '踢出玩家',
-            ],
-        ]
+        'children' => [],
+    ],
+    // 机台列表
+    [
+        'id' => 'addons\webman\controller\StoreOfflineMachineController\index',
+        'pid' => 'addons\webman\controller\StoreOfflineMachineController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreOfflineMachineController/index',
+        'title' => '机台列表',
+    ],
+    // 机台资讯
+    [
+        'id' => 'addons\webman\controller\StoreOfflineMachineController\infoList',
+        'pid' => 'addons\webman\controller\StoreOfflineMachineController-',
+        'action' => 'infoList',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreOfflineMachineController/infoList',
+        'title' => '机台资讯',
+    ],
+    // 踢出玩家
+    [
+        'id' => 'addons\webman\controller\StoreOfflineMachineController\kickPlayer',
+        'pid' => 'addons\webman\controller\StoreOfflineMachineController\infoList',
+        'action' => 'kickPlayer',
+        'method' => '',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreOfflineMachineController/kickPlayer',
+        'title' => '踢出玩家',
     ],
     // 餐點管理
     [

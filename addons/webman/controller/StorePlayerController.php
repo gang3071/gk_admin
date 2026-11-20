@@ -971,44 +971,58 @@ class StorePlayerController
 
             $grid->actions(function ($actions, $data) use ($admin) {
                 // 打码统计按钮
-                $actions->prepend(
-                    Button::create(admin_trans('player.bet_statistics_button'))
-                        ->modal($this->betStatistics($data['id']))
-                        ->width('1200px')
-                        ->title(admin_trans('player.bet_statistics_title', null, ['name' => $data['name']]))
-                        ->size('small')
-                );
+                if (Admin::check(StorePlayerController::class, 'betStatistics', 'get')) {
+                    $actions->prepend(
+                        Button::create(admin_trans('player.bet_statistics_button'))
+                            ->modal($this->betStatistics($data['id']))
+                            ->width('1200px')
+                            ->title(admin_trans('player.bet_statistics_title', null, ['name' => $data['name']]))
+                            ->size('small')
+                    );
+                }
 
                 $actions->edit()->modal($this->form())->width('60%');
 
                 // 积分管理
                 $dropdown = $actions->dropdown();
-                $dropdown->append(admin_trans('player.wallet.activity_give'), 'MoneyCollectFilled')
-                    ->modal($this->playerWallet([
-                        'id' => $data['id'],
-                        'money' => $data['wallet_money'] ?? 0,
-                    ]))->width('600px')
-                    ->title(admin_trans('player.wallet.activity_give') . ' - ' . $data['name']);
-                $dropdown->append(admin_trans('player_points.action.view_records'), 'TransactionOutlined')
-                    ->modal([StorePlayerPointsController::class, 'index'], ['player_id' => $data['id']])
-                    ->width('90%')
-                    ->title($data['name'] . ' (ID:' . $data['id'] . ') - ' . admin_trans('player_points.records_title'));
-                $dropdown->append(admin_trans('player_points.action.add_points'), 'PlusCircleOutlined')
-                    ->modal([StorePlayerPointsController::class, 'addPoints'], ['player_id' => $data['id']])
-                    ->width('600px')
-                    ->title(admin_trans('player_points.form.add_points_title') . ' - ' . $data['name']);
-                $dropdown->append(admin_trans('player_points.action.deduct_points'), 'MinusCircleOutlined')
-                    ->modal([StorePlayerPointsController::class, 'deductPoints'], ['player_id' => $data['id']])
-                    ->width('600px')
-                    ->title(admin_trans('player_points.form.deduct_points_title') . ' - ' . $data['name']);
-                $dropdown->append(admin_trans('player_points.action.freeze_points'), 'LockOutlined')
-                    ->modal([StorePlayerPointsController::class, 'freezePoints'], ['player_id' => $data['id']])
-                    ->width('600px')
-                    ->title(admin_trans('player_points.form.freeze_points_title') . ' - ' . $data['name']);
-                $dropdown->append(admin_trans('player_points.action.unfreeze_points'), 'UnlockOutlined')
-                    ->modal([StorePlayerPointsController::class, 'unfreezePoints'], ['player_id' => $data['id']])
-                    ->width('600px')
-                    ->title(admin_trans('player_points.form.unfreeze_points_title') . ' - ' . $data['name']);
+                if (Admin::check(StorePlayerController::class, 'playerWallet', 'get')) {
+                    $dropdown->append(admin_trans('player.wallet.activity_give'), 'MoneyCollectFilled')
+                        ->modal($this->playerWallet([
+                            'id' => $data['id'],
+                            'money' => $data['wallet_money'] ?? 0,
+                        ]))->width('600px')
+                        ->title(admin_trans('player.wallet.activity_give') . ' - ' . $data['name']);
+                }
+                if (Admin::check(StorePlayerPointsController::class, 'index', 'get')) {
+                    $dropdown->append(admin_trans('player_points.action.view_records'), 'TransactionOutlined')
+                        ->modal([StorePlayerPointsController::class, 'index'], ['player_id' => $data['id']])
+                        ->width('90%')
+                        ->title($data['name'] . ' (ID:' . $data['id'] . ') - ' . admin_trans('player_points.records_title'));
+                }
+                if (Admin::check(StorePlayerPointsController::class, 'addPoints', 'post')) {
+                    $dropdown->append(admin_trans('player_points.action.add_points'), 'PlusCircleOutlined')
+                        ->modal([StorePlayerPointsController::class, 'addPoints'], ['player_id' => $data['id']])
+                        ->width('600px')
+                        ->title(admin_trans('player_points.form.add_points_title') . ' - ' . $data['name']);
+                }
+                if (Admin::check(StorePlayerPointsController::class, 'deductPoints', 'post')) {
+                    $dropdown->append(admin_trans('player_points.action.deduct_points'), 'MinusCircleOutlined')
+                        ->modal([StorePlayerPointsController::class, 'deductPoints'], ['player_id' => $data['id']])
+                        ->width('600px')
+                        ->title(admin_trans('player_points.form.deduct_points_title') . ' - ' . $data['name']);
+                }
+                if (Admin::check(StorePlayerPointsController::class, 'freezePoints', 'post')) {
+                    $dropdown->append(admin_trans('player_points.action.freeze_points'), 'LockOutlined')
+                        ->modal([StorePlayerPointsController::class, 'freezePoints'], ['player_id' => $data['id']])
+                        ->width('600px')
+                        ->title(admin_trans('player_points.form.freeze_points_title') . ' - ' . $data['name']);
+                }
+                if (Admin::check(StorePlayerPointsController::class, 'unfreezePoints', 'post')) {
+                    $dropdown->append(admin_trans('player_points.action.unfreeze_points'), 'UnlockOutlined')
+                        ->modal([StorePlayerPointsController::class, 'unfreezePoints'], ['player_id' => $data['id']])
+                        ->width('600px')
+                        ->title(admin_trans('player_points.form.unfreeze_points_title') . ' - ' . $data['name']);
+                }
 
                 $actions->hideDel();
                 $actions->detail()->modal($this->viewForm())->width('60%');
@@ -1397,6 +1411,8 @@ class StorePlayerController
 
     /**
      * 钱包操作
+     * @auth true
+     * @group store
      * @param $data
      * @return Msg
      */
@@ -1674,6 +1690,8 @@ class StorePlayerController
 
     /**
      * 玩家详情
+     * @auth true
+     * @group store
      * @param $player_id
      * @return Detail
      */
