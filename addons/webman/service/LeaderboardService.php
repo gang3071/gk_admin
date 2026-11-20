@@ -465,7 +465,8 @@ class LeaderboardService
     private static function replaceEntries(int $leaderboardId, array $rows, string $ts, ?string $settleAt = null): void
     {
         // buildEntries() 已在事務外完成計算，事務只包裹 DB 寫入，鎖時間極短
-        Db::transaction(function () use ($leaderboardId, $rows, $ts, $settleAt) {
+        Db::beginTransaction();
+        try {
             if (!empty($rows)) {
                 // 1a. 先 upsert 排名欄位，不含 prize_amount（保護已領獎 entry 的原始金額）
                 LeaderboardEntry::upsert(
@@ -502,7 +503,12 @@ class LeaderboardService
                 $update['settle_at'] = $settleAt;
             }
             Leaderboard::query()->where('id', $leaderboardId)->update($update);
-        });
+
+            Db::commit();
+        } catch (\Throwable $e) {
+            Db::rollBack();
+            throw $e;
+        }
     }
 
     /**
