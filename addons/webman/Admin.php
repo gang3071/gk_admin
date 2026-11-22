@@ -62,9 +62,9 @@ class Admin
     {
         $permissionKey = 'ADMIN_PERMISSIONS_' . Admin::id();
         $adminPermissions = Cache::get($permissionKey);
-        if(empty($adminPermissions)){
+        if ($adminPermissions === null || $adminPermissions === false) {
             $adminPermissions = Admin::user()->permission->pluck('node_id')->toArray();
-            Cache::set($permissionKey, $adminPermissions);
+            Cache::set($permissionKey, $adminPermissions, 3600);
         }
         return $adminPermissions;
     }
@@ -105,7 +105,6 @@ class Admin
         if (self::$cachedNodeIds === null) {
             $allNodes = Admin::node()->all();
             self::$cachedNodeIds = array_column($allNodes, 'id');
-            unset($allNodes);  // 显式释放原始数组
         }
 
         $actions[] = str_replace('-', '\\', $class) . '\\' . $function;

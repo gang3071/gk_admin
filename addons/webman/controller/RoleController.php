@@ -5,6 +5,8 @@ namespace addons\webman\controller;
 use addons\webman\Admin;
 use addons\webman\model\AdminDepartment;
 use addons\webman\model\AdminRole;
+use addons\webman\model\AdminRoleUsers;
+use support\Cache;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\Form;
@@ -123,7 +125,7 @@ class RoleController
         return Form::create(new $this->model(), function (Form $form) {
             $form->title(admin_trans('auth.title'));
 
-            // 字段定义 - 编辑模式下名称和类型字段默认禁用（受保护角色的校验在 saving hook 中进行）
+            // 编辑模式下类型字段禁用；受保护角色的名称变更由 saving hook 拦截
             $form->text('name', admin_trans('auth.fields.name'))->required();
             $form->textarea('desc', admin_trans('auth.fields.desc'))->rows(5)->required();
             $form->radio('type', admin_trans('auth.fields.type'))
@@ -157,7 +159,8 @@ class RoleController
                         if ($form->input('name') != $role->name) {
                             return message_error(admin_trans('common.builtin_role_cannot_modify_name'));
                         }
-                        if ($form->input('type') != $role->type) {
+                        // type 字段在编辑模式下 disabled，不会出现在 POST body 中，跳过 null 值检查
+                        if ($form->input('type') !== null && $form->input('type') != $role->type) {
                             return message_error(admin_trans('common.builtin_role_cannot_modify_type'));
                         }
                     }
@@ -397,6 +400,11 @@ class RoleController
                     foreach ($authsArr as $value) {
                         $model::insert($value);
                     }
+                }
+                // 权限变更后立即清除该角色下所有用户的缓存，无需等用户退出重登
+                $userIds = AdminRoleUsers::query()->where('role_id', $id)->pluck('user_id');
+                foreach ($userIds as $userId) {
+                    Cache::delete('ADMIN_PERMISSIONS_' . $userId);
                 }
             });
         });
