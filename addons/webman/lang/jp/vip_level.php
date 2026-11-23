@@ -29,7 +29,7 @@ return [
         'birthday_bonus' => '誕生日ボーナス',
         'upgrade_bonus' => 'アップグレードボーナス',
         'daily_login_bonus' => '毎日ログインボーナス',
-        'daily_login_bonus_bet_amount' => '毎日ボーナス受取必要ベット額',
+        'daily_login_bonus_bet_amount' => '毎日ログインボーナス必要前日ベット額',
         'high_setting_machine_play_num' => '高設定マシンプレイ可能数',
         'sort' => '並べ替え',
         'status' => 'ステータス',

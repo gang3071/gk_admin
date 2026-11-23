@@ -732,8 +732,17 @@ class ChannelStoreFinanceSummaryController
 
         $steelOfflineSubtotal = bcsub((string)$steelOfflineUp, (string)$steelOfflineDown, 2);
         $steelOnlineSubtotal  = bcsub((string)$steelOnlineUp, (string)$steelOnlineDown, 2);
-        $steelOfflineProfit   = bcsub((string)$steelOfflineSubtotal, (string)$steelOfflineLottery, 2);
-        $steelOnlineProfit    = bcsub((string)$steelOnlineSubtotal, (string)$steelOnlineLottery, 2);
+        // 总利润 = 小计 - 彩金 - 反水 - 红利
+        $steelOfflineProfit   = bcsub(
+            bcsub((string)$steelOfflineSubtotal, (string)$steelOfflineLottery, 2),
+            bcadd((string)$steelOfflineCashback, (string)$steelOfflineParentCashback, 2),
+            2
+        );
+        $steelOnlineProfit    = bcsub(
+            bcsub((string)$steelOnlineSubtotal, (string)$steelOnlineLottery, 2),
+            bcadd((string)$steelOnlineCashback, (string)$steelOnlineParentCashback, 2),
+            2
+        );
 
         // --- 斯洛 ---
         $slotOfflineUp   = $machineDelivery[$slot][$offline][$upType]   ?? 0.0;
@@ -749,8 +758,17 @@ class ChannelStoreFinanceSummaryController
 
         $slotOfflineSubtotal  = bcsub((string)$slotOfflineUp, (string)$slotOfflineDown, 2);
         $slotOnlineSubtotal   = bcsub((string)$slotOnlineUp, (string)$slotOnlineDown, 2);
-        $slotOfflineProfit    = bcsub((string)$slotOfflineSubtotal, (string)$slotOfflineLottery, 2);
-        $slotOnlineProfit     = bcsub((string)$slotOnlineSubtotal, (string)$slotOnlineLottery, 2);
+        // 总利润 = 小计 - 彩金 - 反水 - 红利
+        $slotOfflineProfit    = bcsub(
+            bcsub((string)$slotOfflineSubtotal, (string)$slotOfflineLottery, 2),
+            bcadd((string)$slotOfflineCashback, (string)$slotOfflineParentCashback, 2),
+            2
+        );
+        $slotOnlineProfit     = bcsub(
+            bcsub((string)$slotOnlineSubtotal, (string)$slotOnlineLottery, 2),
+            bcadd((string)$slotOnlineCashback, (string)$slotOnlineParentCashback, 2),
+            2
+        );
 
         $slotOfflinePressure = $slotPressure[$offline]['pressure'] ?? 0.0;
         $slotOfflineScore    = $slotPressure[$offline]['score']    ?? 0.0;
@@ -778,8 +796,29 @@ class ChannelStoreFinanceSummaryController
         $vipDailyLogin    = $welfareData[PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS] ?? 0.0;
         $activityGive     = $welfareData[PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE]         ?? 0.0;
         $lotteryTicket    = $welfareData[PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD] ?? 0.0;
-        $reverseWaterPool = (float)($electronicGame->cashback_amount          ?? 0);
-        $childrenCashback = (float)($electronicGame->children_cashback_amount ?? 0);
+
+        // 反水汇总 = 电子游戏反水 + 机台反水（钢珠线下/线上 + 斯洛线下/线上）
+        $reverseWaterPool = bcadd(
+            bcadd(
+                bcadd((string)(float)($electronicGame->cashback_amount ?? 0), (string)$steelOfflineCashback, 2),
+                (string)$steelOnlineCashback,
+                2
+            ),
+            bcadd((string)$slotOfflineCashback, (string)$slotOnlineCashback, 2),
+            2
+        );
+
+        // 推广红利汇总 = 电子游戏推广红利 + 机台推广红利（钢珠线下/线上 + 斯洛线下/线上）
+        $childrenCashback = bcadd(
+            bcadd(
+                bcadd((string)(float)($electronicGame->children_cashback_amount ?? 0), (string)$steelOfflineParentCashback, 2),
+                (string)$steelOnlineParentCashback,
+                2
+            ),
+            bcadd((string)$slotOfflineParentCashback, (string)$slotOnlineParentCashback, 2),
+            2
+        );
+
         $experienceCoupon = $couponData[TicketRecord::TYPE_EXPERIENCE] ?? 0.0;
         $welfareCoupon    = $couponData[TicketRecord::TYPE_WELFARE]    ?? 0.0;
 

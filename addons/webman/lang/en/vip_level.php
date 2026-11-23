@@ -29,7 +29,7 @@ return [
         'birthday_bonus' => 'Birthday Bonus',
         'upgrade_bonus' => 'Upgrade Bonus',
         'daily_login_bonus' => 'Daily Login Bonus',
-        'daily_login_bonus_bet_amount' => 'Daily Bonus Claim Bet Amount',
+        'daily_login_bonus_bet_amount' => "Yesterday's Bet Amount for Daily Login Reward",
         'high_setting_machine_play_num' => 'High-Setting Machine Playable Count',
         'sort' => 'Sort',
         'status' => 'Status',

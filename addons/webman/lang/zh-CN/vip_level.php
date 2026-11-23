@@ -29,7 +29,7 @@ return [
         'birthday_bonus' => '生日礼金',
         'upgrade_bonus' => '升级礼金',
         'daily_login_bonus' => '每日登录奖励',
-        'daily_login_bonus_bet_amount' => '每日奖励领取打码量',
+        'daily_login_bonus_bet_amount' => '每日登录奖励所需昨日打码量',
         'high_setting_machine_play_num' => '高设定机台可玩数量',
         'sort' => '排序',
         'status' => '状态',
