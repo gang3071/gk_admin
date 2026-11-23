@@ -40,6 +40,8 @@ return [
         PlayerPointsRecord::TYPE_TRANSFER_OUT => 'ポイント送付（送出）',
         PlayerPointsRecord::TYPE_TRANSFER_IN => 'ポイント送付（受取）',
         PlayerPointsRecord::TYPE_STEEL_BALL_JACKPOT => 'スティールボール下玉贈呈',
+        PlayerPointsRecord::TYPE_PROMOTE_POINTS => 'プロモーションポイント',
+        PlayerPointsRecord::TYPE_PROMOTE_DEDUCT => 'プロモーションポイント控除',
     ],
 
     'action' => [

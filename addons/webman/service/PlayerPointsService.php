@@ -55,26 +55,45 @@ class PlayerPointsService
      * 增加积分
      *
      * @param int $playerId 玩家ID
-     * @param int $points 积分数量
+     * @param float $points 积分数量（保留4位小数）
      * @param string $remark 备注
      * @param array $adminInfo 操作人员信息 ['admin_id', 'admin_name', 'admin_ip']
+     * @param string|null $batchId 幂等批次ID（player_points_record.batch_id 唯一索引保障，重复调用跳过）
      * @return array
      * @throws Exception
      */
     public static function addPoints(
         int $playerId,
-        int $points,
+        float $points,
         string $remark,
         array $adminInfo,
         ?int $type = null,
         ?string $source = null,
-        bool $updateTotal = true
+        bool $updateTotal = true,
+        ?string $batchId = null
     ): array {
         $type = $type ?? PlayerPointsRecord::TYPE_POINTS_ADD;
         $source = $source ?? PlayerPointsRecord::SOURCE_POINTS;
 
         if ($points <= 0) {
             throw new Exception(admin_trans('player_points.message.invalid_points_amount'));
+        }
+
+        // 保留4位小数
+        $points = round($points, 4);
+
+        // 幂等：同一 batch_id 只入账一次（补算任务重跑防重发）
+        if ($batchId !== null && PlayerPointsRecord::where('batch_id', $batchId)->exists()) {
+            Log::info('[积分] batch_id已存在，跳过重复入账', [
+                'player_id' => $playerId,
+                'batch_id' => $batchId,
+            ]);
+            $current = self::getPlayerPoints($playerId);
+            return [
+                'points_added' => 0,
+                'total_points' => $current['total_points'],
+                'available_points' => $current['available_points'],
+            ];
         }
 
         Db::beginTransaction();
@@ -92,15 +111,16 @@ class PlayerPointsService
             // 记录变动前积分
             $pointsBefore = $playerPoints->available_points;
 
-            // 使用乐观锁更新
+            // 使用乐观锁更新（积分保留4位小数，须格式化为定点数拼进 SQL）
+            $pointsStr = number_format($points, 4, '.', '');
             $currentVersion = $playerPoints->version;
             $updateData = [
-                'available_points' => Db::raw('available_points + ' . (int)$points),
+                'available_points' => Db::raw('available_points + ' . $pointsStr),
                 'version' => $currentVersion + 1,
                 'updated_at' => date('Y-m-d H:i:s'),
             ];
             if ($updateTotal) {
-                $updateData['total_points'] = Db::raw('total_points + ' . (int)$points);
+                $updateData['total_points'] = Db::raw('total_points + ' . $pointsStr);
             }
             $affected = PlayerPoints::where('id', $playerPoints->id)
                 ->where('version', $currentVersion)
@@ -126,6 +146,7 @@ class PlayerPointsService
                 'admin_id' => $adminInfo['admin_id'] ?? null,
                 'admin_name' => $adminInfo['admin_name'] ?? null,
                 'admin_ip' => $adminInfo['admin_ip'] ?? null,
+                'batch_id' => $batchId,
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
 
@@ -155,25 +176,39 @@ class PlayerPointsService
      * 扣除积分
      *
      * @param int $playerId
-     * @param int $points
+     * @param float $points 积分数量（保留4位小数）
      * @param string $remark
      * @param array $adminInfo
+     * @param string|null $batchId 幂等批次ID（player_points_record.batch_id 唯一索引保障，重复调用跳过）
      * @return bool
      * @throws Exception
      */
     public static function deductPoints(
         int $playerId,
-        int $points,
+        float $points,
         string $remark,
         array $adminInfo,
         ?int $type = null,
-        ?string $source = null
+        ?string $source = null,
+        ?string $batchId = null
     ): bool {
         $type = $type ?? PlayerPointsRecord::TYPE_POINTS_DEDUCT;
         $source = $source ?? PlayerPointsRecord::SOURCE_POINTS;
 
         if ($points <= 0) {
             throw new Exception(admin_trans('player_points.message.invalid_points_amount'));
+        }
+
+        // 保留4位小数
+        $points = round($points, 4);
+
+        // 幂等：同一 batch_id 只扣一次（补算任务重跑防重复扣）
+        if ($batchId !== null && PlayerPointsRecord::where('batch_id', $batchId)->exists()) {
+            Log::info('[积分] batch_id已存在，跳过重复扣除', [
+                'player_id' => $playerId,
+                'batch_id' => $batchId,
+            ]);
+            return true;
         }
 
         Db::beginTransaction();
@@ -191,14 +226,15 @@ class PlayerPointsService
 
             $pointsBefore = $playerPoints->available_points;
 
-            // 使用乐观锁更新
+            // 使用乐观锁更新（积分保留4位小数，须格式化为定点数拼进 SQL）
+            $pointsStr = number_format($points, 4, '.', '');
             $currentVersion = $playerPoints->version;
             $affected = PlayerPoints::where('id', $playerPoints->id)
                 ->where('version', $currentVersion)
                 ->where('available_points', '>=', $points)
                 ->update([
-                    'available_points' => Db::raw('available_points - ' . (int)$points),
-                    'used_points' => Db::raw('used_points + ' . (int)$points),
+                    'available_points' => Db::raw('available_points - ' . $pointsStr),
+                    'used_points' => Db::raw('used_points + ' . $pointsStr),
                     'version' => $currentVersion + 1,
                     'updated_at' => date('Y-m-d H:i:s'),
                 ]);
@@ -220,6 +256,7 @@ class PlayerPointsService
                 'admin_id' => $adminInfo['admin_id'] ?? null,
                 'admin_name' => $adminInfo['admin_name'] ?? null,
                 'admin_ip' => $adminInfo['admin_ip'] ?? null,
+                'batch_id' => $batchId,
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
 
@@ -514,10 +551,13 @@ class PlayerPointsService
 
             $redis = Redis::connection()->client();
             $key = 'gk_api:player_points:' . $playerId;
+            // ⚠️ 不可转 int：积分为 decimal(14,4)，截断后 Redis 与 MySQL 产生小数漂移，
+            //    脏数据同步（MySQL := Redis）会把小数部分永久抹掉
             $redis->hMSet($key, [
-                'available_points' => (int)$playerPoints->available_points,
-                'frozen_points' => (int)$playerPoints->frozen_points,
-                'total_points' => (int)$playerPoints->total_points,
+                'available_points' => number_format($playerPoints->available_points, 4, '.', ''),
+                'frozen_points' => number_format($playerPoints->frozen_points, 4, '.', ''),
+                'total_points' => number_format($playerPoints->total_points, 4, '.', ''),
+                'used_points' => number_format($playerPoints->used_points, 4, '.', ''),
                 'last_update' => time(),
             ]);
             $redis->expire($key, 86400 * 365);
