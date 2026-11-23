@@ -987,7 +987,9 @@ export default {
 
     fmt(val) {
       const n = parseFloat(val);
-      return isNaN(n) ? '0.00' : n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (isNaN(n)) return '0.00';
+      const truncated = this.truncateDecimals(n, 2);
+      return truncated.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
     amountClass(val) {
       const n = parseFloat(val);
@@ -1005,9 +1007,9 @@ export default {
       return n > 0 ? 'tag-profit' : 'tag-loss';
     },
     calcTotalCost(panel) {
-      return Object.keys(this.trans.cost_types || {})
-        .reduce((sum, typeId) => sum + parseFloat(panel.delivery_types[typeId] || 0), 0)
-        .toFixed(2);
+      const total = Object.keys(this.trans.cost_types || {})
+        .reduce((sum, typeId) => sum + parseFloat(panel.delivery_types[typeId] || 0), 0);
+      return this.truncateDecimals(total, 2).toFixed(2);
     },
     costPercent(panel, typeId) {
       const total = parseFloat(this.calcTotalCost(panel));
@@ -1019,7 +1021,8 @@ export default {
       const machine    = parseFloat(panel.machine_win_loss || 0);
       const electronic = parseFloat(panel.electronic_game_win_loss || 0);
       const cost       = parseFloat(this.calcTotalCost(panel));
-      return (machine + electronic - cost).toFixed(2);
+      const net = machine + electronic - cost;
+      return this.truncateDecimals(net, 2).toFixed(2);
     },
     selectType(typeId) {
       this.activeTypeId = this.activeTypeId == typeId ? null : typeId;
@@ -1140,27 +1143,36 @@ export default {
     },
     fmtNum(val) {
       const n = Number(val) || 0;
-      return n.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const truncated = this.truncateDecimals(n, 2);
+      return truncated.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
     fmtPct(val) {
       const n = Number(val) || 0;
       return n.toFixed(2) + '%';
     },
+    // 截断到指定小数位（与 a-statistic 组件行为一致）
+    truncateDecimals(num, decimals) {
+      const factor = Math.pow(10, decimals);
+      return Math.trunc(num * factor) / factor;
+    },
     fmtIncome(val) {
       const n = Number(val) || 0;
       if (n === 0) return '0.00';
-      return '+' + n.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const truncated = this.truncateDecimals(n, 2);
+      return '+' + truncated.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
     fmtExpense(val) {
       const n = Number(val) || 0;
       if (n === 0) return '0.00';
-      return '-' + n.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const truncated = this.truncateDecimals(n, 2);
+      return '-' + truncated.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
     fmtNumSign(val) {
       const n = Number(val) || 0;
       if (n === 0) return '0.00';
-      const abs = Math.abs(n).toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      return (n > 0 ? '+' : '-') + abs;
+      const truncated = this.truncateDecimals(Math.abs(n), 2);
+      const formatted = truncated.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return (n > 0 ? '+' : '-') + formatted;
     },
     profitClass(val) {
       const n = Number(val);
