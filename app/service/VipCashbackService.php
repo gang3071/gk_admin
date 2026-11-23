@@ -224,7 +224,6 @@ class VipCashbackService
                                     $this->updateParentCashbackAmount($parent, $parentAmount);
                                 }
                             }
-
                         } else {
                             $this->log('debug', '跳過紀錄：上級玩家不存在，不計算電子遊戲推廣紅利', [
                                 'record_id' => $record->id,
@@ -665,7 +664,6 @@ class VipCashbackService
                                     $this->updateParentCashbackAmount($parent, $parentAmount);
                                 }
                             }
-
                         } else {
                             $this->log('debug', '跳過紀錄：上級玩家不存在，不計算機台推廣紅利', [
                                 'record_id' => $record->id,
