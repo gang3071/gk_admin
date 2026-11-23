@@ -797,10 +797,13 @@ class ChannelStoreFinanceSummaryController
         $activityGive     = $welfareData[PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE]         ?? 0.0;
         $lotteryTicket    = $welfareData[PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD] ?? 0.0;
 
+        // 电子游戏反水（仅电子游戏）
+        $electronicReverseWater = (float)($electronicGame->cashback_amount ?? 0);
+
         // 反水汇总 = 电子游戏反水 + 机台反水（钢珠线下/线上 + 斯洛线下/线上）
         $reverseWaterPool = bcadd(
             bcadd(
-                bcadd((string)(float)($electronicGame->cashback_amount ?? 0), (string)$steelOfflineCashback, 2),
+                bcadd((string)$electronicReverseWater, (string)$steelOfflineCashback, 2),
                 (string)$steelOnlineCashback,
                 2
             ),
@@ -869,7 +872,7 @@ class ChannelStoreFinanceSummaryController
                 'player_diff'        => $totalDiff,
                 'lottery'            => $electronicLottery,
                 'rtp'                => $this->calcRtp($totalWin, $totalBet),
-                'reverse_water_pool' => $reverseWaterPool,
+                'reverse_water_pool' => $electronicReverseWater,
             ],
             'steel_ball' => [
                 'offline' => [
