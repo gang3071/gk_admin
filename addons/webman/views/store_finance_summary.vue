@@ -987,7 +987,7 @@ export default {
 
     fmt(val) {
       const n = parseFloat(val);
-      return isNaN(n) ? '0.0000' : n.toLocaleString('zh-CN', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+      return isNaN(n) ? '0.00' : n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
     amountClass(val) {
       const n = parseFloat(val);
@@ -1007,7 +1007,7 @@ export default {
     calcTotalCost(panel) {
       return Object.keys(this.trans.cost_types || {})
         .reduce((sum, typeId) => sum + parseFloat(panel.delivery_types[typeId] || 0), 0)
-        .toFixed(4);
+        .toFixed(2);
     },
     costPercent(panel, typeId) {
       const total = parseFloat(this.calcTotalCost(panel));
@@ -1019,7 +1019,7 @@ export default {
       const machine    = parseFloat(panel.machine_win_loss || 0);
       const electronic = parseFloat(panel.electronic_game_win_loss || 0);
       const cost       = parseFloat(this.calcTotalCost(panel));
-      return (machine + electronic - cost).toFixed(4);
+      return (machine + electronic - cost).toFixed(2);
     },
     selectType(typeId) {
       this.activeTypeId = this.activeTypeId == typeId ? null : typeId;
@@ -1140,7 +1140,7 @@ export default {
     },
     fmtNum(val) {
       const n = Number(val) || 0;
-      return n.toLocaleString('zh-TW', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+      return n.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
     fmtPct(val) {
       const n = Number(val) || 0;
@@ -1148,18 +1148,18 @@ export default {
     },
     fmtIncome(val) {
       const n = Number(val) || 0;
-      if (n === 0) return '0.0000';
-      return '+' + n.toLocaleString('zh-TW', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+      if (n === 0) return '0.00';
+      return '+' + n.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
     fmtExpense(val) {
       const n = Number(val) || 0;
-      if (n === 0) return '0.0000';
-      return '-' + n.toLocaleString('zh-TW', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+      if (n === 0) return '0.00';
+      return '-' + n.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
     fmtNumSign(val) {
       const n = Number(val) || 0;
-      if (n === 0) return '0.0000';
-      const abs = Math.abs(n).toLocaleString('zh-TW', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+      if (n === 0) return '0.00';
+      const abs = Math.abs(n).toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       return (n > 0 ? '+' : '-') + abs;
     },
     profitClass(val) {
