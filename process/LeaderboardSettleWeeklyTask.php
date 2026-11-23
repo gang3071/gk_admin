@@ -29,7 +29,7 @@ class LeaderboardSettleWeeklyTask
         ]);
 
         // Cron：秒 分 時 日 月 週（每 1 分鐘，測試用）
-        new Crontab('0 */1 * * * *', function () {
+        new Crontab('0 */30 * * * *', function () {
             $this->doWork();
         });
     }

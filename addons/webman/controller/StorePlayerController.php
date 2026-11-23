@@ -993,10 +993,6 @@ class StorePlayerController
                     ->modal([StorePlayerPointsController::class, 'index'], ['player_id' => $data['id']])
                     ->width('90%')
                     ->title($data['name'] . ' (ID:' . $data['id'] . ') - ' . admin_trans('player_points.records_title'));
-                $dropdown->append(admin_trans('player_points.action.add_points'), 'PlusCircleOutlined')
-                    ->modal([StorePlayerPointsController::class, 'addPoints'], ['player_id' => $data['id']])
-                    ->width('600px')
-                    ->title(admin_trans('player_points.form.add_points_title') . ' - ' . $data['name']);
                 $dropdown->append(admin_trans('player_points.action.deduct_points'), 'MinusCircleOutlined')
                     ->modal([StorePlayerPointsController::class, 'deductPoints'], ['player_id' => $data['id']])
                     ->width('600px')

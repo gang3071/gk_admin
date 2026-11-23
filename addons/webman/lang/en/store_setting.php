@@ -36,7 +36,7 @@ return [
     'points_label' => 'pts',
     'help' => [
         'steel_ball_points_gift_status' => 'When enabled, players automatically receive the specified points each time steel ball drops qualify',
-        'steel_ball_points_gift_amount' => 'Points awarded to the player after each successful steel ball drop, minimum 1',
+        'steel_ball_points_gift_amount' => 'Base points awarded to the player after each successful steel ball drop (minimum 1). Actual points are scaled by the machine odds ratio: 1:2 gives half, 2:1 gives double. No points are awarded if the machine has no odds configured',
     ],
 
     // Validation messages
