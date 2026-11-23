@@ -16,6 +16,7 @@ use addons\webman\model\VipLevelMachineRatio;
 use addons\webman\model\VipLevelPoint;
 use addons\webman\service\PlayerPointsService;
 use support\Log;
+use Webman\RedisQueue\Client;
 
 /**
  * VIP反水补算服务
@@ -431,49 +432,19 @@ class VipCashbackService
                 return;
             }
 
-            $adminInfo = ['admin_id' => 0, 'admin_name' => 'system', 'admin_ip' => ''];
+            // 推送到队列异步处理，避免在补算循环内执行大量数据库操作
+            Client::send('promote-points', [
+                'record_type'     => $recordType,
+                'record_id'       => $recordId,
+                'bet_amount'      => $betAmount,
+                'platform_id'     => $platformId,
+                'child_player_id' => $childPlayerId,
+                'parent_player_id' => $parent->id,
+                'promote_points'  => $promotePoints,
+                'deduct_child'    => $deductChild,
+            ]);
 
-            // 上級直接入账 + 記錄
-            PlayerPointsService::addPoints(
-                $parent->id,
-                $promotePoints,
-                "推廣積分（來自下級玩家 {$childPlayerId}）",
-                $adminInfo,
-                PlayerPointsRecord::TYPE_PROMOTE_POINTS,
-                PlayerPointsRecord::SOURCE_PROMOTE_POINTS,
-                true,
-                "children_points:parent:{$recordType}:{$recordId}"
-            );
-
-            // 下級扣回抽成（仅机台：下級打碼積分已實時全額入賬）
-            if ($deductChild) {
-                $available = PlayerPointsService::getPlayerPoints($childPlayerId)['available_points'];
-                $deduct = min($promotePoints, floatval($available));
-
-                if ($deduct < $promotePoints) {
-                    $this->log('warning', '推廣積分抽成扣回時餘額不足，按可用餘額扣減', [
-                        'child_player_id' => $childPlayerId,
-                        'promote_points' => $promotePoints,
-                        'available' => $available,
-                        'record_type' => $recordType,
-                        'record_id' => $recordId,
-                    ]);
-                }
-
-                if ($deduct > 0) {
-                    PlayerPointsService::deductPoints(
-                        $childPlayerId,
-                        $deduct,
-                        "推廣積分抽成（上級玩家 {$parent->id}）",
-                        $adminInfo,
-                        PlayerPointsRecord::TYPE_PROMOTE_DEDUCT,
-                        PlayerPointsRecord::SOURCE_PROMOTE_POINTS,
-                        "children_points:child:{$recordType}:{$recordId}"
-                    );
-                }
-            }
-
-            $this->log('debug', '推廣積分入账完成', [
+            $this->log('debug', '推廣積分入账任務已推送到隊列', [
                 'parent_player_id' => $parent->id,
                 'child_player_id' => $childPlayerId,
                 'promote_points' => $promotePoints,
@@ -483,7 +454,7 @@ class VipCashbackService
         } catch (\Throwable $e) {
             // 與推廣紅利一致：單筆失敗不中斷整條記錄處理，
             // 避免記錄未標記已處理導致重跑把反水重複入池
-            $this->log('warning', '推廣積分入账失敗', [
+            $this->log('warning', '推廣積分入账任務推送失敗', [
                 'parent_player_id' => $parent->id ?? 0,
                 'child_player_id' => $childPlayerId,
                 'record_type' => $recordType,
