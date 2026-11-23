@@ -5,7 +5,6 @@ namespace app\service;
 use addons\webman\model\GamePlatform;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerExtend;
-use addons\webman\model\PlayerPointsRecord;
 use addons\webman\model\PlayerVipPeriod;
 use addons\webman\model\PlayGameRecord;
 use addons\webman\model\PlayerGameLog;
@@ -13,10 +12,7 @@ use addons\webman\model\SystemSetting;
 use addons\webman\model\VipLevel;
 use addons\webman\model\VipLevelCashback;
 use addons\webman\model\VipLevelMachineRatio;
-use addons\webman\model\VipLevelPoint;
-use addons\webman\service\PlayerPointsService;
 use support\Log;
-use Webman\RedisQueue\Client;
 
 /**
  * VIP反水补算服务
@@ -146,8 +142,6 @@ class VipCashbackService
             $allVipLevel = VipLevel::query()->where('status', VipLevel::STATUS_ENABLED)->get()->keyBy('id')->toArray();
             $allVipLevelIds = array_column($allVipLevel, 'id');
             $cashbackMap = $this->preloadCashbackRatios($allVipLevelIds, $platformIds);
-            // 推廣積分比例（下級VIP等級 × 平台的積分比例）
-            $pointMap = $this->preloadPointRatios($allVipLevelIds, $platformIds);
 
             // 获取电子游戏平台ID列表
             $electronicGamePlatformIds = $this->getElectronicGamePlatformIds();
@@ -231,21 +225,6 @@ class VipCashbackService
                                 }
                             }
 
-                            // ---------------------------------------- 推廣積分 ----------------------------------------
-                            // 打码量 × 積分比例 × 推廣積分比例，直接入账上級積分並生成記錄；
-                            // 三方打碼不產生下級積分，無抽成基數，不扣回
-                            $this->processPromotePoints(
-                                'pgr',
-                                (int) $record->id,
-                                (float) $record->bet,
-                                (int) $record->platform_id,
-                                (int) $record->player_id,
-                                (int) $vipLevelId,
-                                $parent,
-                                $vipLevel ?? [],
-                                $pointMap,
-                                false
-                            );
                         } else {
                             $this->log('debug', '跳過紀錄：上級玩家不存在，不計算電子遊戲推廣紅利', [
                                 'record_id' => $record->id,
@@ -349,119 +328,6 @@ class VipCashbackService
             $map[$r->vip_level_id][$r->platform_id] = $r->cashback_ratio;
         }
         return $map;
-    }
-
-    /**
-     * 批量预加载积分比例
-     *
-     * @param array $vipLevelIds VIP等级ID列表
-     * @param array $platformIds 平台ID列表（机台打码积分=0）
-     * @return array [vipLevelId => [platformId => ratio_point]]
-     */
-    protected function preloadPointRatios(array $vipLevelIds, array $platformIds): array
-    {
-        if (empty($vipLevelIds) || empty($platformIds)) {
-            return [];
-        }
-
-        $records = VipLevelPoint::query()
-            ->whereIn('vip_level_id', $vipLevelIds)
-            ->whereIn('platform_id', $platformIds)
-            ->where('status', 1)
-            ->get();
-
-        $map = [];
-        foreach ($records as $r) {
-            $map[$r->vip_level_id][$r->platform_id] = $r->ratio_point;
-        }
-        return $map;
-    }
-
-    /**
-     * 推廣積分：打码量 × 積分比例 × 上級推廣積分比例，直接入账上級積分並生成記錄
-     *
-     * 与推广红利同构（bet × 反水比例 × 推广比例），比例换成积分域：
-     * - 積分比例：vip_level_point.ratio_point（下級VIP等級 × 平台，机台=0）
-     * - 推廣積分比例：上級VIP等級 children_points_ratio
-     *
-     * 与推广红利不同：不进待领取池、无领取接口，直接入账（type=TYPE_PROMOTE_POINTS）。
-     * 机台下級的打碼積分已由 player-points 隊列實時全額入賬，同一輪扣回抽成部分
-     * （type=TYPE_PROMOTE_DEDUCT），下級實收 = 打码量 × 積分比例 × (1 − children_points_ratio%)。
-     * 三方打碼不產生下級積分，不扣回。
-     *
-     * 幂等：batch_id = children_points:{parent|child}:{recordType}:{recordId}，
-     * 依赖 player_points_record.batch_id 唯一索引，補算任务重跑不重發。
-     *
-     * @param string $recordType 记录类型标识（pgr=三方记录 pgl=机台记录），仅用于 batch_id
-     * @param int $recordId 游戏记录ID
-     * @param float $betAmount 打码量（三方=bet，机台=chip_amount）
-     * @param int $platformId 积分比例对应平台（机台=0）
-     * @param int $childPlayerId 下級玩家ID
-     * @param int $childVipLevelId 下級VIP等级ID
-     * @param Player $parent 上級玩家
-     * @param array $parentVipLevel 上級VIP等级行
-     * @param array $pointMap 预加载积分比例 [vipLevelId => [platformId => ratio]]
-     * @param bool $deductChild 是否从下級已入账的打碼積分中扣回抽成（机台=true）
-     */
-    protected function processPromotePoints(
-        string $recordType,
-        int $recordId,
-        float $betAmount,
-        int $platformId,
-        int $childPlayerId,
-        int $childVipLevelId,
-        $parent,
-        array $parentVipLevel,
-        array $pointMap,
-        bool $deductChild
-    ): void {
-        try {
-            $childrenRatio = floatval($parentVipLevel['children_points_ratio'] ?? 0);
-            if ($childrenRatio <= 0 || $betAmount <= 0) {
-                return;
-            }
-
-            $pointsRatio = floatval($pointMap[$childVipLevelId][$platformId] ?? 0);
-            if ($pointsRatio <= 0) {
-                return;
-            }
-
-            // 与推广红利同构：打码量 × 基础比例 × 上級比例
-            $promotePoints = round($betAmount * ($pointsRatio / 100) * ($childrenRatio / 100), 4);
-            if ($promotePoints <= 0) {
-                return;
-            }
-
-            // 推送到队列异步处理，避免在补算循环内执行大量数据库操作
-            Client::send('promote-points', [
-                'record_type'     => $recordType,
-                'record_id'       => $recordId,
-                'bet_amount'      => $betAmount,
-                'platform_id'     => $platformId,
-                'child_player_id' => $childPlayerId,
-                'parent_player_id' => $parent->id,
-                'promote_points'  => $promotePoints,
-                'deduct_child'    => $deductChild,
-            ]);
-
-            $this->log('debug', '推廣積分入账任務已推送到隊列', [
-                'parent_player_id' => $parent->id,
-                'child_player_id' => $childPlayerId,
-                'promote_points' => $promotePoints,
-                'record_type' => $recordType,
-                'record_id' => $recordId,
-            ]);
-        } catch (\Throwable $e) {
-            // 與推廣紅利一致：單筆失敗不中斷整條記錄處理，
-            // 避免記錄未標記已處理導致重跑把反水重複入池
-            $this->log('warning', '推廣積分入账任務推送失敗', [
-                'parent_player_id' => $parent->id ?? 0,
-                'child_player_id' => $childPlayerId,
-                'record_type' => $recordType,
-                'record_id' => $recordId,
-                'error' => $e->getMessage(),
-            ]);
-        }
     }
 
     /**
@@ -738,9 +604,6 @@ class VipCashbackService
             $allVipLevel = VipLevel::query()->where('status', VipLevel::STATUS_ENABLED)->get()->keyBy('id')->toArray();
             $allVipLevelIds = array_column($allVipLevel, 'id');
             $machineRatioMap = $this->preloadMachineRatios($allVipLevelIds);
-            // 推廣積分比例：机台打码积分按 platform_id=0 的积分比例
-            // （与 player-points 队列 platform_amounts[0] 同口径）
-            $pointMap = $this->preloadPointRatios($allVipLevelIds, [0]);
 
             // 批量获取机台类型映射
             $machineIds = $records->pluck('machine_id')->unique()->toArray();
@@ -803,22 +666,6 @@ class VipCashbackService
                                 }
                             }
 
-                            // ---------------------------------------- 推廣積分 ----------------------------------------
-                            // 打码量 × 積分比例 × 推廣積分比例，直接入账上級積分並生成記錄；
-                            // 下級打碼積分已由 player-points 隊列實時全額入賬，此處扣回抽成部分
-                            //（下級實收 = 打碼量 × 積分比例 × (1 − children_points_ratio%)）
-                            $this->processPromotePoints(
-                                'pgl',
-                                (int) $record->id,
-                                (float) $record->chip_amount,
-                                0,
-                                (int) $record->player_id,
-                                (int) $vipLevelId,
-                                $parent,
-                                $vipLevel ?? [],
-                                $pointMap,
-                                true
-                            );
                         } else {
                             $this->log('debug', '跳過紀錄：上級玩家不存在，不計算機台推廣紅利', [
                                 'record_id' => $record->id,

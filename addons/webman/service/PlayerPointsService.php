@@ -79,7 +79,6 @@ class PlayerPointsService
      * @param float $points 积分数量（保留4位小数）
      * @param string $remark 备注
      * @param array $adminInfo 操作人员信息 ['admin_id', 'admin_name', 'admin_ip']
-     * @param string|null $batchId 幂等批次ID（player_points_record.batch_id 唯一索引保障，重复调用跳过）
      * @return array
      * @throws Exception
      */
@@ -90,8 +89,7 @@ class PlayerPointsService
         array $adminInfo,
         ?int $type = null,
         ?string $source = null,
-        bool $updateTotal = true,
-        ?string $batchId = null
+        bool $updateTotal = true
     ): array {
         $type = $type ?? PlayerPointsRecord::TYPE_POINTS_ADD;
         $source = $source ?? PlayerPointsRecord::SOURCE_POINTS;
@@ -102,20 +100,6 @@ class PlayerPointsService
 
         // 保留4位小数
         $points = round($points, 4);
-
-        // 幂等：同一 batch_id 只入账一次（补算任务重跑防重发）
-        if ($batchId !== null && PlayerPointsRecord::where('batch_id', $batchId)->exists()) {
-            Log::info('[积分] batch_id已存在，跳过重复入账', [
-                'player_id' => $playerId,
-                'batch_id' => $batchId,
-            ]);
-            $current = self::getPlayerPoints($playerId);
-            return [
-                'points_added' => 0,
-                'total_points' => $current['total_points'],
-                'available_points' => $current['available_points'],
-            ];
-        }
 
         // 先把 Redis 未同步的打码积分落账，保证变动前后数值准确
         self::flushPlayerToMySQL($playerId);
@@ -170,7 +154,6 @@ class PlayerPointsService
                 'admin_id' => $adminInfo['admin_id'] ?? null,
                 'admin_name' => $adminInfo['admin_name'] ?? null,
                 'admin_ip' => $adminInfo['admin_ip'] ?? null,
-                'batch_id' => $batchId,
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
 
@@ -206,7 +189,6 @@ class PlayerPointsService
      * @param float $points 积分数量（保留4位小数）
      * @param string $remark
      * @param array $adminInfo
-     * @param string|null $batchId 幂等批次ID（player_points_record.batch_id 唯一索引保障，重复调用跳过）
      * @return bool
      * @throws Exception
      */
@@ -216,8 +198,7 @@ class PlayerPointsService
         string $remark,
         array $adminInfo,
         ?int $type = null,
-        ?string $source = null,
-        ?string $batchId = null
+        ?string $source = null
     ): bool {
         $type = $type ?? PlayerPointsRecord::TYPE_POINTS_DEDUCT;
         $source = $source ?? PlayerPointsRecord::SOURCE_POINTS;
@@ -228,15 +209,6 @@ class PlayerPointsService
 
         // 保留4位小数
         $points = round($points, 4);
-
-        // 幂等：同一 batch_id 只扣一次（补算任务重跑防重复扣）
-        if ($batchId !== null && PlayerPointsRecord::where('batch_id', $batchId)->exists()) {
-            Log::info('[积分] batch_id已存在，跳过重复扣除', [
-                'player_id' => $playerId,
-                'batch_id' => $batchId,
-            ]);
-            return true;
-        }
 
         // 先把 Redis 未同步的打码积分落账，否则余额不足检查会读到滞后值
         self::flushPlayerToMySQL($playerId);
@@ -287,7 +259,6 @@ class PlayerPointsService
                 'admin_id' => $adminInfo['admin_id'] ?? null,
                 'admin_name' => $adminInfo['admin_name'] ?? null,
                 'admin_ip' => $adminInfo['admin_ip'] ?? null,
-                'batch_id' => $batchId,
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
 
