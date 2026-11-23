@@ -373,9 +373,9 @@
                   <tr>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-bet')">電子總押注</th>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-win')">電子總贏分</th>
-                    <th class="th-link th-player-diff" @click="scrollToDesc('desc-electronic-diff')">玩家輸贏<span class="note-small">以平台盈虧展示</span></th>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-lottery')">電子彩金</th>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-reverse-water')">返水<span class="note-small">含未領取</span></th>
+                    <th class="th-link th-player-diff" @click="scrollToDesc('desc-electronic-diff')">玩家輸贏<span class="note-small">以平台盈虧展示</span></th>
                     <th class="th-link th-rtp" @click="scrollToDesc('desc-electronic-rtp')">RTP</th>
                   </tr>
                 </thead>
@@ -383,9 +383,9 @@
                   <tr>
                     <td class="val-income">{{ fmtIncome(reportData.electronic.total_bet) }}</td>
                     <td class="val-expense">{{ fmtExpense(reportData.electronic.total_win) }}</td>
-                    <td :class="['td-player-diff', profitClass(-reportData.electronic.player_diff)]">{{ fmtNumSign(-reportData.electronic.player_diff) }}</td>
                     <td class="val-expense">{{ fmtExpense(reportData.electronic.lottery) }}</td>
                     <td class="val-expense">{{ fmtExpense(reportData.electronic.reverse_water_pool) }}</td>
+                    <td :class="['td-player-diff', profitClass(-reportData.electronic.player_diff)]">{{ fmtNumSign(-reportData.electronic.player_diff) }}</td>
                     <td :class="['td-rtp', rtpClass(reportData.electronic.rtp)]">{{ fmtPct(reportData.electronic.rtp) }}</td>
                   </tr>
                 </tbody>
@@ -987,7 +987,7 @@ export default {
 
     fmt(val) {
       const n = parseFloat(val);
-      return isNaN(n) ? '0.00' : n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return isNaN(n) ? '0.0000' : n.toLocaleString('zh-CN', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
     },
     amountClass(val) {
       const n = parseFloat(val);
@@ -1007,7 +1007,7 @@ export default {
     calcTotalCost(panel) {
       return Object.keys(this.trans.cost_types || {})
         .reduce((sum, typeId) => sum + parseFloat(panel.delivery_types[typeId] || 0), 0)
-        .toFixed(2);
+        .toFixed(4);
     },
     costPercent(panel, typeId) {
       const total = parseFloat(this.calcTotalCost(panel));
@@ -1019,7 +1019,7 @@ export default {
       const machine    = parseFloat(panel.machine_win_loss || 0);
       const electronic = parseFloat(panel.electronic_game_win_loss || 0);
       const cost       = parseFloat(this.calcTotalCost(panel));
-      return (machine + electronic - cost).toFixed(2);
+      return (machine + electronic - cost).toFixed(4);
     },
     selectType(typeId) {
       this.activeTypeId = this.activeTypeId == typeId ? null : typeId;
@@ -1140,7 +1140,7 @@ export default {
     },
     fmtNum(val) {
       const n = Number(val) || 0;
-      return n.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return n.toLocaleString('zh-TW', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
     },
     fmtPct(val) {
       const n = Number(val) || 0;
@@ -1148,18 +1148,18 @@ export default {
     },
     fmtIncome(val) {
       const n = Number(val) || 0;
-      if (n === 0) return '0.00';
-      return '+' + n.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (n === 0) return '0.0000';
+      return '+' + n.toLocaleString('zh-TW', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
     },
     fmtExpense(val) {
       const n = Number(val) || 0;
-      if (n === 0) return '0.00';
-      return '-' + n.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (n === 0) return '0.0000';
+      return '-' + n.toLocaleString('zh-TW', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
     },
     fmtNumSign(val) {
       const n = Number(val) || 0;
-      if (n === 0) return '0.00';
-      const abs = Math.abs(n).toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (n === 0) return '0.0000';
+      const abs = Math.abs(n).toLocaleString('zh-TW', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
       return (n > 0 ? '+' : '-') + abs;
     },
     profitClass(val) {
