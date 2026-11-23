@@ -252,13 +252,13 @@ class AgentStoreProfitMonthlyExporter extends Excel
     {
         $this->sheet->setCellValue('A' . $this->currentRow, $item['store_name']);
         $this->sheet->setCellValue('B' . $this->currentRow, $item['device_count']);
-        $this->sheet->setCellValue('C' . $this->currentRow, number_format(floatval($item['recharge_amount']), 2));
-        $this->sheet->setCellValue('D' . $this->currentRow, number_format(floatval($item['machine_put_point']), 2));
-        $this->sheet->setCellValue('E' . $this->currentRow, number_format(floatval($item['withdraw_amount']), 2));
-        $this->sheet->setCellValue('F' . $this->currentRow, number_format(floatval($item['lottery_amount']), 2));
-        $this->sheet->setCellValue('G' . $this->currentRow, number_format(floatval($item['subtotal']), 2));
-        $this->sheet->setCellValue('H' . $this->currentRow, number_format(floatval($item['yesterday_subtotal']), 2));
-        $this->sheet->setCellValue('I' . $this->currentRow, number_format(floatval($item['today_change']), 2));
+        $this->sheet->setCellValue('C' . $this->currentRow, number_format(floatval($item['recharge_amount']), 0));
+        $this->sheet->setCellValue('D' . $this->currentRow, number_format(floatval($item['machine_put_point']), 0));
+        $this->sheet->setCellValue('E' . $this->currentRow, number_format(floatval($item['withdraw_amount']), 0));
+        $this->sheet->setCellValue('F' . $this->currentRow, number_format(floatval($item['lottery_amount']), 0));
+        $this->sheet->setCellValue('G' . $this->currentRow, number_format(floatval($item['subtotal']), 0));
+        $this->sheet->setCellValue('H' . $this->currentRow, number_format(floatval($item['yesterday_subtotal']), 0));
+        $this->sheet->setCellValue('I' . $this->currentRow, number_format(floatval($item['today_change']), 0));
 
         // 交替行背景色
         $bgColor = $index % 2 == 0 ? 'FFFFFF' : 'F5F5F5';

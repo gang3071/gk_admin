@@ -236,24 +236,24 @@ class AgentStoreProfitReportController
             $grid->column('store_username', admin_trans('agent_store_profit.fields.store_username'))->width(120)->align('center');
 
             $grid->column('machine_put_point', admin_trans('agent_store_profit.fields.machine_put_point'))->display(function ($value) {
-                return number_format(floatval($value), 2);
+                return number_format(floatval($value), 0);
             })->width(120)->align('center');
 
             $grid->column('recharge_amount', admin_trans('agent_store_profit.fields.recharge_amount'))->display(function ($value) {
-                return number_format(floatval($value), 2);
+                return number_format(floatval($value), 0);
             })->width(120)->align('center');
 
             $grid->column('withdraw_amount', admin_trans('agent_store_profit.fields.withdraw_amount'))->display(function ($value) {
-                return number_format(floatval($value), 2);
+                return number_format(floatval($value), 0);
             })->width(120)->align('center');
 
             $grid->column('lottery_amount', admin_trans('agent_store_profit.fields.lottery_amount'))->display(function ($value) {
-                return number_format(floatval($value), 2);
+                return number_format(floatval($value), 0);
             })->width(120)->align('center');
 
             $grid->column('subtotal', admin_trans('agent_store_profit.fields.subtotal'))->display(function ($value) {
                 $color = $value >= 0 ? '#3f8600' : '#cf1322';
-                return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
+                return Html::create(number_format(floatval($value), 0))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
 
             $grid->column('agent_commission', admin_trans('agent_store_profit.fields.agent_commission'))->display(function ($value) {
@@ -262,7 +262,7 @@ class AgentStoreProfitReportController
 
             $grid->column('agent_profit', admin_trans('agent_store_profit.fields.agent_profit'))->display(function ($value) {
                 $color = $value >= 0 ? '#1890ff' : '#fa8c16';
-                return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
+                return Html::create(number_format(floatval($value), 0))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
 
             $grid->column('channel_commission', admin_trans('agent_store_profit.fields.channel_commission'))->display(function ($value) {
@@ -271,7 +271,7 @@ class AgentStoreProfitReportController
 
             $grid->column('channel_profit', admin_trans('agent_store_profit.fields.channel_profit'))->display(function ($value) {
                 $color = $value >= 0 ? '#52c41a' : '#f5222d';
-                return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
+                return Html::create(number_format(floatval($value), 0))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
 
             // 筛选器
@@ -739,20 +739,20 @@ class AgentStoreProfitReportController
             $grid->column('store_name', admin_trans('agent_store_profit.fields.store_name'))->align('center');
             $grid->column('machine_put_point', admin_trans('agent_store_profit.fields.machine_put_point'))->align('center')
                 ->display(function ($value) {
-                    return number_format(floatval($value), 2);
+                    return number_format(floatval($value), 0);
                 });
             $grid->column('recharge_amount', admin_trans('agent_store_profit.fields.recharge_amount'))->align('center')
                 ->display(function ($value) {
-                    return number_format(floatval($value), 2);
+                    return number_format(floatval($value), 0);
                 });
             $grid->column('withdraw_amount', admin_trans('agent_store_profit.fields.withdraw_amount'))->align('center')
                 ->display(function ($value) {
-                    return number_format(floatval($value), 2);
+                    return number_format(floatval($value), 0);
                 });
             $grid->column('profit', admin_trans('agent_store_profit.fields.profit'))->align('center')
                 ->display(function ($value, $data) {
                     $profit = bcadd(bcadd(floatval($data['machine_put_point']), floatval($data['recharge_amount']), 2), -floatval($data['withdraw_amount']), 2);
-                    return number_format(floatval($profit), 2);
+                    return number_format(floatval($profit), 0);
                 });
 
             $grid->hideAction();
