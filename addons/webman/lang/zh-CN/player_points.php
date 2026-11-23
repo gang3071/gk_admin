@@ -40,6 +40,8 @@ return [
         PlayerPointsRecord::TYPE_TRANSFER_OUT => '积分转赠（送出）',
         PlayerPointsRecord::TYPE_TRANSFER_IN => '积分转赠（收入）',
         PlayerPointsRecord::TYPE_STEEL_BALL_JACKPOT => '钢珠下珠赠送',
+        PlayerPointsRecord::TYPE_PROMOTE_POINTS => '推广积分',
+        PlayerPointsRecord::TYPE_PROMOTE_DEDUCT => '推广积分抽成',
     ],
 
     'action' => [
