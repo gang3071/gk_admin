@@ -18,6 +18,7 @@ return [
         'lottery_pool_amount' => '宝くじプール金額',
         'lottery_rate' => '金額比率',
         'cate_rate' => 'ペイアウト係数',
+        'win_condition' => 'トリガー条件値',
         'reject_reason' => '拒否理由',
         'user_name' => 'レビュー担当者',
         'status' => '状态',
