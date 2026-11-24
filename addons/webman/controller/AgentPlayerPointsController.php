@@ -194,6 +194,8 @@ class AgentPlayerPointsController
                         PlayerPointsRecord::TYPE_TRANSFER_OUT        => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_TRANSFER_OUT),
                         PlayerPointsRecord::TYPE_TRANSFER_IN         => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_TRANSFER_IN),
                         PlayerPointsRecord::TYPE_STEEL_BALL_JACKPOT  => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_STEEL_BALL_JACKPOT),
+                        PlayerPointsRecord::TYPE_PROMOTE_POINTS      => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_PROMOTE_POINTS),
+                        PlayerPointsRecord::TYPE_PROMOTE_DEDUCT      => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_PROMOTE_DEDUCT),
                     ]);
             });
             $grid->expandFilter(false);
