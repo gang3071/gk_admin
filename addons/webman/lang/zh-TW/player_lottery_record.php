@@ -18,6 +18,7 @@ return [
         'lottery_pool_amount' => '彩池金額',
         'lottery_rate' => '金額比例',
         'cate_rate' => '派彩係數',
+        'win_condition' => '觸發條件值',
         'reject_reason' => '拒絕原因',
         'user_name' => '稽核人',
         'status' => '狀態',

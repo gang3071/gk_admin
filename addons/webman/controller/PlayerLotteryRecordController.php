@@ -251,6 +251,12 @@ class PlayerLotteryRecordController
                 return $data->source == PlayerLotteryRecord::SOURCE_GAME ? Html::create()->content(['-' . $val])->style(['color' => '#cd201f']) : '';
             })->sortable()->align('center');
             $grid->column('cate_rate', admin_trans('player_lottery_record.fields.cate_rate'))->align('center');
+            $grid->column('win_condition', admin_trans('player_lottery_record.fields.win_condition'))->display(function ($val, PlayerLotteryRecord $data) {
+                if ($data->lottery_type !== \addons\webman\model\Lottery::LOTTERY_TYPE_FIXED) {
+                    return '';
+                }
+                return $val > 0 ? (string) $val : '';
+            })->align('center');
             $grid->column('reject_reason',
                 admin_trans('player_lottery_record.fields.reject_reason'))->display(function ($value) {
                 return Str::of($value)->limit(20, ' (...)');

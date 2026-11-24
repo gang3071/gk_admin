@@ -18,6 +18,7 @@ return [
         'lottery_pool_amount' => 'Lottery pool amount',
         'lottery_rate' => 'amount ratio',
         'cate_rate' => 'Payout coefficient',
+        'win_condition' => 'Trigger condition value',
         'reject_reason' => 'Rejection reason',
         'user_name' => 'Reviewer',
         'status' => 'status',
