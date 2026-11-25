@@ -42,6 +42,7 @@ return [
         'parent_cashback_ratio' => '推廣紅利比例',
         'parent_cashback_amount' => '推廣紅利金額',
         'source_type' => '來源類型',
+        'remark' => '備註',
     ],
     'total_data' => [
         'total_game_amount' => '總遊戲點',

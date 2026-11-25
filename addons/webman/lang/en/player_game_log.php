@@ -43,6 +43,7 @@ return [
         'parent_cashback_ratio' => 'Promotional Bonus Percentage',
         'parent_cashback_amount' => 'Promotional Bonus Amount',
         'source_type' => 'Source Type',
+        'remark' => 'Remark',
     ],
     'total_data' => [
         'total_game_amount' => 'Total game points',

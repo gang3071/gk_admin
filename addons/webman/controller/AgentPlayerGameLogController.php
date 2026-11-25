@@ -293,6 +293,9 @@ class AgentPlayerGameLogController
                 }
                 return '-';
             })->align('center');
+            $grid->column('remark', admin_trans('player_game_log.fields.remark'))->display(function ($val) {
+                return $val ?: '';
+            })->tip()->width('150px')->align('center');
             $grid->column('created_at', admin_trans('player_game_log.fields.create_at'))->align('center');
             $grid->filter(function (Filter $filter) use ($admin) {
                 $filter->like()->text('player.name')->placeholder(admin_trans('player.fields.device_name'));

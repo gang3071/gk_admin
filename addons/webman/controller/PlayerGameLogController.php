@@ -274,6 +274,9 @@ class PlayerGameLogController
                 ->display(function ($value) {
                     return Html::create()->content(['+' . number_format((float)$value, 5)])->style(['color' => 'green']);
                 });
+            $grid->column('remark', admin_trans('player_game_log.fields.remark'))->display(function ($val) {
+                return $val ?: '';
+            })->tip()->width('150px')->align('center');
             $grid->column('created_at', admin_trans('player_game_log.fields.create_at'))->align('center');
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('player.phone')->placeholder(admin_trans('player.fields.phone'));

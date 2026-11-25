@@ -42,6 +42,7 @@ return [
         'parent_cashback_ratio' => '推广红利比例',
         'parent_cashback_amount' => '推广红利金额',
         'source_type' => '来源类型',
+        'remark' => '备注',
     ],
     'total_data' => [
         'total_game_amount' => '总游戏点',

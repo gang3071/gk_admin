@@ -42,6 +42,7 @@ return [
         'parent_cashback_ratio' => 'プロモーション特典の割合',
         'parent_cashback_amount' => 'プロモーション特典額',
         'source_type' => 'ソースタイプ',
+        'remark' => '備考',
     ],
     'total_data' => [
         'total_game_amount' => '総ゲームポイント',

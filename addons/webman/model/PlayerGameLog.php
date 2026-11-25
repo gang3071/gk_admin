@@ -48,6 +48,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string created_at 创建时间
  * @property string updated_at 最后一次修改时间
  * @property int is_test 是否为测试数据 0否 1是
+ * @property string|null remark 备注信息（如管理员操作说明：强制踢出原因、没收分数说明等）
  *
  * @property Player player 玩家信息
  * @property MachineRecording machine_recording 录制记录
