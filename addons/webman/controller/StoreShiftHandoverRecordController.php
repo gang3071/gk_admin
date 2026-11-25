@@ -5,10 +5,8 @@ namespace addons\webman\controller;
 use addons\webman\Admin;
 use addons\webman\grid\ShiftReportExporter;
 use addons\webman\model\AdminUser;
-use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\StoreShiftDeviceDetail;
-use addons\webman\model\TicketRecord;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
@@ -35,93 +33,6 @@ class StoreShiftHandoverRecordController
      * @group store
      * @auth true
      */
-    /**
-     * 按店家分润报表口径实时计算交班记录的展示值
-     *
-     * ⚠️ 仅用于列表展示：不落库、不影响交班记录导出报表的数据（导出仍读取记录原值）。
-     * 口径与 ChannelStoreProfitReportController 一致：
-     *   总入 = 开分 + 开票（票券：玩家票或柜台购）
-     *   总出 = 洗分 + 全票种后台核销
-     *   利润 = 总入 − 总出
-     *   未核销 = 出卷 − 后台核销 − 机台核销 + 柜台核销 − 已拆分/已合并
-     *   打码量 = 本班次设备明细合计
-     *
-     * @param array $data 交班记录行
-     * @return array
-     */
-    private function calcAlignedStats(array $data): array
-    {
-        static $cache = [];
-
-        $id = (int)($data['id'] ?? 0);
-        if ($id > 0 && isset($cache[$id])) {
-            return $cache[$id];
-        }
-
-        $storeId = (int)($data['bind_admin_user_id'] ?? 0);
-        $start = (string)($data['start_time'] ?? '');
-        $end = (string)($data['end_time'] ?? '');
-
-        // 金流：开分 / 洗分 / 出卷（按 created_at 归属班次）
-        $del = PlayerDeliveryRecord::query()
-            ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
-            ->where('player.store_admin_id', $storeId)
-            ->where('player.is_promoter', 0)
-            ->where('player_delivery_record.created_at', '>', $start)
-            ->where('player_delivery_record.created_at', '<=', $end)
-            ->selectRaw("
-                SUM(CASE WHEN (player_delivery_record.type = 6 AND player_delivery_record.source = 'artificial_recharge')
-                    OR (player_delivery_record.type = 23 AND player_delivery_record.source = 'storage_recharge')
-                    THEN player_delivery_record.amount ELSE 0 END) AS open_score,
-                SUM(CASE WHEN player_delivery_record.type = 7 AND player_delivery_record.source = 'channel_withdrawal'
-                    THEN player_delivery_record.amount ELSE 0 END) AS withdraw,
-                SUM(CASE WHEN player_delivery_record.type = 7 AND player_delivery_record.source = 'ticket_redeem'
-                    THEN player_delivery_record.amount ELSE 0 END) AS ticket_redeem
-            ")
-            ->first();
-
-        // 票券：开票（created_at）/ 各类核销与拆合（scanned_at / created_at）
-        $tk = TicketRecord::query()
-            ->where('store_admin_id', $storeId)
-            ->selectRaw("
-                SUM(CASE WHEN ticket_type = 1 AND status IN (1, 2, 3)
-                    AND (player_id > 0 OR ((player_id = 0 OR player_id IS NULL) AND (source_type IS NULL OR source_type = 'purchase')))
-                    AND created_at > ? AND created_at <= ? THEN score ELSE 0 END) AS ticket_open,
-                SUM(CASE WHEN status = 2 AND scanned_at > ? AND scanned_at <= ? THEN score ELSE 0 END) AS redeem,
-                SUM(CASE WHEN ticket_type = 2 AND status = 3 AND scanned_at > ? AND scanned_at <= ? THEN score ELSE 0 END) AS redeem_machine,
-                SUM(CASE WHEN status = 2 AND (ticket_type = 1 OR (ticket_type = 2 AND (player_id = 0 OR player_id IS NULL)))
-                    AND scanned_at > ? AND scanned_at <= ? THEN score ELSE 0 END) AS counter_redeem,
-                SUM(CASE WHEN ticket_type = 2 AND status IN (6, 7) AND created_at > ? AND created_at <= ? THEN score ELSE 0 END) AS split_merged
-            ", [$start, $end, $start, $end, $start, $end, $start, $end, $start, $end])
-            ->first();
-
-        // 打码量 = 本班次设备明细合计（与分润报聚合合同源）
-        $bet = StoreShiftDeviceDetail::query()
-            ->where('shift_record_id', $id)
-            ->selectRaw('COALESCE(SUM(electronic_game_bet_amount), 0) AS e, COALESCE(SUM(machine_bet_amount), 0) AS m')
-            ->first();
-
-        $openScore = floatval($del->open_score ?? 0);
-        $withdraw = floatval($del->withdraw ?? 0);
-        $redeem = floatval($tk->redeem ?? 0);
-        $totalIn = round($openScore + floatval($tk->ticket_open ?? 0), 2);
-        $totalOut = round($withdraw + $redeem, 2);
-
-        return $cache[$id] = [
-            'total_in' => $totalIn,
-            'total_out' => $totalOut,
-            'total_profit' => round($totalIn - $totalOut, 2),
-            'ticket_unredeemed_amount' => round(
-                floatval($del->ticket_redeem ?? 0) - $redeem
-                - floatval($tk->redeem_machine ?? 0) + floatval($tk->counter_redeem ?? 0)
-                - floatval($tk->split_merged ?? 0),
-                2
-            ),
-            'electronic_game_bet_amount' => floatval($bet->e ?? 0),
-            'machine_bet_amount' => floatval($bet->m ?? 0),
-        ];
-    }
-
     public function index(): Grid
     {
         return Grid::create(new StoreAgentShiftHandoverRecord(), function (Grid $grid) {
@@ -153,41 +64,27 @@ class StoreShiftHandoverRecordController
             })->width(100)->align('center');
 
             $grid->column('machine_point', admin_trans('shift_handover.record.machine_point'))->width(100)->align('center');
-            $grid->column('total_in', admin_trans('shift_handover.record.total_in'))->width(100)->align('center')
-                // 展示值按店家分润报表口径实时计算（不落库，不影响导出）
-                ->display(function ($val, $data) {
-                    return number_format($this->calcAlignedStats($data)['total_in'], 2);
-                });
-            $grid->column('total_out', admin_trans('shift_handover.record.total_out'))->width(100)->align('center')
-                ->display(function ($val, $data) {
-                    return number_format($this->calcAlignedStats($data)['total_out'], 2);
-                });
+            $grid->column('total_in', admin_trans('shift_handover.record.total_in'))->width(100)->align('center');
+            $grid->column('total_out', admin_trans('shift_handover.record.total_out'))->width(100)->align('center');
             $grid->column('lottery_amount', admin_trans('shift_handover.lottery_amount'))->width(100)->align('center');
             $grid->column('activity_bonus_amount', admin_trans('shift_handover.auto.activity_bonus_amount'))->width(100)->align('center');
             $grid->column('lottery_ticket_reward_amount', admin_trans('shift_handover.auto.lottery_ticket_reward_amount'))->width(120)->align('center');
             $grid->column('birthday_bonus_amount', admin_trans('shift_handover.record.birthday_bonus_amount'))->width(120)->align('center');
             $grid->column('upgrade_bonus_amount', admin_trans('shift_handover.record.upgrade_bonus_amount'))->width(120)->align('center');
-            $grid->column('electronic_game_bet_amount', admin_trans('shift_handover.record.electronic_game_bet_amount'))->width(120)->align('center')
-                ->display(function ($val, $data) {
-                    return number_format($this->calcAlignedStats($data)['electronic_game_bet_amount'], 2);
-                });
-            $grid->column('machine_bet_amount', admin_trans('shift_handover.record.machine_bet_amount'))->width(120)->align('center')
-                ->display(function ($val, $data) {
-                    return number_format($this->calcAlignedStats($data)['machine_bet_amount'], 2);
-                });
+            $grid->column('electronic_game_bet_amount', admin_trans('shift_handover.record.electronic_game_bet_amount'))->width(120)->align('center');
+            $grid->column('machine_bet_amount', admin_trans('shift_handover.record.machine_bet_amount'))->width(120)->align('center');
             $grid->column('ticket_record_total_score', admin_trans('shift_handover.record.ticket_record_total_score'))->width(120)->align('center');
             $grid->column('ticket_redeem_backend_used_score', admin_trans('shift_handover.record.ticket_redeem_backend_used_score'))->width(120)->align('center');
-            $grid->column('ticket_unredeemed_amount', admin_trans('channel_store_profit.fields.ticket_unredeemed_amount'))->width(100)->align('center')
+            $grid->column('ticket_subtotal', admin_trans('shift_handover.record.ticket_subtotal'))->width(100)->align('center')
                 ->display(function ($val, $data) {
-                    $v = $this->calcAlignedStats($data)['ticket_unredeemed_amount'];
-                    $color = $v >= 0 ? '#3f8600' : '#cf1322';
-                    return Html::create(number_format($v, 2))->style(['color' => $color]);
+                    $subtotal = bcsub($data['ticket_record_total_score'] ?? 0, $data['ticket_redeem_backend_used_score'] ?? 0, 2);
+                    $color = floatval($subtotal) >= 0 ? '#3f8600' : '#cf1322';
+                    return Html::create(number_format(floatval($subtotal), 2))->style(['color' => $color]);
                 });
             $grid->column('total_profit_amount', admin_trans('shift_handover.record.total_profit'))->width(100)->align('center')
-                ->display(function ($val, $data) {
-                    $v = $this->calcAlignedStats($data)['total_profit'];
-                    $color = $v >= 0 ? '#3f8600' : '#cf1322';
-                    return Html::create(number_format($v, 2))->style(['color' => $color]);
+                ->display(function ($value) {
+                    $color = $value >= 0 ? '#3f8600' : '#cf1322';
+                    return Html::create($value)->style(['color' => $color]);
                 });
 
             $grid->column('created_at', admin_trans('shift_handover.record.created_at'))->width(180)->align('center');
