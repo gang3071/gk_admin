@@ -20,6 +20,7 @@ return [
         'experience_bet_check_enabled' => 'Experience Bet Check',
         'experience_voucher_enabled' => 'Experience Voucher',
         'welfare_voucher_enabled' => 'Welfare Voucher',
+        'give_point_enabled' => 'Gift Points Switch',
         'status' => 'Status',
         'created_at' => 'Created At',
         'parent_agent' => 'Parent Agent',

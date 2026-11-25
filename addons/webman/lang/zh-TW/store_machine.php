@@ -20,6 +20,7 @@ return [
         'experience_bet_check_enabled' => '體驗券打碼判定',
         'experience_voucher_enabled' => '體驗券開關',
         'welfare_voucher_enabled' => '福利券開關',
+        'give_point_enabled' => '開分贈點開關',
         'status' => '狀態',
         'created_at' => '建立時間',
         'parent_agent' => '上級代理',

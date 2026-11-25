@@ -20,6 +20,7 @@ return [
         'experience_bet_check_enabled' => '体験バウチャーベットチェック',
         'experience_voucher_enabled' => '体験バウチャースイッチ',
         'welfare_voucher_enabled' => '福利バウチャースイッチ',
+        'give_point_enabled' => '開分ボーナスポイントスイッチ',
         'status' => 'ステータス',
         'created_at' => '作成日時',
         'parent_agent' => '上位代理',

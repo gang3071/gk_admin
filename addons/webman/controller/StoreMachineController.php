@@ -226,6 +226,10 @@ class StoreMachineController
                 ->switch()
                 ->width(120)->align('center');
 
+            $grid->column('give_point_enabled', admin_trans('store_machine.fields.give_point_enabled'))
+                ->switch()
+                ->width(120)->align('center');
+
             $grid->column('status', admin_trans('store_machine.fields.status'))->display(function ($value) {
                 return match ($value) {
                     0 => Tag::create(admin_trans('store_machine.status.disabled'))->color('red'),
@@ -435,7 +439,7 @@ class StoreMachineController
                         }
 
                         // 更新可编辑字段（wash_point_config已改为使用配置表）
-                        $updateableFields = ['agent_commission', 'channel_commission', 'experience_bet_check_enabled', 'experience_voucher_enabled', 'welfare_voucher_enabled'];
+                        $updateableFields = ['agent_commission', 'channel_commission', 'experience_bet_check_enabled', 'experience_voucher_enabled', 'welfare_voucher_enabled', 'give_point_enabled'];
                         $updated = false;
                         foreach ($updateableFields as $field) {
                             if (array_key_exists($field, $data)) {
