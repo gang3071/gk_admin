@@ -22,6 +22,8 @@ return [
         'score' => 'スコア',
         'turn_point' => 'ターン数',
         'diff' => '損益を押さえる',
+        'press_score_rtp' => 'ベットRTP',
+        'up_down_rtp' => '上下ポイントRTP',
         'data_type' => 'データ型',
     ],
     'date_type' => [

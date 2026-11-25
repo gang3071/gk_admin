@@ -56,6 +56,7 @@ class GamePlatform extends Model
     const TYPE_KT = 'KT';
     const TYPE_QT = 'QT';
     const TYPE_GK = 'GK';
+    const TYPE_AS = 'AS';
 
     public function __construct(array $attributes = [])
     {

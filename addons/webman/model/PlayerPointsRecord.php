@@ -42,6 +42,8 @@ class PlayerPointsRecord extends Model
     const TYPE_TRANSFER_OUT = 11;    // 积分转赠（送出）
     const TYPE_TRANSFER_IN = 12;     // 积分转赠（收入）
     const TYPE_STEEL_BALL_JACKPOT = 13; // 钢珠下珠赠送积分
+    const TYPE_PROMOTE_POINTS = 14;  // 推广积分（上级收入）
+    const TYPE_PROMOTE_DEDUCT = 15;  // 推广积分抽成（下级扣除）
 
     // 来源常量
     const SOURCE_BETTING_SUMMARY = 'betting_summary';
@@ -52,6 +54,7 @@ class PlayerPointsRecord extends Model
     const SOURCE_REFUND = 'refund';
     const SOURCE_POINTS = 'points';
     const SOURCE_STEEL_BALL = 'steel_ball';
+    const SOURCE_PROMOTE_POINTS = 'children_points'; // 推广积分
 
     protected $fillable = [
         'player_id',
@@ -100,6 +103,8 @@ class PlayerPointsRecord extends Model
             self::TYPE_TRANSFER_OUT     => admin_trans('player_points.type.' . self::TYPE_TRANSFER_OUT),
             self::TYPE_TRANSFER_IN          => admin_trans('player_points.type.' . self::TYPE_TRANSFER_IN),
             self::TYPE_STEEL_BALL_JACKPOT   => admin_trans('player_points.type.' . self::TYPE_STEEL_BALL_JACKPOT),
+            self::TYPE_PROMOTE_POINTS       => admin_trans('player_points.type.' . self::TYPE_PROMOTE_POINTS),
+            self::TYPE_PROMOTE_DEDUCT       => admin_trans('player_points.type.' . self::TYPE_PROMOTE_DEDUCT),
         ];
 
         return $types[$this->type] ?? admin_trans('admin.unknown', [], 'Unknown');

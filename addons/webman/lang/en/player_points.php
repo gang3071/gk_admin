@@ -40,6 +40,8 @@ return [
         PlayerPointsRecord::TYPE_TRANSFER_OUT => 'Transfer Out',
         PlayerPointsRecord::TYPE_TRANSFER_IN => 'Transfer In',
         PlayerPointsRecord::TYPE_STEEL_BALL_JACKPOT => 'Steel Ball Jackpot Gift',
+        PlayerPointsRecord::TYPE_PROMOTE_POINTS => 'Promotional Points',
+        PlayerPointsRecord::TYPE_PROMOTE_DEDUCT => 'Promotional Points Deduction',
     ],
 
     'action' => [

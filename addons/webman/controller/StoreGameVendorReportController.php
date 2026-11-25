@@ -119,6 +119,10 @@ class StoreGameVendorReportController
                 ->display(fn($val) => number_format(floatval($val), 2))
                 ->align('right')->sortable();
 
+            $grid->column('rtp', admin_trans('game_vendor_report.rtp'))
+                ->display(fn($val) => number_format(floatval($val), 2) . '%')
+                ->align('right')->sortable();
+
             $grid->filter(function (Filter $filter) use ($platformOptions) {
                 $filter->select('date_type')
                     ->placeholder(admin_trans('machine_report.fields.date_type'))
@@ -264,7 +268,29 @@ class StoreGameVendorReportController
             ->get()
             ->toArray();
 
+        // RTP 栏目：= 總贏分 ÷ 投注金額 × 100%（电子游戏RTP算法，与 ChannelStoreFinanceSummaryController 一致）
+        foreach ($rows as &$row) {
+            $row['rtp'] = $this->calcRtp((float)($row['total_win'] ?? 0), (float)($row['total_bet'] ?? 0));
+        }
+        unset($row);
+
         return $rows;
+    }
+
+    /**
+     * RTP = 分子 ÷ 分母 × 100%（分母 <= 0 时为 0）
+     * 与 ChannelStoreFinanceSummaryController::calcRtp 同算法
+     * @param float $dividend
+     * @param float $divisor
+     * @return float
+     */
+    private function calcRtp(float $dividend, float $divisor): float
+    {
+        if ($divisor <= 0) {
+            return 0.0;
+        }
+
+        return round($dividend / $divisor * 100, 2);
     }
 
     /**

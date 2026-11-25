@@ -373,9 +373,9 @@
                   <tr>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-bet')">電子總押注</th>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-win')">電子總贏分</th>
-                    <th class="th-link th-player-diff" @click="scrollToDesc('desc-electronic-diff')">玩家輸贏<span class="note-small">以平台盈虧展示</span></th>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-lottery')">電子彩金</th>
                     <th class="th-link" @click="scrollToDesc('desc-electronic-reverse-water')">返水<span class="note-small">含未領取</span></th>
+                    <th class="th-link th-player-diff" @click="scrollToDesc('desc-electronic-diff')">玩家輸贏<span class="note-small">以平台盈虧展示</span></th>
                     <th class="th-link th-rtp" @click="scrollToDesc('desc-electronic-rtp')">RTP</th>
                   </tr>
                 </thead>
@@ -383,9 +383,9 @@
                   <tr>
                     <td class="val-income">{{ fmtIncome(reportData.electronic.total_bet) }}</td>
                     <td class="val-expense">{{ fmtExpense(reportData.electronic.total_win) }}</td>
-                    <td :class="['td-player-diff', profitClass(-reportData.electronic.player_diff)]">{{ fmtNumSign(-reportData.electronic.player_diff) }}</td>
                     <td class="val-expense">{{ fmtExpense(reportData.electronic.lottery) }}</td>
                     <td class="val-expense">{{ fmtExpense(reportData.electronic.reverse_water_pool) }}</td>
+                    <td :class="['td-player-diff', profitClass(-reportData.electronic.player_diff)]">{{ fmtNumSign(-reportData.electronic.player_diff) }}</td>
                     <td :class="['td-rtp', rtpClass(reportData.electronic.rtp)]">{{ fmtPct(reportData.electronic.rtp) }}</td>
                   </tr>
                 </tbody>
@@ -705,14 +705,14 @@
               </div>
               <div class="desc-item" id="desc-welfare-reverse-water" :class="{ 'desc-item-active': activeDescId === 'desc-welfare-reverse-water' }">
                 <div class="desc-item-name">返水</div>
-                <div class="desc-item-body">玩家累積遊戲量達標後依 VIP 返水比例計算的回饋金額，取自各電子遊戲結算紀錄的 cashback_amount 加總。<br>
-                  <span class="desc-source">play_game_record SUM(cashback_amount) settlement_status=SETTLED</span>
+                <div class="desc-item-body">玩家累積遊戲量達標後依 VIP 返水比例計算的回饋金額，包含電子遊戲與實體機台（鋼珠/斯洛）的返水合計。<br>
+                  <span class="desc-source">play_game_record SUM(cashback_amount) + player_game_log SUM(cashback_amount)</span>
                 </div>
               </div>
               <div class="desc-item" id="desc-welfare-children-cashback" :class="{ 'desc-item-active': activeDescId === 'desc-welfare-children-cashback' }">
                 <div class="desc-item-name">推廣紅利</div>
-                <div class="desc-item-body">玩家下注時由系統計算並累積給其上級推廣人的紅利金額，取自各電子遊戲結算紀錄的 parent_cashback_amount 加總。<br>
-                  <span class="desc-source">play_game_record SUM(parent_cashback_amount) settlement_status=SETTLED</span>
+                <div class="desc-item-body">玩家下注時由系統計算並累積給其上級推廣人的紅利金額，包含電子遊戲與實體機台（鋼珠/斯洛）的推廣紅利合計。<br>
+                  <span class="desc-source">play_game_record SUM(parent_cashback_amount) + player_game_log SUM(parent_cashback_amount)</span>
                 </div>
               </div>
               <div class="desc-item" id="desc-welfare-subtotal" :class="{ 'desc-item-active': activeDescId === 'desc-welfare-subtotal' }">
@@ -789,7 +789,7 @@
               </div>
               <div class="desc-item" id="desc-steel-ball-profit" :class="{ 'desc-item-active': activeDescId === 'desc-steel-ball-profit' }">
                 <div class="desc-item-name">鋼珠總盈虧</div>
-                <div class="desc-item-body">= 上下點小計 - 鋼珠彩金<br>反映扣除彩金後門店的實際盈虧。</div>
+                <div class="desc-item-body">= 上下點小計 - 鋼珠彩金 - 返水 - 推廣紅利<br>反映扣除彩金、返水、推廣紅利後門店的實際盈虧。</div>
               </div>
               <div class="desc-item" id="desc-steel-ball-rtp" :class="{ 'desc-item-active': activeDescId === 'desc-steel-ball-rtp' }">
                 <div class="desc-item-name">RTP</div>
@@ -837,7 +837,7 @@
               </div>
               <div class="desc-item" id="desc-slot-profit" :class="{ 'desc-item-active': activeDescId === 'desc-slot-profit' }">
                 <div class="desc-item-name">總盈虧（上下點）</div>
-                <div class="desc-item-body">= 上下點小計 - 斯洛彩金</div>
+                <div class="desc-item-body">= 上下點小計 - 斯洛彩金 - 返水 - 推廣紅利<br>反映扣除彩金、返水、推廣紅利後門店的實際盈虧。</div>
               </div>
               <div class="desc-item" id="desc-slot-updown-rtp" :class="{ 'desc-item-active': activeDescId === 'desc-slot-updown-rtp' }">
                 <div class="desc-item-name">上下點RTP</div>
@@ -987,7 +987,9 @@ export default {
 
     fmt(val) {
       const n = parseFloat(val);
-      return isNaN(n) ? '0.00' : n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (isNaN(n)) return '0.00';
+      const truncated = this.truncateDecimals(n, 2);
+      return truncated.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
     amountClass(val) {
       const n = parseFloat(val);
@@ -1005,9 +1007,9 @@ export default {
       return n > 0 ? 'tag-profit' : 'tag-loss';
     },
     calcTotalCost(panel) {
-      return Object.keys(this.trans.cost_types || {})
-        .reduce((sum, typeId) => sum + parseFloat(panel.delivery_types[typeId] || 0), 0)
-        .toFixed(2);
+      const total = Object.keys(this.trans.cost_types || {})
+        .reduce((sum, typeId) => sum + parseFloat(panel.delivery_types[typeId] || 0), 0);
+      return this.truncateDecimals(total, 2).toFixed(2);
     },
     costPercent(panel, typeId) {
       const total = parseFloat(this.calcTotalCost(panel));
@@ -1019,7 +1021,8 @@ export default {
       const machine    = parseFloat(panel.machine_win_loss || 0);
       const electronic = parseFloat(panel.electronic_game_win_loss || 0);
       const cost       = parseFloat(this.calcTotalCost(panel));
-      return (machine + electronic - cost).toFixed(2);
+      const net = machine + electronic - cost;
+      return this.truncateDecimals(net, 2).toFixed(2);
     },
     selectType(typeId) {
       this.activeTypeId = this.activeTypeId == typeId ? null : typeId;
@@ -1140,27 +1143,36 @@ export default {
     },
     fmtNum(val) {
       const n = Number(val) || 0;
-      return n.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const truncated = this.truncateDecimals(n, 2);
+      return truncated.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
     fmtPct(val) {
       const n = Number(val) || 0;
       return n.toFixed(2) + '%';
     },
+    // 截断到指定小数位（与 a-statistic 组件行为一致）
+    truncateDecimals(num, decimals) {
+      const factor = Math.pow(10, decimals);
+      return Math.trunc(num * factor) / factor;
+    },
     fmtIncome(val) {
       const n = Number(val) || 0;
       if (n === 0) return '0.00';
-      return '+' + n.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const truncated = this.truncateDecimals(n, 2);
+      return '+' + truncated.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
     fmtExpense(val) {
       const n = Number(val) || 0;
       if (n === 0) return '0.00';
-      return '-' + n.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const truncated = this.truncateDecimals(n, 2);
+      return '-' + truncated.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
     fmtNumSign(val) {
       const n = Number(val) || 0;
       if (n === 0) return '0.00';
-      const abs = Math.abs(n).toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      return (n > 0 ? '+' : '-') + abs;
+      const truncated = this.truncateDecimals(Math.abs(n), 2);
+      const formatted = truncated.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return (n > 0 ? '+' : '-') + formatted;
     },
     profitClass(val) {
       const n = Number(val);

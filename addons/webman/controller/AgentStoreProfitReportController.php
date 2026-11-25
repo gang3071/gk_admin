@@ -474,7 +474,7 @@ class AgentStoreProfitReportController
             $query->where($shiftTable . '.end_time', '>', $shiftDateRange['start'])
                   ->where($shiftTable . '.start_time', '<', $shiftDateRange['end']);
         } elseif (!empty($dateType)) {
-            $query->where(getDateWhere($dateType, $shiftTable . '.start_time'));
+            $query->where(getDateWhere8am($dateType, $shiftTable . '.start_time'));
         } else {
             if (!empty($createdAtStart)) {
                 $query->where($shiftTable . '.end_time', '>', $createdAtStart);
@@ -532,7 +532,7 @@ class AgentStoreProfitReportController
             $query->where($column, '>', $shiftDateRange['start']->toDateTimeString())
                   ->where($column, '<=', $shiftDateRange['end']->toDateTimeString());
         } elseif (!empty($dateType)) {
-            $query->where(getDateWhere($dateType, $column));
+            $query->where(getDateWhere8am($dateType, $column));
         } else {
             if (!empty($createdAtStart)) {
                 $query->where($column, '>', $createdAtStart);

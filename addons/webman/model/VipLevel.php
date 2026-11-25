@@ -16,9 +16,11 @@ use Illuminate\Database\Eloquent\Model;
  * @property float upgrade_bet_amount 升级所需打码量
  * @property float min_claim_amount 最小领取额
  * @property float children_cashback_ratio 下级反水比例 (%)
+ * @property float children_points_ratio 推广积分比例 (%)
  * @property float birthday_bonus 生日礼金
  * @property float upgrade_bonus 升级礼金
  * @property float daily_login_bonus 每日登录奖励
+ * @property float daily_login_bonus_bet_amount 每日奖励领取打码量(领取每日登入奖励需满足的昨日打码量)
  * @property int high_setting_machine_play_num 高设定机台可玩数量(0=不可玩)
  * @property int sort 排序
  * @property int status 状态
@@ -44,9 +46,11 @@ class VipLevel extends Model
         'upgrade_bet_amount',
         'min_claim_amount',
         'children_cashback_ratio',
+        'children_points_ratio',
         'birthday_bonus',
         'upgrade_bonus',
         'daily_login_bonus',
+        'daily_login_bonus_bet_amount',
         'high_setting_machine_play_num',
         'sort',
         'status',

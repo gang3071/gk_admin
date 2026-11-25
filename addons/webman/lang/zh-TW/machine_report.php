@@ -22,6 +22,8 @@ return [
         'score' => '得分',
         'turn_point' => '轉數',
         'diff' => '押得盈虧',
+        'press_score_rtp' => '押得RTP',
+        'up_down_rtp' => '上下點RTP',
         'data_type' => '資料類型',
     ],
     'date_type' => [

@@ -16,6 +16,7 @@ return [
     'platform'                => 'Vendor Platform',
     'store'                   => 'Store',
     'total_win'               => 'Total Win',
+    'rtp'                     => 'RTP',
     'player_win_loss_tip'     => 'Positive: house wins (player loses); Negative: house loses (player wins)',
     'stats' => [
         'panel_header'    => 'View Statistics',

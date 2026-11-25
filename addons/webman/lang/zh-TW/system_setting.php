@@ -70,7 +70,8 @@ return [
     'master' => '總配置',
     'points' => '分',
     'balls' => '珠',
-    'disabled' => '已禁用',
+    'disabled'     => '已禁用',
+    'annotate_btn' => '配置說明',
     // VIP欢迎语音
     'vip_welcome_voice' => [
         'title' => 'VIP歡迎語音配置',

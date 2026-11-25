@@ -32,6 +32,27 @@ class PlayerPointsService
      */
     public static function getPlayerPoints(int $playerId): array
     {
+        // ✅ 优先读 Redis：打码积分实时累加在 Redis（gk_api），MySQL 每分钟才同步一次，
+        // 只读 MySQL 会拿到滞后余额（推广积分扣回曾因此被静默跳过）
+        try {
+            $redis = Redis::connection()->client();
+            $data = $redis->hGetAll('gk_api:player_points:' . $playerId);
+
+            if (!empty($data) && isset($data['available_points'])) {
+                return [
+                    'available_points' => round(floatval($data['available_points'] ?? 0), 4),
+                    'frozen_points' => round(floatval($data['frozen_points'] ?? 0), 4),
+                    'total_points' => round(floatval($data['total_points'] ?? 0), 4),
+                    'used_points' => round(floatval($data['used_points'] ?? 0), 4),
+                ];
+            }
+        } catch (\Throwable $e) {
+            Log::warning('[积分] Redis余额读取失败，回退MySQL', [
+                'player_id' => $playerId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         $playerPoints = PlayerPoints::where('player_id', $playerId)->first();
 
         if (!$playerPoints) {
@@ -55,7 +76,7 @@ class PlayerPointsService
      * 增加积分
      *
      * @param int $playerId 玩家ID
-     * @param int $points 积分数量
+     * @param float $points 积分数量（保留4位小数）
      * @param string $remark 备注
      * @param array $adminInfo 操作人员信息 ['admin_id', 'admin_name', 'admin_ip']
      * @return array
@@ -63,7 +84,7 @@ class PlayerPointsService
      */
     public static function addPoints(
         int $playerId,
-        int $points,
+        float $points,
         string $remark,
         array $adminInfo,
         ?int $type = null,
@@ -76,6 +97,12 @@ class PlayerPointsService
         if ($points <= 0) {
             throw new Exception(admin_trans('player_points.message.invalid_points_amount'));
         }
+
+        // 保留4位小数
+        $points = round($points, 4);
+
+        // 先把 Redis 未同步的打码积分落账，保证变动前后数值准确
+        self::flushPlayerToMySQL($playerId);
 
         Db::beginTransaction();
 
@@ -92,15 +119,16 @@ class PlayerPointsService
             // 记录变动前积分
             $pointsBefore = $playerPoints->available_points;
 
-            // 使用乐观锁更新
+            // 使用乐观锁更新（积分保留4位小数，须格式化为定点数拼进 SQL）
+            $pointsStr = number_format($points, 4, '.', '');
             $currentVersion = $playerPoints->version;
             $updateData = [
-                'available_points' => Db::raw('available_points + ' . (int)$points),
+                'available_points' => Db::raw('available_points + ' . $pointsStr),
                 'version' => $currentVersion + 1,
                 'updated_at' => date('Y-m-d H:i:s'),
             ];
             if ($updateTotal) {
-                $updateData['total_points'] = Db::raw('total_points + ' . (int)$points);
+                $updateData['total_points'] = Db::raw('total_points + ' . $pointsStr);
             }
             $affected = PlayerPoints::where('id', $playerPoints->id)
                 ->where('version', $currentVersion)
@@ -131,8 +159,11 @@ class PlayerPointsService
 
             Db::commit();
 
-            // 同步 Redis 缓存
-            self::syncPointsCache($playerId);
+            // 同步 Redis 缓存（按增量，避免覆盖未同步的打码积分）
+            self::syncPointsCache($playerId, [
+                'available_points' => $points,
+                'total_points' => $updateTotal ? $points : 0,
+            ]);
 
             return [
                 'points_added' => $points,
@@ -155,7 +186,7 @@ class PlayerPointsService
      * 扣除积分
      *
      * @param int $playerId
-     * @param int $points
+     * @param float $points 积分数量（保留4位小数）
      * @param string $remark
      * @param array $adminInfo
      * @return bool
@@ -163,7 +194,7 @@ class PlayerPointsService
      */
     public static function deductPoints(
         int $playerId,
-        int $points,
+        float $points,
         string $remark,
         array $adminInfo,
         ?int $type = null,
@@ -175,6 +206,12 @@ class PlayerPointsService
         if ($points <= 0) {
             throw new Exception(admin_trans('player_points.message.invalid_points_amount'));
         }
+
+        // 保留4位小数
+        $points = round($points, 4);
+
+        // 先把 Redis 未同步的打码积分落账，否则余额不足检查会读到滞后值
+        self::flushPlayerToMySQL($playerId);
 
         Db::beginTransaction();
 
@@ -191,14 +228,16 @@ class PlayerPointsService
 
             $pointsBefore = $playerPoints->available_points;
 
-            // 使用乐观锁更新
+
+            // 使用乐观锁更新（积分保留4位小数，须格式化为定点数拼进 SQL）
+            $pointsStr = number_format($points, 4, '.', '');
             $currentVersion = $playerPoints->version;
             $affected = PlayerPoints::where('id', $playerPoints->id)
                 ->where('version', $currentVersion)
                 ->where('available_points', '>=', $points)
                 ->update([
-                    'available_points' => Db::raw('available_points - ' . (int)$points),
-                    'used_points' => Db::raw('used_points + ' . (int)$points),
+                    'available_points' => Db::raw('available_points - ' . $pointsStr),
+                    'used_points' => Db::raw('used_points + ' . $pointsStr),
                     'version' => $currentVersion + 1,
                     'updated_at' => date('Y-m-d H:i:s'),
                 ]);
@@ -225,8 +264,11 @@ class PlayerPointsService
 
             Db::commit();
 
-            // 同步 Redis 缓存
-            self::syncPointsCache($playerId);
+            // 同步 Redis 缓存（按增量，避免覆盖未同步的打码积分）
+            self::syncPointsCache($playerId, [
+                'available_points' => -$points,
+                'used_points' => $points,
+            ]);
 
             return true;
 
@@ -264,6 +306,9 @@ class PlayerPointsService
         if ($points <= 0) {
             throw new Exception(admin_trans('player_points.message.invalid_points_amount'));
         }
+
+        // 先把 Redis 未同步的打码积分落账，否则余额不足检查会读到滞后值
+        self::flushPlayerToMySQL($playerId);
 
         Db::beginTransaction();
 
@@ -314,8 +359,11 @@ class PlayerPointsService
 
             Db::commit();
 
-            // 同步 Redis 缓存
-            self::syncPointsCache($playerId);
+            // 同步 Redis 缓存（按增量，避免覆盖未同步的打码积分）
+            self::syncPointsCache($playerId, [
+                'available_points' => -$points,
+                'frozen_points' => $points,
+            ]);
 
             return true;
 
@@ -354,6 +402,9 @@ class PlayerPointsService
             throw new Exception(admin_trans('player_points.message.invalid_points_amount'));
         }
 
+        // 先把 Redis 未同步的打码积分落账，保证变动前后数值准确
+        self::flushPlayerToMySQL($playerId);
+
         Db::beginTransaction();
 
         try {
@@ -368,6 +419,7 @@ class PlayerPointsService
             }
 
             $availableBefore = $playerPoints->available_points;
+
 
             // 使用乐观锁更新（解冻到可用）
             $currentVersion = $playerPoints->version;
@@ -403,8 +455,11 @@ class PlayerPointsService
 
             Db::commit();
 
-            // 同步 Redis 缓存
-            self::syncPointsCache($playerId);
+            // 同步 Redis 缓存（按增量，避免覆盖未同步的打码积分）
+            self::syncPointsCache($playerId, [
+                'frozen_points' => -$points,
+                'available_points' => $points,
+            ]);
 
             return true;
 
@@ -500,11 +555,71 @@ class PlayerPointsService
     }
 
     /**
+     * 将玩家 Redis 积分快照落账到 MySQL（增扣前调用，对齐未同步的打码积分）
+     *
+     * 打码积分实时累加在 Redis、每分钟由 gk_api 同步 MySQL。增扣积分前先调用本方法，
+     * 否则余额不足检查会读到滞后值（推广积分扣回曾因此被静默跳过）。
+     * 语义与 gk_api syncDirtyPlayersToMySQL 单玩家版一致：MySQL := Redis。
+     */
+    public static function flushPlayerToMySQL(int $playerId): void
+    {
+        try {
+            $redis = Redis::connection()->client();
+            $data = $redis->hGetAll('gk_api:player_points:' . $playerId);
+
+            if (empty($data) || !isset($data['available_points'])) {
+                return; // Redis 无快照，MySQL 即为准
+            }
+
+            $player = Player::find($playerId);
+            if (!$player) {
+                return;
+            }
+
+            $playerPoints = PlayerPoints::getOrCreate($playerId, $player->department_id ?? 0);
+
+            for ($i = 0; $i < 3; $i++) {
+                $playerPoints->refresh();
+                $currentVersion = $playerPoints->version;
+
+                $affected = PlayerPoints::where('id', $playerPoints->id)
+                    ->where('version', $currentVersion)
+                    ->update([
+                        'available_points' => round(floatval($data['available_points'] ?? 0), 4),
+                        'frozen_points' => round(floatval($data['frozen_points'] ?? 0), 4),
+                        'total_points' => round(floatval($data['total_points'] ?? 0), 4),
+                        'used_points' => round(floatval($data['used_points'] ?? 0), 4),
+                        'version' => $currentVersion + 1,
+                        'updated_at' => date('Y-m-d H:i:s'),
+                    ]);
+
+                if ($affected > 0) {
+                    return;
+                }
+            }
+
+            Log::warning('[积分] Redis快照落账MySQL持续冲突，跳过（后续增扣自带乐观锁兜底）', [
+                'player_id' => $playerId,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('[积分] Redis快照落账MySQL失败', [
+                'player_id' => $playerId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * 同步积分到 Redis 缓存（与 gk_api PlayerPointsService 保持一致）
      *
+     * ⚠️ 必须按增量更新：Redis 里可能有尚未同步到 MySQL 的打码积分累加，
+     * 整体覆盖（hMSet MySQL 绝对值）会把这部分积分抹掉。
+     * 仅在 Redis 无快照时才用 MySQL 绝对值初始化。
+     *
      * @param int $playerId
+     * @param array $deltas 字段增量 ['available_points' => +5, 'total_points' => +5, ...]
      */
-    private static function syncPointsCache(int $playerId): void
+    private static function syncPointsCache(int $playerId, array $deltas = []): void
     {
         try {
             $playerPoints = PlayerPoints::where('player_id', $playerId)->first();
@@ -514,12 +629,25 @@ class PlayerPointsService
 
             $redis = Redis::connection()->client();
             $key = 'gk_api:player_points:' . $playerId;
-            $redis->hMSet($key, [
-                'available_points' => (int)$playerPoints->available_points,
-                'frozen_points' => (int)$playerPoints->frozen_points,
-                'total_points' => (int)$playerPoints->total_points,
-                'last_update' => time(),
-            ]);
+
+            if ($redis->exists($key)) {
+                foreach ($deltas as $field => $delta) {
+                    if ($delta != 0) {
+                        $redis->hIncrByFloat($key, $field, $delta);
+                    }
+                }
+                $redis->hSet($key, 'last_update', time());
+            } else {
+                // ⚠️ 不可转 int：积分为 decimal(14,4)，截断后 Redis 与 MySQL 产生小数漂移，
+                //    脏数据同步（MySQL := Redis）会把小数部分永久抹掉
+                $redis->hMSet($key, [
+                    'available_points' => number_format($playerPoints->available_points, 4, '.', ''),
+                    'frozen_points' => number_format($playerPoints->frozen_points, 4, '.', ''),
+                    'total_points' => number_format($playerPoints->total_points, 4, '.', ''),
+                    'used_points' => number_format($playerPoints->used_points, 4, '.', ''),
+                    'last_update' => time(),
+                ]);
+            }
             $redis->expire($key, 86400 * 365);
         } catch (\Throwable $e) {
             Log::warning('[积分] Redis缓存同步失败', [

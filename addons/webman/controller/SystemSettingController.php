@@ -15,6 +15,7 @@ use ExAdmin\ui\component\grid\grid\Editable;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
+use ExAdmin\ui\support\Request;
 use Illuminate\Support\Str;
 use Webman\RedisQueue\Client;
 
@@ -58,6 +59,15 @@ class SystemSettingController
             $grid->autoHeight();
             $grid->bordered(true);
             $grid->model()->where('department_id', $id);
+            $annotateUrl = '#/' . admin_url(['addons-webman-controller-SystemSettingController', 'annotate']);
+            $grid->toolBar()->push(
+                Html::create()->content(
+                    '<a href="' . $annotateUrl . '" class="ant-btn ant-btn-default" style="margin-right:8px;">' .
+                    '<span>📋 ' . admin_trans('system_setting.annotate_btn') . '</span>' .
+                    '</a>'
+                )
+            );
+
             $grid->column('feature', admin_trans('system_setting.fields.feature'))->display(function ($value) {
                 return admin_trans('system_setting.fields.' . $value);
             })->align('center');
@@ -384,6 +394,45 @@ class SystemSettingController
                 $actions->hideEdit();
             });
         });
+    }
+
+    /**
+     * 配置說明頁（左側列表 + 右側注解面板）
+     * @auth true
+     */
+    public function annotate()
+    {
+        $channels = Channel::get(['department_id', 'name'])->map(fn($c) => [
+            'department_id' => $c->department_id,
+            'name'          => $c->name,
+        ])->values()->toArray();
+
+        return admin_view(plugin()->webman->getPath() . '/views/system_setting_annotate.vue')
+            ->attr('ex_admin_title', admin_trans('system_setting.title'))
+            ->attr('channels', $channels)
+            ->attr('data_url', admin_url(['addons-webman-controller-SystemSettingController', 'settingData']))
+            ->attr('grid_url', '#/' . admin_url(['addons-webman-controller-SystemSettingController', 'index']));
+    }
+
+    /**
+     * 返回系统配置 JSON 数据（供配置说明页 AJAX 使用）
+     * @auth true
+     */
+    public function settingData()
+    {
+        $departmentId = (int) Request::input('department_id', 0);
+        $settings = (new $this->model)
+            ->where('department_id', $departmentId)
+            ->get(['id', 'feature', 'num', 'content', 'status'])
+            ->map(fn($s) => [
+                'id'      => $s->id,
+                'feature' => $s->feature,
+                'num'     => $s->num,
+                'content' => $s->content,
+                'status'  => $s->status,
+            ])->keyBy('feature')->toArray();
+
+        return json(['code' => 200, 'data' => $settings]);
     }
 
     /**

@@ -36,7 +36,7 @@ return [
     'points_label' => '积分',
     'help' => [
         'steel_ball_points_gift_status' => '开启后，玩家每次钢珠下珠达标时将自动获得指定积分',
-        'steel_ball_points_gift_amount' => '每次钢珠下珠成功后赠送给玩家的积分数量，最小为 1',
+        'steel_ball_points_gift_amount' => '每次钢珠下珠成功后赠送给玩家的基础积分数量（最小为 1）。实际赠送积分依机台比值换算：比值 1:2 实得一半，比值 2:1 加倍；机台未设定比值则不赠送',
     ],
 
     // 验证消息
