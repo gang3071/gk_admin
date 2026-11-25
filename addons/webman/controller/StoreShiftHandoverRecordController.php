@@ -46,10 +46,10 @@ class StoreShiftHandoverRecordController
      *   未核销 = 出卷 − 后台核销 − 机台核销 + 柜台核销 − 已拆分/已合并
      *   打码量 = 本班次设备明细合计
      *
-     * @param array|\addons\webman\model\StoreAgentShiftHandoverRecord $data 交班记录行（Grid display 回调传模型实例）
+     * @param array $data 交班记录行
      * @return array
      */
-    private function calcAlignedStats($data): array
+    private function calcAlignedStats(array $data): array
     {
         static $cache = [];
 
