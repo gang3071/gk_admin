@@ -498,6 +498,20 @@ class GamePlatformController
                     $grid->column('code', admin_trans('game_extend.fields.code'))->align('center');
                     $grid->setForm()->drawer($this->addKYGame());
                     break;
+                case GamePlatform::TYPE_PP:
+                    $grid->column('logo', 'Logo')->display(function ($val, GameExtend $data) {
+                        $image = Image::create()
+                            ->width(50)
+                            ->height(50)
+                            ->style(['border-radius' => '50%', 'objectFit' => 'cover'])
+                            ->src($data['logo']);
+                        return Html::create()->content([
+                            $image,
+                        ]);
+                    })->align('center');
+                    $grid->column('name', admin_trans('game_extend.fields.name'))->align('center');
+                    $grid->column('code', admin_trans('game_extend.fields.code'))->copy()->align('center');
+                    break;
                 default:
                     break;
             }

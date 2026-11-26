@@ -97,13 +97,6 @@ class StoreShiftHandoverRecordController
                 ->display(function ($value, $data) use (&$aggCache) {
                     return self::alignedStats($data, $aggCache)['redeem_amount'];
                 });
-            // 未核销：与导出「未核销」列同口径（逐台 max(·,0) 后累加）
-            $grid->column('ticket_unredeemed_amount', admin_trans('shift_handover.ticket_unredeemed_amount'))->width(100)->align('center')
-                ->display(function ($value, $data) use (&$aggCache) {
-                    $unredeemed = self::alignedStats($data, $aggCache)['ticket_unredeemed_amount'];
-                    $color = $unredeemed >= 0 ? '#3f8600' : '#cf1322';
-                    return Html::create(number_format($unredeemed, 2))->style(['color' => $color]);
-                });
             $grid->column('total_profit_amount', admin_trans('shift_handover.record.total_profit'))->width(100)->align('center')
                 ->display(function ($value, $data) use (&$aggCache) {
                     $profit = self::alignedStats($data, $aggCache)['profit'];
