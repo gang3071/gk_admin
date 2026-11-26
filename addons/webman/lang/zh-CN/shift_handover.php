@@ -247,6 +247,7 @@ return [
         'ticket_record_total_score' => '出票记录总金额：',
         'ticket_redeem_backend_used_score' => '核销记录后台使用金额：',
         'ticket_subtotal' => '小计：',
+        'ticket_unredeemed_amount' => '未核销：',
         'birthday_bonus_amount' => 'VIP生日礼金：',
         'upgrade_bonus_amount' => 'VIP升级礼金：',
         'total_profit' => '总利润：',
