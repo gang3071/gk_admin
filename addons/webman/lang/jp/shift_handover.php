@@ -295,6 +295,7 @@ return [
         'ticket_record_total_score' => '出票記録合計金額：',
         'ticket_redeem_backend_used_score' => '精算バックエンド使用金額：',
         'ticket_subtotal' => '小計：',
+        'ticket_unredeemed_amount' => '未消込：',
         'birthday_bonus_amount' => 'VIP誕生日ボーナス：',
         'upgrade_bonus_amount' => 'VIPアップグレードボーナス：',
         'total_profit' => '総利益：',

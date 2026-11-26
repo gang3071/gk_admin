@@ -35,7 +35,11 @@ class StoreShiftHandoverRecordController
      */
     public function index(): Grid
     {
-        return Grid::create(new StoreAgentShiftHandoverRecord(), function (Grid $grid) {
+        // 导出口径的设备明细汇总缓存：shift_record_id => Σ store_shift_device_detail
+        // 按需惰性查询并缓存，同一次请求内列表格、展开行共用，每条交班只查一次
+        $aggCache = [];
+
+        return Grid::create(new StoreAgentShiftHandoverRecord(), function (Grid $grid) use (&$aggCache) {
             $grid->title(admin_trans('shift_handover.record.title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -64,27 +68,47 @@ class StoreShiftHandoverRecordController
             })->width(100)->align('center');
 
             $grid->column('machine_point', admin_trans('shift_handover.record.machine_point'))->width(100)->align('center');
-            $grid->column('total_in', admin_trans('shift_handover.record.total_in'))->width(100)->align('center');
-            $grid->column('total_out', admin_trans('shift_handover.record.total_out'))->width(100)->align('center');
+            $grid->column('total_in', admin_trans('shift_handover.record.total_in'))->width(100)->align('center')
+                ->display(function ($value, $data) use (&$aggCache) {
+                    return self::alignedStats($data, $aggCache)['total_in'];
+                });
+            $grid->column('total_out', admin_trans('shift_handover.record.total_out'))->width(100)->align('center')
+                ->display(function ($value, $data) use (&$aggCache) {
+                    return self::alignedStats($data, $aggCache)['total_out'];
+                });
             $grid->column('lottery_amount', admin_trans('shift_handover.lottery_amount'))->width(100)->align('center');
-            $grid->column('activity_bonus_amount', admin_trans('shift_handover.auto.activity_bonus_amount'))->width(100)->align('center');
+            $grid->column('activity_bonus_amount', admin_trans('shift_handover.auto.activity_bonus_amount'))->width(100)->align('center')
+                ->display(function ($value, $data) use (&$aggCache) {
+                    // 自动交班不写主表 activity_bonus_amount，只能取设备明细汇总
+                    return self::alignedStats($data, $aggCache)['activity_bonus_amount'];
+                });
             $grid->column('lottery_ticket_reward_amount', admin_trans('shift_handover.auto.lottery_ticket_reward_amount'))->width(120)->align('center');
             $grid->column('birthday_bonus_amount', admin_trans('shift_handover.record.birthday_bonus_amount'))->width(120)->align('center');
             $grid->column('upgrade_bonus_amount', admin_trans('shift_handover.record.upgrade_bonus_amount'))->width(120)->align('center');
             $grid->column('electronic_game_bet_amount', admin_trans('shift_handover.record.electronic_game_bet_amount'))->width(120)->align('center');
             $grid->column('machine_bet_amount', admin_trans('shift_handover.record.machine_bet_amount'))->width(120)->align('center');
-            $grid->column('ticket_record_total_score', admin_trans('shift_handover.record.ticket_record_total_score'))->width(120)->align('center');
-            $grid->column('ticket_redeem_backend_used_score', admin_trans('shift_handover.record.ticket_redeem_backend_used_score'))->width(120)->align('center');
-            $grid->column('ticket_subtotal', admin_trans('shift_handover.record.ticket_subtotal'))->width(100)->align('center')
-                ->display(function ($val, $data) {
-                    $subtotal = bcsub($data['ticket_record_total_score'] ?? 0, $data['ticket_redeem_backend_used_score'] ?? 0, 2);
-                    $color = floatval($subtotal) >= 0 ? '#3f8600' : '#cf1322';
-                    return Html::create(number_format(floatval($subtotal), 2))->style(['color' => $color]);
+            // 与导出「开票」列同口径：Σ(store_shift_device_detail.ticket_open_score_amount) + 柜台开票
+            $grid->column('ticket_record_total_score', admin_trans('shift_handover.record.ticket_record_total_score'))->width(120)->align('center')
+                ->display(function ($value, $data) use (&$aggCache) {
+                    return self::alignedStats($data, $aggCache)['ticket_open_score_amount'];
+                });
+            // 与导出「核销」列同口径：Σ(store_shift_device_detail.redeem_amount) + 柜台核销
+            $grid->column('ticket_redeem_backend_used_score', admin_trans('shift_handover.record.ticket_redeem_backend_used_score'))->width(120)->align('center')
+                ->display(function ($value, $data) use (&$aggCache) {
+                    return self::alignedStats($data, $aggCache)['redeem_amount'];
+                });
+            // 未核销：与导出「未核销」列同口径（逐台 max(·,0) 后累加）
+            $grid->column('ticket_unredeemed_amount', admin_trans('shift_handover.ticket_unredeemed_amount'))->width(100)->align('center')
+                ->display(function ($value, $data) use (&$aggCache) {
+                    $unredeemed = self::alignedStats($data, $aggCache)['ticket_unredeemed_amount'];
+                    $color = $unredeemed >= 0 ? '#3f8600' : '#cf1322';
+                    return Html::create(number_format($unredeemed, 2))->style(['color' => $color]);
                 });
             $grid->column('total_profit_amount', admin_trans('shift_handover.record.total_profit'))->width(100)->align('center')
-                ->display(function ($value) {
-                    $color = $value >= 0 ? '#3f8600' : '#cf1322';
-                    return Html::create($value)->style(['color' => $color]);
+                ->display(function ($value, $data) use (&$aggCache) {
+                    $profit = self::alignedStats($data, $aggCache)['profit'];
+                    $color = $profit >= 0 ? '#3f8600' : '#cf1322';
+                    return Html::create(number_format($profit, 2))->style(['color' => $color]);
                 });
 
             $grid->column('created_at', admin_trans('shift_handover.record.created_at'))->width(180)->align('center');
@@ -104,8 +128,9 @@ class StoreShiftHandoverRecordController
             })->width(120)->align('center');
 
             // 行展开 - 显示详细信息
-            $grid->expandRow(function ($row) {
-                $profitColor = $row['total_profit_amount'] >= 0 ? '#3f8600' : '#cf1322';
+            $grid->expandRow(function ($row) use (&$aggCache) {
+                $stats = self::alignedStats($row, $aggCache);
+                $profitColor = $stats['profit'] >= 0 ? '#3f8600' : '#cf1322';
 
                 return Card::create([
                     Html::div()->content([
@@ -148,11 +173,11 @@ class StoreShiftHandoverRecordController
                             Html::div()->content([
                                 Html::create()->content([
                                     Html::create(admin_trans('shift_handover.label.total_in'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '150px']),
-                                    Html::create($row['total_in'])->style(['color' => '#3f8600'])
+                                    Html::create($stats['total_in'])->style(['color' => '#3f8600'])
                                 ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
                                 Html::create()->content([
                                     Html::create(admin_trans('shift_handover.label.total_out'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '150px']),
-                                    Html::create($row['total_out'])->style(['color' => '#cf1322'])
+                                    Html::create($stats['total_out'])->style(['color' => '#cf1322'])
                                 ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
                             ]),
                             // 第5行
@@ -170,11 +195,11 @@ class StoreShiftHandoverRecordController
                             Html::div()->content([
                                 Html::create()->content([
                                     Html::create(admin_trans('shift_handover.label.ticket_record_total_score'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '150px']),
-                                    Html::create(number_format($row['ticket_record_total_score'] ?? 0, 2))->style(['color' => '#3f8600'])
+                                    Html::create(number_format($stats['ticket_open_score_amount'], 2))->style(['color' => '#3f8600'])
                                 ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
                                 Html::create()->content([
                                     Html::create(admin_trans('shift_handover.label.ticket_redeem_backend_used_score'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '150px']),
-                                    Html::create(number_format($row['ticket_redeem_backend_used_score'] ?? 0, 2))->style(['color' => '#cf1322'])
+                                    Html::create(number_format($stats['redeem_amount'], 2))->style(['color' => '#cf1322'])
                                 ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
                             ]),
                             // 第7行 - 礼金
@@ -191,13 +216,12 @@ class StoreShiftHandoverRecordController
                             // 第8行
                             Html::div()->content([
                                 Html::create()->content([
-                                    Html::create(admin_trans('shift_handover.label.ticket_subtotal'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '150px']),
-                                    $ticketSubtotal = bcsub($row['ticket_record_total_score'] ?? 0, $row['ticket_redeem_backend_used_score'] ?? 0, 2),
-                                    Html::create(number_format(floatval($ticketSubtotal), 2))->style(['color' => floatval($ticketSubtotal) >= 0 ? '#3f8600' : '#cf1322'])
+                                    Html::create(admin_trans('shift_handover.label.ticket_unredeemed_amount'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '150px']),
+                                    Html::create(number_format($stats['ticket_unredeemed_amount'], 2))->style(['color' => $stats['ticket_unredeemed_amount'] >= 0 ? '#3f8600' : '#cf1322'])
                                 ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
                                 Html::create()->content([
                                     Html::create(admin_trans('shift_handover.label.total_profit'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '150px']),
-                                    Html::create($row['total_profit_amount'])->style(['color' => $profitColor])
+                                    Html::create(number_format($stats['profit'], 2))->style(['color' => $profitColor])
                                 ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
                             ]),
                             // 第8行
@@ -586,6 +610,103 @@ class StoreShiftHandoverRecordController
             $grid->hideSelection();
             $grid->hideDelete();
         });
+    }
+
+    /**
+     * 导出口径的交班汇总展示值
+     *
+     * 交班导出的小计行 = Σ(store_shift_device_detail) + 柜台行
+     * （见 ShiftReportExporter::write() 的柜台行 / 小计行）：
+     *   柜台行把 counter_ticket_amount 计入「开票」和「总收入」，
+     *   把 counter_redeem_amount 计入「核销」和「总支出」，
+     *   利润 = 总收入 - 总支出。
+     *
+     * 页面取值与导出逐列同源同公式；没有设备明细行的旧记录回落到主表快照字段。
+     *
+     * @param array|object $row 交班记录行（Grid display/expandRow 传入的模型或数组）
+     * @param array $cache 同一次请求内的汇总缓存，key = shift_record_id
+     * @return array{total_in: float, total_out: float, profit: float,
+     *              ticket_open_score_amount: float, redeem_amount: float,
+     *              ticket_unredeemed_amount: float, activity_bonus_amount: float}
+     */
+    private static function alignedStats($row, array &$cache): array
+    {
+        $data = is_object($row) && method_exists($row, 'getAttributes')
+            ? $row->getAttributes()
+            : (array)$row;
+
+        $id = (int)($data['id'] ?? 0);
+        if (!array_key_exists($id, $cache)) {
+            $cache[$id] = self::detailAggregates($id);
+        }
+        $agg = $cache[$id];
+
+        if ($agg === null) {
+            // 没有设备明细行：主表快照本身已含柜台金额
+            $totalIn = round((float)($data['total_in'] ?? 0), 2);
+            $totalOut = round((float)($data['total_out'] ?? 0), 2);
+            return [
+                'total_in' => $totalIn,
+                'total_out' => $totalOut,
+                'profit' => round($totalIn - $totalOut, 2),
+                'ticket_open_score_amount' => round((float)($data['ticket_open_score_amount'] ?? 0), 2),
+                'redeem_amount' => round((float)($data['redeem_amount'] ?? 0), 2),
+                'ticket_unredeemed_amount' => round((float)($data['ticket_unredeemed_amount'] ?? 0), 2),
+                'activity_bonus_amount' => round((float)($data['activity_bonus_amount'] ?? 0), 2),
+            ];
+        }
+
+        $counterTicket = round((float)($data['counter_ticket_amount'] ?? 0), 2);
+        $counterRedeem = round((float)($data['counter_redeem_amount'] ?? 0), 2);
+        $totalIn = round($agg['total_in'] + $counterTicket, 2);
+        $totalOut = round($agg['total_out'] + $counterRedeem, 2);
+
+        return [
+            'total_in' => $totalIn,
+            'total_out' => $totalOut,
+            'profit' => round($totalIn - $totalOut, 2),
+            'ticket_open_score_amount' => round($agg['ticket_open'] + $counterTicket, 2),
+            'redeem_amount' => round($agg['redeem'] + $counterRedeem, 2),
+            // 导出对未核销逐台取 max(·, 0) 再累加（ShiftReportExporter::getColumnValue），柜台行不参与该列
+            'ticket_unredeemed_amount' => round($agg['unredeemed'], 2),
+            'activity_bonus_amount' => round($agg['activity_bonus'], 2),
+        ];
+    }
+
+    /**
+     * 汇总一条交班的 store_shift_device_detail（与导出同源）
+     *
+     * @param int $shiftRecordId 交班记录ID
+     * @return array|null null 表示该交班没有设备明细行
+     */
+    private static function detailAggregates(int $shiftRecordId): ?array
+    {
+        $row = StoreShiftDeviceDetail::query()
+            ->where('shift_record_id', $shiftRecordId)
+            ->selectRaw('
+                COUNT(*) AS agg_count,
+                IFNULL(SUM(total_in), 0) AS agg_total_in,
+                IFNULL(SUM(total_out), 0) AS agg_total_out,
+                IFNULL(SUM(ticket_open_score_amount), 0) AS agg_ticket_open,
+                IFNULL(SUM(redeem_amount), 0) AS agg_redeem,
+                IFNULL(SUM(GREATEST(IFNULL(ticket_unredeemed_amount, 0), 0)), 0) AS agg_unredeemed,
+                IFNULL(SUM(activity_bonus_amount), 0) AS agg_activity_bonus
+            ')
+            ->toBase()
+            ->first();
+
+        if (!$row || (int)$row->agg_count === 0) {
+            return null;
+        }
+
+        return [
+            'total_in' => (float)$row->agg_total_in,
+            'total_out' => (float)$row->agg_total_out,
+            'ticket_open' => (float)$row->agg_ticket_open,
+            'redeem' => (float)$row->agg_redeem,
+            'unredeemed' => (float)$row->agg_unredeemed,
+            'activity_bonus' => (float)$row->agg_activity_bonus,
+        ];
     }
 
 }

@@ -295,6 +295,7 @@ return [
         'ticket_record_total_score' => 'Ticket Record Total:',
         'ticket_redeem_backend_used_score' => 'Redeem Backend Used:',
         'ticket_subtotal' => 'Subtotal:',
+        'ticket_unredeemed_amount' => 'Unredeemed:',
         'birthday_bonus_amount' => 'VIP Birthday Bonus:',
         'upgrade_bonus_amount' => 'VIP Upgrade Bonus:',
         'total_profit' => 'Total Profit:',

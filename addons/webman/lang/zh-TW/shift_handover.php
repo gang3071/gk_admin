@@ -294,6 +294,7 @@ return [
         'ticket_record_total_score' => '出票記錄總金額：',
         'ticket_redeem_backend_used_score' => '核銷記錄後台使用金額：',
         'ticket_subtotal' => '小計：',
+        'ticket_unredeemed_amount' => '未核銷：',
         'birthday_bonus_amount' => 'VIP生日禮金：',
         'upgrade_bonus_amount' => 'VIP升級禮金：',
         'total_profit' => '總利潤：',
