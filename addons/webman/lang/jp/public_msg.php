@@ -13,4 +13,6 @@ return [
     'action_at_start' => '決済開始時間',
     'action_at_end' => '決済終了時間',
     'month_unit' => '月',
+    'row_num' => '第%d行',
+    'cannot_be_empty' => '空にできません',
 ];

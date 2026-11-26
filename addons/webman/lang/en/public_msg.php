@@ -13,4 +13,6 @@ return [
     'action_at_start' => 'Settlement start time',
     'action_at_end' => 'Settlement end time',
     'month_unit' => 'Month',
+    'row_num' => 'Row %d',
+    'cannot_be_empty' => 'cannot be empty',
 ];

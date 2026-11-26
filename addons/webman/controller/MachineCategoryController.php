@@ -494,18 +494,19 @@ class MachineCategoryController
                     array_unshift($slotKeys, 'condition');
                     foreach ($machineCategoryGiveRule as $key => $val) {
                         $machineCategoryGiveRule[$key]['sort'] = $key;
+                        $rowLabel = admin_trans('machine_category.opening_gift.opening_gift') . ' ' . sprintf(admin_trans('public_msg.row_num'), $key + 1);
                         switch ($type) {
                             case GameType::TYPE_SLOT:
                                 foreach ($slotKeys as $slotVal) {
                                     if (empty($val[$slotVal])) {
-                                        return message_error('Validation fail:' . admin_trans('machine_category.opening_gift.' . $slotVal));
+                                        return message_error($rowLabel . '：' . admin_trans('machine_category.opening_gift.' . $slotVal) . ' ' . admin_trans('public_msg.cannot_be_empty'));
                                     }
                                 }
                                 break;
                             case GameType::TYPE_STEEL_BALL:
                                 foreach ($steelBallKeys as $sVal) {
                                     if (empty($val[$sVal])) {
-                                        return message_error('Validation fail:' . admin_trans('machine_category.opening_gift.' . $sVal));
+                                        return message_error($rowLabel . '：' . admin_trans('machine_category.opening_gift.' . $sVal) . ' ' . admin_trans('public_msg.cannot_be_empty'));
                                     }
                                 }
                                 break;

@@ -13,4 +13,6 @@ return [
     'action_at_start' => '结算开始时间',
     'action_at_end' => '结算结束时间',
     'month_unit' => '月',
+    'row_num' => '第%d条',
+    'cannot_be_empty' => '不能为空',
 ];
