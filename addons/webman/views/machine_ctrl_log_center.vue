@@ -193,17 +193,19 @@ export default {
       return {
         open_start:     '▶ 開分開始',
         open_end:       '✓ 開分結束',
+        wash_request:   '▶ 收到洗分請求',
         wash_start:     '▶ 洗分開始',
         wash_end:       '✓ 洗分結束',
-        lottery_check:  '🔍 彩金檢查',
-        lottery_payout: '🎰 彩金發放',
-        wallet_add:     '💰 錢包加款',
+        lottery_check:  '◆ 彩金檢查',
+        lottery_payout: '★ 彩金發放',
+        wallet_add:     '+ 錢包加款',
         bet_drop:       '⚠ BET下降',
       }[m] || m;
     },
     dotClass(item) {
       if (item.marker === 'open_start')     return 'dot-open-start';
       if (item.marker === 'open_end')       return 'dot-open-end';
+      if (item.marker === 'wash_request')   return 'dot-wash-request';
       if (item.marker === 'wash_start')     return 'dot-wash-start';
       if (item.marker === 'wash_end')       return 'dot-wash-end';
       if (item.marker === 'lottery_check')  return 'dot-lottery-check';
@@ -218,6 +220,7 @@ export default {
     bodyClass(item) {
       if (item.marker === 'open_start')     return 'body-open-start';
       if (item.marker === 'open_end')       return 'body-open-end';
+      if (item.marker === 'wash_request')   return 'body-wash-request';
       if (item.marker === 'wash_start')     return 'body-wash-start';
       if (item.marker === 'wash_end')       return 'body-wash-end';
       if (item.marker === 'lottery_check')  return 'body-lottery-check';
@@ -326,6 +329,7 @@ export default {
 
 .dot-open-start      { width:12px; height:12px; background:#13c2c2; border-color:#006d75; }
 .dot-open-end        { width:12px; height:12px; background:#52c41a; border-color:#237804; }
+.dot-wash-request    { width:12px; height:12px; background:#fff7e6; border-color:#fa541c; }
 .dot-wash-start      { width:12px; height:12px; background:#fa8c16; border-color:#ad4e00; }
 .dot-wash-end        { width:12px; height:12px; background:#722ed1; border-color:#391085; }
 .dot-lottery-check   { width:12px; height:12px; background:#fff0f6; border-color:#eb2f96; }
@@ -341,6 +345,7 @@ export default {
 
 .body-open-start      { background:#e6fffb; border-left:4px solid #13c2c2; }
 .body-open-end        { background:#f6ffed; border-left:4px solid #52c41a; }
+.body-wash-request    { background:#fff7e6; border-left:4px solid #fa541c; }
 .body-wash-start      { background:#fff7e6; border-left:4px solid #fa8c16; }
 .body-wash-end        { background:#f9f0ff; border-left:4px solid #722ed1; }
 .body-lottery-check   { background:#fff0f6; border-left:4px solid #eb2f96; }
@@ -356,6 +361,7 @@ export default {
 .tl-marker              { font-size:12px; font-weight:700; padding:1px 8px; border-radius:3px; border:1px solid; }
 .marker-open_start      { background:#e6fffb; border-color:#13c2c2; color:#006d75; }
 .marker-open_end        { background:#f6ffed; border-color:#52c41a; color:#237804; }
+.marker-wash_request    { background:#fff7e6; border-color:#fa541c; color:#871400; }
 .marker-wash_start      { background:#fff7e6; border-color:#fa8c16; color:#ad4e00; }
 .marker-wash_end        { background:#f9f0ff; border-color:#722ed1; color:#391085; }
 .marker-lottery_check   { background:#fff0f6; border-color:#eb2f96; color:#9e1068; }
@@ -401,6 +407,7 @@ export default {
 
 .anchor-btn-open_start     { background:#e6fffb; border-color:#13c2c2; color:#006d75; }
 .anchor-btn-open_end       { background:#f6ffed; border-color:#52c41a; color:#237804; }
+.anchor-btn-wash_request   { background:#fff7e6; border-color:#fa541c; color:#871400; }
 .anchor-btn-wash_start     { background:#fff7e6; border-color:#fa8c16; color:#ad4e00; }
 .anchor-btn-wash_end       { background:#f9f0ff; border-color:#722ed1; color:#391085; }
 .anchor-btn-lottery_check  { background:#fff0f6; border-color:#eb2f96; color:#9e1068; }
