@@ -165,6 +165,7 @@ class MachineCtrlLogController
             $action = $row['action'] ?? '';
             if (str_contains($desc, '開分開始'))                                                 { $marker = 'open_start'; }
             elseif (str_contains($desc, '開分結束'))                                             { $marker = 'open_end'; if ($displayType === 'noise') $displayType = 'response'; }
+            elseif ($action === 'wash' && str_contains($desc, '收到洗分請求'))                   { $marker = 'wash_request'; }
             elseif (str_contains($desc, '下分開始'))                                             { $marker = 'wash_start'; }
             elseif (str_contains($desc, '下分結束'))                                             { $marker = 'wash_end'; }
             elseif ($action === 'lottery_check' && str_contains($desc, '開始彩金預留檢查'))      { $marker = 'lottery_check'; }
