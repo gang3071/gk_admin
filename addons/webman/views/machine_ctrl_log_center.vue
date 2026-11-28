@@ -75,7 +75,7 @@
               class="anchor-btn"
               :class="'anchor-btn-' + a.item.marker"
               @click="scrollToAnchor(a.idx)"
-            >{{ a.item.time.slice(11, 19) }} {{ markerLabel(a.item.marker) }}</button>
+            >{{ a.item.time }} {{ markerLabel(a.item.marker) }}</button>
           </div>
         </div>
 
@@ -191,28 +191,39 @@ export default {
     },
     markerLabel(m) {
       return {
-        open_start: '▶ 開分開始', open_end: '✓ 開分結束',
-        wash_start: '▶ 洗分開始', wash_end: '✓ 洗分結束',
-        bet_drop:   '⚠ BET下降',
+        open_start:     '▶ 開分開始',
+        open_end:       '✓ 開分結束',
+        wash_start:     '▶ 洗分開始',
+        wash_end:       '✓ 洗分結束',
+        lottery_check:  '🔍 彩金檢查',
+        lottery_payout: '🎰 彩金發放',
+        wallet_add:     '💰 錢包加款',
+        bet_drop:       '⚠ BET下降',
       }[m] || m;
     },
     dotClass(item) {
-      if (item.marker === 'open_start') return 'dot-open-start';
-      if (item.marker === 'open_end')   return 'dot-open-end';
-      if (item.marker === 'wash_start') return 'dot-wash-start';
-      if (item.marker === 'wash_end')   return 'dot-wash-end';
-      if (item.marker === 'bet_drop')   return 'dot-bet-drop';
+      if (item.marker === 'open_start')     return 'dot-open-start';
+      if (item.marker === 'open_end')       return 'dot-open-end';
+      if (item.marker === 'wash_start')     return 'dot-wash-start';
+      if (item.marker === 'wash_end')       return 'dot-wash-end';
+      if (item.marker === 'lottery_check')  return 'dot-lottery-check';
+      if (item.marker === 'lottery_payout') return 'dot-lottery-payout';
+      if (item.marker === 'wallet_add')     return 'dot-wallet-add';
+      if (item.marker === 'bet_drop')       return 'dot-bet-drop';
       const base = 'dot-' + item.display_type;
       if (item.level === 'ERROR')   return base + ' dot-error';
       if (item.level === 'WARNING') return base + ' dot-warn';
       return base;
     },
     bodyClass(item) {
-      if (item.marker === 'open_start') return 'body-open-start';
-      if (item.marker === 'open_end')   return 'body-open-end';
-      if (item.marker === 'wash_start') return 'body-wash-start';
-      if (item.marker === 'wash_end')   return 'body-wash-end';
-      if (item.marker === 'bet_drop')   return 'body-bet-drop';
+      if (item.marker === 'open_start')     return 'body-open-start';
+      if (item.marker === 'open_end')       return 'body-open-end';
+      if (item.marker === 'wash_start')     return 'body-wash-start';
+      if (item.marker === 'wash_end')       return 'body-wash-end';
+      if (item.marker === 'lottery_check')  return 'body-lottery-check';
+      if (item.marker === 'lottery_payout') return 'body-lottery-payout';
+      if (item.marker === 'wallet_add')     return 'body-wallet-add';
+      if (item.marker === 'bet_drop')       return 'body-bet-drop';
       if (item.level === 'ERROR')   return 'body-error';
       if (item.level === 'WARNING') return 'body-warn';
       if (['wash', 'leave', 'account_query', 'wash_zero', 'all_down'].includes(item.action)) return 'body-key';
@@ -313,11 +324,14 @@ export default {
 .dot-error     { background:#fff1f0 !important; border-color:#f5222d !important; }
 .dot-warn      { background:#fffbe6 !important; border-color:#fa8c16 !important; }
 
-.dot-open-start { width:12px; height:12px; background:#13c2c2; border-color:#006d75; }
-.dot-open-end   { width:12px; height:12px; background:#52c41a; border-color:#237804; }
-.dot-wash-start { width:12px; height:12px; background:#fa8c16; border-color:#ad4e00; }
-.dot-wash-end   { width:12px; height:12px; background:#722ed1; border-color:#391085; }
-.dot-bet-drop   { width:12px; height:12px; background:#fff1f0; border-color:#f5222d; }
+.dot-open-start      { width:12px; height:12px; background:#13c2c2; border-color:#006d75; }
+.dot-open-end        { width:12px; height:12px; background:#52c41a; border-color:#237804; }
+.dot-wash-start      { width:12px; height:12px; background:#fa8c16; border-color:#ad4e00; }
+.dot-wash-end        { width:12px; height:12px; background:#722ed1; border-color:#391085; }
+.dot-lottery-check   { width:12px; height:12px; background:#fff0f6; border-color:#eb2f96; }
+.dot-lottery-payout  { width:12px; height:12px; background:#eb2f96; border-color:#9e1068; }
+.dot-wallet-add      { width:12px; height:12px; background:#d9f7be; border-color:#52c41a; }
+.dot-bet-drop        { width:12px; height:12px; background:#fff1f0; border-color:#f5222d; }
 
 .tl-body      { flex:1; padding:5px 8px; border-radius:4px; margin-bottom:4px; border-left:3px solid transparent; min-width:0; }
 .body-default { background:#fafafa; border-left-color:#e8e8e8; }
@@ -325,23 +339,29 @@ export default {
 .body-warn    { background:#fffbe6; border-left-color:#fa8c16; }
 .body-key     { background:#f6ffed; border-left-color:#52c41a; }
 
-.body-open-start { background:#e6fffb; border-left:4px solid #13c2c2; }
-.body-open-end   { background:#f6ffed; border-left:4px solid #52c41a; }
-.body-wash-start { background:#fff7e6; border-left:4px solid #fa8c16; }
-.body-wash-end   { background:#f9f0ff; border-left:4px solid #722ed1; }
-.body-bet-drop   { background:#fff1f0; border-left:4px solid #f5222d; }
+.body-open-start      { background:#e6fffb; border-left:4px solid #13c2c2; }
+.body-open-end        { background:#f6ffed; border-left:4px solid #52c41a; }
+.body-wash-start      { background:#fff7e6; border-left:4px solid #fa8c16; }
+.body-wash-end        { background:#f9f0ff; border-left:4px solid #722ed1; }
+.body-lottery-check   { background:#fff0f6; border-left:4px solid #eb2f96; }
+.body-lottery-payout  { background:#ffd6e7; border-left:4px solid #9e1068; }
+.body-wallet-add      { background:#f6ffed; border-left:4px solid #52c41a; }
+.body-bet-drop        { background:#fff1f0; border-left:4px solid #f5222d; }
 
 .tl-head    { display:flex; align-items:center; flex-wrap:wrap; gap:4px; margin-bottom:3px; }
 .tl-time    { font-size:12px; color:#595959; font-weight:700; background:none; padding:0; }
 .tl-elapsed { font-size:11px; color:#8c8c8c; background:#f5f5f5; padding:0 5px; border-radius:3px; }
 .tl-desc    { font-size:12px; color:#262626; margin-bottom:2px; line-height:1.5; word-break:break-word; }
 
-.tl-marker         { font-size:12px; font-weight:700; padding:1px 8px; border-radius:3px; border:1px solid; }
-.marker-open_start { background:#e6fffb; border-color:#13c2c2; color:#006d75; }
-.marker-open_end   { background:#f6ffed; border-color:#52c41a; color:#237804; }
-.marker-wash_start { background:#fff7e6; border-color:#fa8c16; color:#ad4e00; }
-.marker-wash_end   { background:#f9f0ff; border-color:#722ed1; color:#391085; }
-.marker-bet_drop   { background:#fff1f0; border-color:#f5222d; color:#a8071a; }
+.tl-marker              { font-size:12px; font-weight:700; padding:1px 8px; border-radius:3px; border:1px solid; }
+.marker-open_start      { background:#e6fffb; border-color:#13c2c2; color:#006d75; }
+.marker-open_end        { background:#f6ffed; border-color:#52c41a; color:#237804; }
+.marker-wash_start      { background:#fff7e6; border-color:#fa8c16; color:#ad4e00; }
+.marker-wash_end        { background:#f9f0ff; border-color:#722ed1; color:#391085; }
+.marker-lottery_check   { background:#fff0f6; border-color:#eb2f96; color:#9e1068; }
+.marker-lottery_payout  { background:#ffd6e7; border-color:#9e1068; color:#520339; }
+.marker-wallet_add      { background:#f6ffed; border-color:#52c41a; color:#237804; }
+.marker-bet_drop        { background:#fff1f0; border-color:#f5222d; color:#a8071a; }
 
 .state-card  { background:#fff; border:1px solid #e8e8e8; border-radius:4px; padding:6px 10px; margin:4px 0; }
 .state-grid  { display:flex; flex-wrap:wrap; gap:16px; }
@@ -379,9 +399,12 @@ export default {
 }
 .anchor-btn:hover { opacity: .75; }
 
-.anchor-btn-open_start { background:#e6fffb; border-color:#13c2c2; color:#006d75; }
-.anchor-btn-open_end   { background:#f6ffed; border-color:#52c41a; color:#237804; }
-.anchor-btn-wash_start { background:#fff7e6; border-color:#fa8c16; color:#ad4e00; }
-.anchor-btn-wash_end   { background:#f9f0ff; border-color:#722ed1; color:#391085; }
-.anchor-btn-bet_drop   { background:#fff1f0; border-color:#f5222d; color:#a8071a; }
+.anchor-btn-open_start     { background:#e6fffb; border-color:#13c2c2; color:#006d75; }
+.anchor-btn-open_end       { background:#f6ffed; border-color:#52c41a; color:#237804; }
+.anchor-btn-wash_start     { background:#fff7e6; border-color:#fa8c16; color:#ad4e00; }
+.anchor-btn-wash_end       { background:#f9f0ff; border-color:#722ed1; color:#391085; }
+.anchor-btn-lottery_check  { background:#fff0f6; border-color:#eb2f96; color:#9e1068; }
+.anchor-btn-lottery_payout { background:#ffd6e7; border-color:#9e1068; color:#520339; }
+.anchor-btn-wallet_add     { background:#f6ffed; border-color:#52c41a; color:#237804; }
+.anchor-btn-bet_drop       { background:#fff1f0; border-color:#f5222d; color:#a8071a; }
 </style>

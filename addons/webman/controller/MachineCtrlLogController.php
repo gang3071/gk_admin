@@ -163,11 +163,14 @@ class MachineCtrlLogController
             $marker = null;
             $desc   = $row['action_desc'] ?? '';
             $action = $row['action'] ?? '';
-            if (str_contains($desc, '開分開始'))                                                           { $marker = 'open_start'; }
-            elseif (str_contains($desc, '開分結束'))                                                       { $marker = 'open_end';   if ($displayType === 'noise') $displayType = 'response'; }
-            elseif (str_contains($desc, '下分開始') || ($action === 'wash' && str_contains($desc, '收到洗分請求')))   { $marker = 'wash_start'; }
-            elseif (str_contains($desc, '下分結束') || ($action === 'check_reset' && str_contains($desc, '重置壓分/得分'))) { $marker = 'wash_end'; }
-            elseif ($action === 'read_bet' && str_contains($desc, 'BET值下降异常'))                        { $marker = 'bet_drop'; }
+            if (str_contains($desc, '開分開始'))                                                 { $marker = 'open_start'; }
+            elseif (str_contains($desc, '開分結束'))                                             { $marker = 'open_end'; if ($displayType === 'noise') $displayType = 'response'; }
+            elseif (str_contains($desc, '下分開始'))                                             { $marker = 'wash_start'; }
+            elseif (str_contains($desc, '下分結束'))                                             { $marker = 'wash_end'; }
+            elseif ($action === 'lottery_check' && str_contains($desc, '開始彩金預留檢查'))      { $marker = 'lottery_check'; }
+            elseif ($action === 'lottery_fixed' && str_contains($desc, 'WS 彩金派发消息已发送')) { $marker = 'lottery_payout'; }
+            elseif ($action === 'wash' && str_contains($desc, '钱包加款成功'))                   { $marker = 'wallet_add'; }
+            elseif ($action === 'read_bet' && str_contains($desc, 'BET值下降异常'))              { $marker = 'bet_drop'; }
 
             $state = [];
             if (!empty($row['machine_state'])) {
